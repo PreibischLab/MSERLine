@@ -12,7 +12,6 @@ import java.util.TreeSet;
 
 import com.sun.tools.javac.util.Pair;
 
-import houghandWatershed.Boundingboxes;
 import houghandWatershed.HoughTransformandMser;
 import ij.IJ;
 import ij.ImageJ;
@@ -39,6 +38,7 @@ import net.imglib2.util.Util;
 import net.imglib2.view.Views;
 import peakFitter.SortListbyproperty;
 import preProcessing.GetLocalmaxmin;
+import util.Boundingboxes;
 
 public class RoiforMSER extends BenchmarkAlgorithm
 		implements OutputAlgorithm <ArrayList<LabelledImg>> {

@@ -3,7 +3,6 @@ package peakFitter;
 
 import java.util.ArrayList;
 
-import houghandWatershed.Boundingboxes;
 import ij.gui.EllipseRoi;
 import labeledObjects.LabelledImg;
 import labeledObjects.Simpleobject;
@@ -17,6 +16,7 @@ import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.Views;
 import peakFitter.GaussianMaskFitMSER.EndfitMSER;
 import preProcessing.GetLocalmaxmin;
+import util.Boundingboxes;
 
 public class SubpixelLengthMSER extends BenchmarkAlgorithm
 implements OutputAlgorithm<ArrayList<double[]>> {

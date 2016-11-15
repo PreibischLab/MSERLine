@@ -29,6 +29,7 @@ import net.imglib2.view.Views;
 import preProcessing.GetLocalmaxmin;
 import preProcessing.GlobalThresholding;
 import preProcessing.Kernels;
+import util.Boundingboxes;
 
 /**
  * Hough transform of images that operates on 2D images.

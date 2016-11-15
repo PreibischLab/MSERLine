@@ -274,52 +274,7 @@ public class PushCurves {
 	
 
 	
-	// Draw a line between starting and end point
-	public static void DrawfinalLine(RandomAccessibleInterval<FloatType> imgout, final double[] final_param,
-			final double[] sigma) {
-
-		int ndims = imgout.numDimensions();
-
-		
-		double[] startline = new double[ndims];
-		double[] endline = new double[ndims];
-
-		for (int d = 0; d < ndims; ++d) {
-			startline[d] = final_param[d];
-			endline[d] = final_param[ndims + d];
-		}
-
-		double slope = (endline[1] - startline[1]) / (endline[0] - startline[0]);
-		 
-		final double[] steppos = new double[ndims];
-		double stepsize = 1;
-		double[] dxvector = {stepsize / Math.sqrt(1 + slope * slope),  stepsize * slope / Math.sqrt(1 + slope * slope) };
-		if (Math.abs(Math.toDegrees(Math.atan2(dxvector[1], dxvector[0]))) <= slopethresh && Math.abs(Math.toDegrees(Math.atan2(dxvector[1], dxvector[0]))) > slopethresh - 1  ){
-
-			dxvector[0] = 0;
-			dxvector[1] = stepsize* Math.signum(slope);
-			
-		}
-			for (int d  = 0; d < ndims ; ++d)
-				steppos[d] = startline[d];
-			while (true) {
-
-				AddGaussian.addGaussian(imgout, steppos, sigma);
-				steppos[0] +=  dxvector[0];
-				steppos[1] +=  dxvector[1];
-				
-
-
-				if (steppos[0] > endline[0] || steppos[1] > endline[1] && slope >= 0)
-					break;
-				if (steppos[0] > endline[0] || steppos[1] < endline[1] && slope < 0)
-					break;
-			}
-		
-		
-		
-
-	}
+	
 	// Draw a line between starting and end point
 		public static void DrawallLine(RandomAccessibleInterval<FloatType> imgout, final ArrayList<double[]> final_param,
 				final double[] sigma) {
@@ -367,54 +322,7 @@ public class PushCurves {
 			}
 		}
 
-	public static void Drawexactcircle(RandomAccessibleInterval<FloatType> imgout, double[] center, double radius,
-			double[] min, double[] max) {
-
-		int n = imgout.numDimensions();
-
-		final double[] position = new double[n];
-
-		final double[] realpos = new double[n];
-
-		double sigmasq = 0, sigma;
-
-		double[] delta = new double[n];
-
-		for (int d = 0; d < n; ++d) {
-
-			delta[d] = (max[d] - min[d]) / (imgout.dimension(d));
-
-			sigmasq += Math.pow(delta[d], 2);
-
-		}
-		sigma = Math.sqrt(sigmasq);
-
-		final Cursor<FloatType> inputcursor = Views.iterable(imgout).localizingCursor();
-
-		final RandomAccess<FloatType> outbound = imgout.randomAccess();
-
-		while (inputcursor.hasNext()) {
-			inputcursor.fwd();
-			inputcursor.localize(position);
-
-			// Forward transformation
-			for (int d = 0; d < n; ++d)
-				realpos[d] = position[d] * delta[d] + min[d];
-			outbound.setPosition(inputcursor);
-			// To set the pixel intensity as the shortest distance to the curve
-			double distance = 0;
-			double intensity = 0;
-
-			Finalfunction circlefunction = new Finalfunction(realpos, center, radius, 0);
-
-			distance = circlefunction.Circlefunctiondist();
-
-			intensity = (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-distance * distance / (2 * sigmasq));
-			outbound.get().setReal(intensity);
-
-		}
-	}
-
+	
 	public static void Drawexactline(RandomAccessibleInterval<FloatType> imgout, double slope, double intercept,
 			final IntensityType setintensity) {
 
@@ -464,74 +372,9 @@ public class PushCurves {
 		}
 	}
 
-	// Compute the local maxima of your model image of the detected lines
-	// all the points in that image with value > 0 are the guess centroids
-	public static void MakeHTguess(RandomAccessibleInterval<FloatType> Modelimg,
-			PointSampleList<FloatType> centroidlist) {
+	
 
-		Cursor<FloatType> modelcursor = Views.iterable(Modelimg).localizingCursor();
-
-		while (modelcursor.hasNext()) {
-			modelcursor.fwd();
-			final FloatType val = new FloatType(0);
-			if (modelcursor.get().compareTo(val) > 0) {
-
-				Point centroid = new Point(modelcursor);
-
-				centroidlist.add(centroid, modelcursor.get().copy());
-
-			}
-
-		}
-
-	}
-
-	// Compute the local maxima of your model image of the detected lines
-	// all the points in that image with value > 0 are the guess centroids
-	public static void Getcentroids(RandomAccessibleInterval<FloatType> Modelimg,
-			PointSampleList<FloatType> centroidlist) {
-
-		Cursor<FloatType> modelcursor = Views.iterable(Modelimg).localizingCursor();
-
-		while (modelcursor.hasNext()) {
-			modelcursor.fwd();
-			final FloatType val = new FloatType(0);
-			if (modelcursor.get().compareTo(val) > 0) {
-
-				Point centroid = new Point(modelcursor);
-
-				centroidlist.add(centroid, modelcursor.get().copy());
-			}
-
-		}
-
-	}
-
-	public static double MaxIntensitylabel(RandomAccessibleInterval<FloatType> inputimg,
-			RandomAccessibleInterval<IntType> intimg, final int label) {
-		double maxIntensity = Double.NEGATIVE_INFINITY;
-		Cursor<IntType> intcursor = Views.iterable(intimg).localizingCursor();
-		RandomAccess<FloatType> ranac = inputimg.randomAccess();
-
-		while (intcursor.hasNext()) {
-			intcursor.fwd();
-
-			int i = intcursor.get().get();
-			if (i == label) {
-
-				ranac.setPosition(intcursor);
-
-				if (ranac.get().get() > maxIntensity) {
-
-					maxIntensity = ranac.get().get();
-				}
-
-			}
-
-		}
-
-		return maxIntensity;
-	}
+	
 
 	public static void DrawRoiline(
 			final RandomAccessibleInterval<FloatType> imgout,

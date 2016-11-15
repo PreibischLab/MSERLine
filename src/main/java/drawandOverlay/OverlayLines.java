@@ -2,7 +2,6 @@ package drawandOverlay;
 
 import java.util.ArrayList;
 
-import houghandWatershed.Boundingboxes;
 import houghandWatershed.TransformCordinates;
 import ij.IJ;
 import ij.ImagePlus;
@@ -28,6 +27,7 @@ import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.Views;
 import preProcessing.GetLocalmaxmin;
 import preProcessing.GetLocalmaxmin.IntensityType;
+import util.Boundingboxes;
 
 public class OverlayLines {
 	
