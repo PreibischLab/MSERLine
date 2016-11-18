@@ -3,10 +3,15 @@ package peakFitter;
 
 import java.util.ArrayList;
 
+import com.sun.tools.javac.util.Pair;
+
+import LineModels.GaussianLineds;
 import ij.gui.EllipseRoi;
+import labeledObjects.CommonOutput;
 import labeledObjects.LabelledImg;
 import labeledObjects.Simpleobject;
 import net.imglib2.Cursor;
+import net.imglib2.FinalInterval;
 import net.imglib2.Point;
 import net.imglib2.PointSampleList;
 import net.imglib2.RandomAccessibleInterval;
@@ -19,38 +24,141 @@ import preProcessing.GetLocalmaxmin;
 import util.Boundingboxes;
 
 public class SubpixelLengthMSER extends BenchmarkAlgorithm
-implements OutputAlgorithm<ArrayList<double[]>> {
+implements OutputAlgorithm<Pair<ArrayList<double[]>, ArrayList<double[]>>> {
 	
 	private static final String BASE_ERROR_MSG = "[SubpixelLineMSER] ";
 	private final RandomAccessibleInterval<FloatType> source;
-	private final ArrayList<LabelledImg> imgs;
-	private final ArrayList<Simpleobject> simpleobject;
+	private final ArrayList<CommonOutput> imgs;
 	private final int ndims;
-	private ArrayList<double[]> final_paramlist;
+	private Pair<ArrayList<double[]>, ArrayList<double[]>> pair_paramlist;
+	private ArrayList<double[]> startlist;
+	private ArrayList<double[]> endlist;
 	private final double[] psf;
-	private final double minlength;
+	private final int minlength;
+	private final int framenumber;
 	// LM solver iteration params
-	final int maxiter = 500;
-	final double lambda = 1e-3;
-	final double termepsilon = 1e-1;
+	public int maxiter = 500;
+	public double lambda = 1e-3;
+	public double termepsilon = 1e-1;
 	//Mask fits iteration param
-	final int iterations = 500;
-	final double cutoffdistance = 20;
-	final boolean halfgaussian = false;
-	final double Intensityratio = 0.5;
+	public int iterations = 500;
+	public double cutoffdistance = 20;
+	public boolean halfgaussian = false;
+    public double Intensityratio = 0.5;
+    
+    
+    /**
+     * 
+     * 
+     * @param cutoffdistance for recoganizing the faliure of Gaussian Mask fits,
+     * if the co-ordinates move by more than this distance than predicted by the LM 
+     * solver, call it a faliure of the Mask fits
+     */
+    public void setCutoffdistance(double cutoffdistance) {
+		this.cutoffdistance = cutoffdistance;
+	}
+    
+    /**
+     * 
+     * @param halfgaussian for Gaussian Mask fits, to
+     * cutoff half part of the last Gaussian for 1.5 Gaussian fit
+     */
+    public void setHalfgaussian(boolean halfgaussian) {
+		this.halfgaussian = halfgaussian;
+	}
+    
+    /**
+     * 
+     * @param intensityratio for making an intensity cutoff along the 
+     * line to make the start and end point guess
+     */
+    
+    public void setIntensityratio(double intensityratio) {
+		Intensityratio = intensityratio;
+	}
+    
+    /**
+     * 
+     * @param iterations for the Gaussian Mask fits
+     */
+    public void setIterations(int iterations) {
+		this.iterations = iterations;
+	}
+    /**
+     * 
+     * @param lambda for LM solver optimizer
+     */
+    public void setLambda(double lambda) {
+		this.lambda = lambda;
+	}
+    
+    /**
+     * 
+     * @param maxiter, maximum iterations for the LM solver optimizer
+     */
+    public void setMaxiter(int maxiter) {
+		this.maxiter = maxiter;
+	}
+    
+    /**
+     * 
+     * @param termepsilon for the LM solver optimizer
+     */
+    public void setTermepsilon(double termepsilon) {
+		this.termepsilon = termepsilon;
+	}
 	
+    public double getCutoffdistance() {
+		return cutoffdistance;
+	}
+    
+    public int getFramenumber() {
+		return framenumber;
+	}
+    
+    public double getIntensityratio() {
+		return Intensityratio;
+	}
+    
+    public int getIterations() {
+		return iterations;
+	}
+    
+    public int getMaxiter() {
+		return maxiter;
+	}
+    
+    public int getMinlength() {
+		return minlength;
+	}
+    
+    public double getLambda() {
+		return lambda;
+	}
+    
+    public double[] getPsf() {
+		return psf;
+	}
+    
+    public double getTermepsilon() {
+		return termepsilon;
+	}
+    
+
+    
+    
 	
 	public SubpixelLengthMSER( final RandomAccessibleInterval<FloatType> source, 
-			             final ArrayList<LabelledImg> imgs,
-			             final ArrayList<Simpleobject> simpleobject,
+			             final ArrayList<CommonOutput> imgs,
 			             final double[] psf,
-			             final double minlength){
+			             final int minlength,
+			             final int framenumber){
 		
 		this.source = source;
 		this.imgs = imgs;
-		this.simpleobject = simpleobject;
 		this.psf = psf;
 		this.minlength = minlength;
+		this.framenumber = framenumber;
 		this.ndims = source.numDimensions();
 		
 	}
@@ -68,40 +176,55 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 	@Override
 	public boolean process() {
 		
-		final_paramlist = new ArrayList<double[]>();
-		for (int index = 0; index < simpleobject.size() ; ++index) {
+		
+		startlist = new ArrayList<double[]>();
+		endlist = new ArrayList<double[]>();
+		for (int index = 0; index < imgs.size() ; ++index) {
 			
-			final int Label = simpleobject.get(index).Label;
-			final double slope = simpleobject.get(index).slope;
-			final double intercept = simpleobject.get(index).intercept;
-			final double ifprep = simpleobject.get(index).ifprep;
+			final int Label = imgs.get(index).roilabel;
+			final double slope = imgs.get(index).lineparam[0];
+			final double intercept = imgs.get(index).lineparam[1];
+			final double ifprep = imgs.get(index).lineparam[2];
 			if ( slope!= Double.MAX_VALUE && intercept!= Double.MAX_VALUE){
-			final double [] final_param = Getfinallineparam(Label, slope, intercept, psf, minlength);
-			if (final_param!= null )
-			final_paramlist.add(final_param);
+			final Pair<double [], double[]> returnparam = Getfinallineparam(Label, slope, intercept, psf, minlength);
+			if (returnparam!= null )
+			startlist.add(returnparam.fst);
+			endlist.add(returnparam.snd);
 			}
 		}
 		
-		
+		pair_paramlist = new Pair<ArrayList<double[]>, ArrayList<double[]>>(startlist, endlist);
 
 		return true;
 	}
 
 	@Override
-	public ArrayList<double[]> getResult() {
+	public Pair<ArrayList<double[]>, ArrayList<double[]>> getResult() {
 		
-		return final_paramlist;
+		
+		return pair_paramlist;
 	}
 
+	public ArrayList<double[]> getStartPoints(){
+		
+		return startlist;
+	}
+	
+public ArrayList<double[]> getEndPoints(){
+		
+		return endlist;
+	}
 	
 	private final double[] MakeimprovedLineguess(double slope, double intercept, double[] psf, int label)  {
 		long[] newposition = new long[ndims];
 		double[] minVal = { Double.MAX_VALUE, Double.MAX_VALUE };
 		double[] maxVal = { -Double.MIN_VALUE, -Double.MIN_VALUE };
 
-		RandomAccessibleInterval<FloatType> currentimg = Boundingboxes.CurrentLabelImage(imgs, label);
+		RandomAccessibleInterval<FloatType> currentimg = imgs.get(label).Actualroi;
 
-		final EllipseRoi roi = imgs.get(label).roi;
+		FinalInterval interval = imgs.get(label).interval;
+		
+		currentimg = Views.interval(currentimg, interval);
 
 		final Cursor<FloatType> inputcursor = Views.iterable(currentimg).localizingCursor();
 
@@ -110,10 +233,8 @@ implements OutputAlgorithm<ArrayList<double[]>> {
            while(inputcursor.hasNext()){
 			
 			inputcursor.fwd();
-			int x = inputcursor.getIntPosition(0);
-			int y = inputcursor.getIntPosition(1);
+			
 			if (inputcursor.get().get()/maxintensityline > Intensityratio){
-			if (roi.contains(x, y)){
 			
 				inputcursor.localize(newposition);
 				long pointonline = (long) (newposition[1] - slope * newposition[0] - intercept);
@@ -136,7 +257,6 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 				}
 
 			
-			}
 			}
            }
 
@@ -184,12 +304,7 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 			}
 		
 
-			if (roi.getLength() < 3.14 * minlength ){
-			
-				System.out.println("Neglecting small region");
-				return null;
-				
-			}
+		
 		
 
 		
@@ -200,7 +315,7 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 	
 	// Get line parameters for fitting line to a line in a label
 
-		public double[] Getfinallineparam(final int label, final double slope, final double intercept, final double[] psf,
+		public Pair<double[], double[]> Getfinallineparam(final int label, final double slope, final double intercept, final double[] psf,
 				final double minlength)  {
 
 			PointSampleList<FloatType> datalist = gatherfullData(label);
@@ -230,8 +345,11 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 				final double[] finalparamstart = start_param.clone();
 				// LM solver part
 
-				RandomAccessibleInterval<FloatType> currentimg = Boundingboxes.CurrentLabelImage(imgs, label);
-						//imgs.get(label).Actualroiimg;
+				RandomAccessibleInterval<FloatType> currentimg = imgs.get(label).Actualroi;
+				
+				FinalInterval interval = imgs.get(label).interval;
+				
+				currentimg = Views.interval(currentimg, interval);
 
 				final double[] fixed_param = new double[ndims];
 
@@ -302,19 +420,20 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 					// If mask fits fail, return LM solver results, very crucial for
 					// noisy data
 
-					double[] returnparam = new double[2 * ndims + 3];
-					double[] LMparam = new double[2 * ndims];
-
 					
-
-					for (int d = 0; d < ndims; ++d) {
-						LMparam[d] = startpos[d];
-						LMparam[ndims + d] = endpos[d];
-					}
-
+					/**
+					 * dimensions of returnparam =  2 * ndims + 3 for the free parameters
+					 * + 4 for the label and the frame number information.
+					 */
+					double[] returnparam = new double[2 * ndims + 7];
+					double[] startparam = new double[2 * ndims + 5];
+					double[] endparam = new double[2 * ndims + 5];
+					
 					for (int d = 0; d < ndims; ++d) {
 						returnparam[d] = startfit[d];
 						returnparam[ndims + d] = endfit[d];
+						startparam[d] = startfit[d];
+						endparam[d] = endfit[d];
 					}
 					
 					
@@ -326,6 +445,8 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 						for (int d = 0; d < ndims; ++d) {
 							returnparam[d] = startpos[d];
 							returnparam[ndims + d] = endpos[d];
+							startparam[d] = startpos[d];
+							endparam[d] = endpos[d];
 						}
 						}
 					if (Math.abs(startpos[0] - startfit[0]) >= cutoffdistance || Math.abs(startpos[1] - startfit[1]) >= cutoffdistance 
@@ -334,6 +455,8 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 						for (int d = 0; d < ndims; ++d) {
 							returnparam[d] = startpos[d];
 							returnparam[ndims + d] = endpos[d];
+							startparam[d] = startpos[d];
+							endparam[d] = endpos[d];
 						}
 						
 					}
@@ -348,6 +471,8 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 							System.out.println("Mask fits fail, returning LM solver results!");
 							returnparam[d] = startpos[d];
 							returnparam[ndims + d] = endpos[d];
+							startparam[d] = startpos[d];
+							endparam[d] = endpos[d];
 
 						}
 					}
@@ -362,7 +487,24 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 					returnparam[2 * ndims] = finalparamstart[4];
 					returnparam[2 * ndims + 1] = finalparamstart[5];
 					returnparam[2 * ndims + 2] = finalparamstart[6];
-					return returnparam;
+					
+					final double currentslope = (returnparam[3] - returnparam[1]) / (returnparam[2] - returnparam[0]);
+					final double currentintercept = returnparam[3] - currentslope * returnparam[2];
+					returnparam[2 * ndims + 3] = currentslope;
+					returnparam[2 * ndims + 4] = currentintercept;
+					
+					returnparam[2 * ndims + 5] = label;
+					returnparam[2 * ndims + 6] = framenumber;
+					
+					for (int d =  ndims ; d <  ndims + 7; ++d){
+						
+						startparam[d] = returnparam[d +ndims  ];
+						endparam[d] = returnparam[d + ndims  ];
+						
+					}
+					
+					final Pair<double[], double[]> pair = new Pair<double[], double[]> ( startparam, endparam);
+					return pair;
 
 				}
 
@@ -377,18 +519,25 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 		}
 		public int Getlabel(final Point linepoint) {
 
-			final int x = linepoint.getIntPosition(0);
-			final int y = linepoint.getIntPosition(1);
+			
 			int currentlabel = Integer.MIN_VALUE;
 			for (int index = 0; index < imgs.size(); ++index){
 				
-				EllipseRoi ellipse = imgs.get(index).roi;
-				
-				if (ellipse.contains(x, y)){
+				RandomAccessibleInterval<FloatType> currentimg = imgs.get(index).Actualroi;
+				FinalInterval interval = imgs.get(index).interval;
+				currentimg = Views.interval(currentimg, interval);
+				for (int d = 0; d < ndims; ++d){
 					
-					currentlabel = index;
-					break;
+					if (linepoint.getIntPosition(d) >= interval.min(d) && linepoint.getIntPosition(d)<= interval.max(d)){
+						
+						currentlabel = index;
+						break;
+					}
+					
 				}
+				
+				
+				
 				
 			}
 			
@@ -403,8 +552,9 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 		private PointSampleList<FloatType> gatherfullData(final int label) {
 			final PointSampleList<FloatType> datalist = new PointSampleList<FloatType>(ndims);
 
-			RandomAccessibleInterval<FloatType> currentimg = Boundingboxes.CurrentLabelImage(imgs, label);
-			
+			RandomAccessibleInterval<FloatType> currentimg = imgs.get(label).Actualroi;
+			FinalInterval interval = imgs.get(label).interval;
+			currentimg = Views.interval(currentimg, interval);			
 			Cursor<FloatType> localcursor = Views.iterable(currentimg).localizingCursor();
 
 			while (localcursor.hasNext()) {
@@ -415,6 +565,7 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 
 			}
 
+			
 			return datalist;
           
           

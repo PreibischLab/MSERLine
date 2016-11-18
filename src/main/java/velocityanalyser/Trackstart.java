@@ -5,14 +5,14 @@ import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
 
 import graphconstructs.Logger;
-import graphconstructs.Staticproperties;
+import graphconstructs.Trackproperties;
 import labeledObjects.Subgraphs;
 
 public class Trackstart implements Linetracker {
 
 	
 
-		private final ArrayList<ArrayList<Staticproperties>> Allstartandend;
+		private final ArrayList<ArrayList<Trackproperties>> Allandend;
 		private final long maxframe;
 		private SimpleWeightedGraph< double[], DefaultWeightedEdge > graph;
 		private ArrayList<Subgraphs> Framedgraph;
@@ -20,9 +20,9 @@ public class Trackstart implements Linetracker {
 		protected String errorMessage;
 
 		public Trackstart(
-				final ArrayList<ArrayList<Staticproperties>> Allstartandend,  
+				final ArrayList<ArrayList<Trackproperties>> Allandend,  
 				final long maxframe){
-			this.Allstartandend = Allstartandend;
+			this.Allandend = Allandend;
 			this.maxframe = maxframe;
 			
 			
@@ -48,11 +48,11 @@ public class Trackstart implements Linetracker {
 			for (int frame = 1; frame < maxframe   ; ++frame){
 			
 			
-				ArrayList<Staticproperties> Baseframestartend = Allstartandend.get(frame - 1);
+				ArrayList<Trackproperties> Baseframeend = Allandend.get(frame - 1);
 				
 				
 				
-				Iterator<Staticproperties> baseobjectiterator = Baseframestartend.iterator();
+				Iterator<Trackproperties> baseobjectiterator = Baseframeend.iterator();
 				
 				SimpleWeightedGraph<double[], DefaultWeightedEdge> subgraph = new SimpleWeightedGraph<double[], DefaultWeightedEdge>(
 						DefaultWeightedEdge.class);
@@ -60,23 +60,23 @@ public class Trackstart implements Linetracker {
 				
 				while(baseobjectiterator.hasNext()){
 					
-					final Staticproperties source = baseobjectiterator.next();
+					final Trackproperties source = baseobjectiterator.next();
 					
 					
-					double sqdist = Distance(source.oldstartpoint, source.newstartpoint);
+					double sqdist = Distance(source.oldpoint, source.newpoint);
 					
 					synchronized (graph) {
 						
-						graph.addVertex(source.oldstartpoint);
-						graph.addVertex(source.newstartpoint);
-						final DefaultWeightedEdge edge = graph.addEdge(source.oldstartpoint, source.newstartpoint);
+						graph.addVertex(source.oldpoint);
+						graph.addVertex(source.newpoint);
+						final DefaultWeightedEdge edge = graph.addEdge(source.oldpoint, source.newpoint);
 						graph.setEdgeWeight(edge, sqdist);
 						
 						
 					}
-					subgraph.addVertex(source.oldstartpoint);
-					subgraph.addVertex(source.newstartpoint);
-					final DefaultWeightedEdge subedge = subgraph.addEdge(source.oldstartpoint, source.newstartpoint);
+					subgraph.addVertex(source.oldpoint);
+					subgraph.addVertex(source.newpoint);
+					final DefaultWeightedEdge subedge = subgraph.addEdge(source.oldpoint, source.newpoint);
 					subgraph.setEdgeWeight(subedge, sqdist);
 
 					Subgraphs currentframegraph = new Subgraphs(frame - 1, frame, subgraph);
@@ -117,8 +117,8 @@ public class Trackstart implements Linetracker {
 		
 		public void reset() {
 			graph = new SimpleWeightedGraph<double[], DefaultWeightedEdge>(DefaultWeightedEdge.class);
-//			final Iterator<Staticproperties> it = Allstartandend.get(0).iterator();
-				graph.addVertex(Allstartandend.get(0).get(0).oldstartpoint);
+//			final Iterator<Trackproperties> it = Allandend.get(0).iterator();
+				graph.addVertex(Allandend.get(0).get(0).oldpoint);
 		}
 
 		@Override

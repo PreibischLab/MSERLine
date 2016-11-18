@@ -43,7 +43,6 @@ public class GetDelta {
 				
 			int ellipsecount = 0;
 			
-			
 			ArrayList<double[]> ellipselist = new ArrayList<double[]>();
 			
 

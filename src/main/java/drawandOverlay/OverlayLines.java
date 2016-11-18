@@ -6,6 +6,7 @@ import houghandWatershed.TransformCordinates;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.EllipseRoi;
+import labeledObjects.CommonOutput;
 import labeledObjects.LabelledImg;
 import labeledObjects.Lineobjects;
 import labeledObjects.Simpleobject;
@@ -174,57 +175,35 @@ public class OverlayLines {
 		return point;
 	}
 	
-	public static void Getmserlines(RandomAccessibleInterval<FloatType> imgout,
-			ArrayList<LabelledImg> imgslist,ArrayList<Simpleobject> lineobject){
+	
+	public static void Getlines(RandomAccessibleInterval<FloatType> imgout, ArrayList<CommonOutput> newlinelist){
 		
-		for (int index = 0; index < imgslist.size(); ++index){
+		for (int index = 0; index < newlinelist.size(); ++index){
 			
-			final int label = imgslist.get(index).label;
-			final EllipseRoi ellipse = imgslist.get(index).roi;
-			final double slope = imgslist.get(index).slopeandintercept[0];
-			final double intercept = imgslist.get(index).slopeandintercept[1];
-			final double ifprep = imgslist.get(index).slopeandintercept[2];
-
-			RandomAccessibleInterval<FloatType> currimg = Boundingboxes.CurrentLabeloffsetImage(imgslist, label);
-           final Img<UnsignedByteType> newimg;
-
+			final double slope = newlinelist.get(index).lineparam[0];
+			final double intercept = newlinelist.get(index).lineparam[1];
+			final double ifprep = newlinelist.get(index).lineparam[2];
+			RandomAccessibleInterval<FloatType> sourceimg = newlinelist.get(index).Actualroi;
+			FinalInterval interval = newlinelist.get(index).interval;
+			sourceimg = Views.interval(sourceimg, interval);
 			
-			ImageJFunctions.wrap(currimg, "curr");
-			final ImagePlus currentimp = IJ.getImage();
-			IJ.run("8-bit");
-
-			newimg = ImagePlusAdapter.wrapByte(currentimp);
-
-			//ImageJFunctions.show(currimg);
-			Histogram<UnsignedByteType> hist;
-			hist = new Histogram<UnsignedByteType>(
-					new IntBinMapper<UnsignedByteType>(new UnsignedByteType() ), newimg);
-			
-			hist.process();
-			/*
-			for(int i = 0; i < hist.getNumBins(); ++i)
-			{
-				if (hist.getHistogram()[i] > 10)
-				System.out.println("" + hist.getHistogram()[i] );
-			}
-			*/
 			if (slope!= Double.MAX_VALUE && intercept!=Double.MAX_VALUE && ifprep==Double.MAX_VALUE){
-			final Simpleobject simpleobj = new Simpleobject(label, slope, intercept, ifprep);
-			lineobject.add(simpleobj);
-			
-			PushCurves.DrawRoiline(imgout, ellipse, slope, intercept);
-			}
+				
+				
+				PushCurves.DrawRoiimageline(imgout, sourceimg, slope, intercept);
+				}
 			
 			else if (ifprep!= Double.MAX_VALUE){
-				final Simpleobject simpleobj = new Simpleobject(label, Double.MAX_VALUE, Double.MAX_VALUE, ifprep);
-				lineobject.add(simpleobj);
-				PushCurves.DrawRoilineprep(imgout, ellipse, ifprep);
+				
+				PushCurves.DrawRoiimagelineprep(imgout, sourceimg, ifprep);
 			}
 			
 		}
-		
-		
 	}
+	
+	
+	
+	
 	public static void GetAlllines(
 			RandomAccessibleInterval<FloatType> imgout,
 			
