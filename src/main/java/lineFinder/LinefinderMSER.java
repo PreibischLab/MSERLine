@@ -1,4 +1,4 @@
-package peakFitter;
+package lineFinder;
 
 import java.awt.Color;
 import java.util.ArrayList;
@@ -31,6 +31,7 @@ import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Util;
 import net.imglib2.view.Views;
+import peakFitter.SortListbyproperty;
 
 public class LinefinderMSER extends BenchmarkAlgorithm implements OutputAlgorithm<ArrayList<CommonOutput>>{
 

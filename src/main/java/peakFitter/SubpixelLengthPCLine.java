@@ -23,10 +23,10 @@ import peakFitter.GaussianMaskFitMSER.EndfitMSER;
 import preProcessing.GetLocalmaxmin;
 import util.Boundingboxes;
 
-public class SubpixelLengthMSER extends BenchmarkAlgorithm
+public class SubpixelLengthPCLine extends BenchmarkAlgorithm
 implements OutputAlgorithm<Pair<ArrayList<double[]>, ArrayList<double[]>>> {
 	
-	private static final String BASE_ERROR_MSG = "[SubpixelLineMSER] ";
+	private static final String BASE_ERROR_MSG = "[SubpixelLine] ";
 	private final RandomAccessibleInterval<FloatType> source;
 	private final ArrayList<CommonOutput> imgs;
 	private final int ndims;
@@ -148,7 +148,7 @@ implements OutputAlgorithm<Pair<ArrayList<double[]>, ArrayList<double[]>>> {
     
     
 	
-	public SubpixelLengthMSER( final RandomAccessibleInterval<FloatType> source, 
+	public SubpixelLengthPCLine( final RandomAccessibleInterval<FloatType> source, 
 			             final ArrayList<CommonOutput> imgs,
 			             final double[] psf,
 			             final int minlength,

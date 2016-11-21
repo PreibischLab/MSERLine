@@ -28,7 +28,7 @@ import peakFitter.GaussianMaskFitMSER.EndfitMSER;
 import preProcessing.GetLocalmaxmin;
 import util.Boundingboxes;
 
-public class SubpixelVelocityPCLineMSER extends BenchmarkAlgorithm
+public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 		implements OutputAlgorithm<Pair<ArrayList<double[]>, ArrayList<double[]>>> {
 
 	private static final String BASE_ERROR_MSG = "[SubpixelVelocity] ";
@@ -54,7 +54,49 @@ public class SubpixelVelocityPCLineMSER extends BenchmarkAlgorithm
 	public boolean halfgaussian = false;
 	public double Intensityratio = 0.5;
 
-	public SubpixelVelocityPCLineMSER(final RandomAccessibleInterval<FloatType> source,
+	
+	public void setCutoffdistance(double cutoffdistance) {
+		this.cutoffdistance = cutoffdistance;
+	}
+	public double getCutoffdistance() {
+		return cutoffdistance;
+	}
+	
+	public void setIntensityratio(double intensityratio) {
+		Intensityratio = intensityratio;
+	}
+	
+	public double getIntensityratio() {
+		return Intensityratio;
+	}
+	public void setMaxiter(int maxiter) {
+		this.maxiter = maxiter;
+	}
+	
+	public int getMaxiter() {
+		return maxiter;
+	}
+	
+	public void setLambda(double lambda) {
+		this.lambda = lambda;
+	}
+	
+	public double getLambda() {
+		return lambda;
+	}
+	
+	public void setTermepsilon(double termepsilon) {
+		this.termepsilon = termepsilon;
+	}
+	
+	public double getTermepsilon() {
+		return termepsilon;
+	}
+	
+	public void setHalfgaussian(boolean halfgaussian) {
+		this.halfgaussian = halfgaussian;
+	}
+	public SubpixelVelocityPCLine(final RandomAccessibleInterval<FloatType> source,
 			final ArrayList<CommonOutput> imgs, final ArrayList<double[]> PrevFrameparamstart,
 			final ArrayList<double[]> PrevFrameparamend, final double[] psf, final int framenumber) {
 
@@ -169,7 +211,7 @@ public class SubpixelVelocityPCLineMSER extends BenchmarkAlgorithm
 
 		}
 
-		return false;
+		return true;
 	}
 
 	@Override

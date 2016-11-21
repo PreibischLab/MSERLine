@@ -24,6 +24,7 @@ import labeledObjects.CommonOutput;
 import labeledObjects.LabelledImg;
 import labeledObjects.Simpleobject;
 import labeledObjects.Subgraphs;
+import lineFinder.LinefinderMSER;
 import mserMethods.GetDelta;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.stats.Normalize;
@@ -36,10 +37,8 @@ import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
-import peakFitter.LinefinderMSER;
-import peakFitter.SubpixelLengthMSER;
-import peakFitter.SubpixelVelocityMSER;
-import peakFitter.SubpixelVelocityPCLineMSER;
+import peakFitter.SubpixelLengthPCLine;
+import peakFitter.SubpixelVelocityPCLine;
 import preProcessing.MedianFilter2D;
 
 public class VelocitydetectionMSER {
@@ -142,7 +141,7 @@ public class VelocitydetectionMSER {
 					new FloatType());
 			
 
-			SubpixelLengthMSER MTline = new SubpixelLengthMSER(img, newlinelist, psf, minlength, 0);
+			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(img, newlinelist, psf, minlength, 0);
 			MTline.checkInput();
 			MTline.process();
 			Pair<ArrayList<double[]>,ArrayList<double[]>> PrevFrameparam = MTline.getResult();
@@ -187,7 +186,7 @@ public class VelocitydetectionMSER {
 			
 			
 
-			SubpixelLengthMSER MTline = new SubpixelLengthMSER(groundframe, newlinelist, psf, minlength, 0);
+			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(groundframe, newlinelist, psf, minlength, 0);
 			MTline.checkInput();
 			MTline.process();
 			Pair<ArrayList<double[]>,ArrayList<double[]>> PrevFrameparam = MTline.getResult();
@@ -233,24 +232,15 @@ public class VelocitydetectionMSER {
 				 * For the start point, getting the track
 				 */
 
-			//	if (frame ==1){
-					final SubpixelVelocityPCLineMSER growthtracker = new SubpixelVelocityPCLineMSER(currentframe, newlinenextlist,
+			
+					final SubpixelVelocityPCLine growthtracker = new SubpixelVelocityPCLine(currentframe, newlinenextlist,
 							PrevFrameparam.fst, PrevFrameparam.snd, psf, frame);
 					growthtracker.checkInput();
 					growthtracker.process();
 					Pair<ArrayList<double[]>, ArrayList<double[]>> NewFrameparam = growthtracker.getResult();
 					ArrayList<Trackproperties> startStateVectors = growthtracker.getstartStateVectors();
 					ArrayList<Trackproperties> endStateVectors = growthtracker.getendStateVectors();
-			//	}
-				/*
-			//	else {
-					
-				final SubpixelVelocityMSER growthtracker = new SubpixelVelocityMSER(currentframe, newlinenextlist, PrevFrameparam.fst, psf, frame);
-				growthtracker.checkInput();
-				growthtracker.process();
-				ArrayList<double[]> NewFrameparam = growthtracker.getResult();
-				ArrayList<Staticproperties> StateVectors = growthtracker.getStateVectors();
-			//	}*/
+			
 				PrevFrameparam = NewFrameparam;
 				
 				Allstart.add(startStateVectors);

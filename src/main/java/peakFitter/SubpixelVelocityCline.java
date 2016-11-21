@@ -23,7 +23,7 @@ import peakFitter.GaussianMaskFitMSER.EndfitMSER;
 import preProcessing.GetLocalmaxmin;
 import util.Boundingboxes;
 
-public class SubpixelVelocityMSER extends BenchmarkAlgorithm
+public class SubpixelVelocityCline extends BenchmarkAlgorithm
 implements OutputAlgorithm<ArrayList<double[]>> {
 
 	private static final String BASE_ERROR_MSG = "[SubpixelVelocity] ";
@@ -37,16 +37,58 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 	private final double[] psf;
 	
 	// LM solver iteration params
-	final int maxiter = 500;
-	final double lambda = 1e-3;
-	final double termepsilon = 1e-1;
+	public int maxiter = 500;
+	public double lambda = 1e-3;
+	 public double termepsilon = 1e-1;
 	//Mask fits iteration param
-	final int iterations = 500;
-	final double cutoffdistance = 10;
-	final boolean halfgaussian = false;
-	final double Intensityratio = 0.5;
+	 int iterations = 500;
+	public double cutoffdistance = 10;
+	public boolean halfgaussian = false;
+	public double Intensityratio = 0.5;
 	
-	public  SubpixelVelocityMSER(final RandomAccessibleInterval<FloatType> source, 
+	public void setCutoffdistance(double cutoffdistance) {
+		this.cutoffdistance = cutoffdistance;
+	}
+	public double getCutoffdistance() {
+		return cutoffdistance;
+	}
+	
+	public void setIntensityratio(double intensityratio) {
+		Intensityratio = intensityratio;
+	}
+	
+	public double getIntensityratio() {
+		return Intensityratio;
+	}
+	public void setMaxiter(int maxiter) {
+		this.maxiter = maxiter;
+	}
+	
+	public int getMaxiter() {
+		return maxiter;
+	}
+	
+	public void setLambda(double lambda) {
+		this.lambda = lambda;
+	}
+	
+	public double getLambda() {
+		return lambda;
+	}
+	
+	public void setTermepsilon(double termepsilon) {
+		this.termepsilon = termepsilon;
+	}
+	
+	public double getTermepsilon() {
+		return termepsilon;
+	}
+	
+	public void setHalfgaussian(boolean halfgaussian) {
+		this.halfgaussian = halfgaussian;
+	}
+	
+	public  SubpixelVelocityCline(final RandomAccessibleInterval<FloatType> source, 
 			                      final ArrayList<CommonOutput> imgs,
 			                       final ArrayList<double[]> PrevFrameparam,
 			                       final double[] psf,
