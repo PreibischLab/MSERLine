@@ -8,6 +8,7 @@ import drawandOverlay.HoughPushCurves;
 import drawandOverlay.OverlayLines;
 import houghandWatershed.WatershedDistimg;
 import labeledObjects.CommonOutput;
+import labeledObjects.CommonOutputHF;
 import net.imglib2.FinalInterval;
 import net.imglib2.Point;
 import net.imglib2.RandomAccessibleInterval;
@@ -24,7 +25,7 @@ import preProcessing.GlobalThresholding;
 import preProcessing.Kernels;
 import util.Boundingboxes;
 
-public class LinefinderHough extends BenchmarkAlgorithm implements OutputAlgorithm<ArrayList<CommonOutput>> {
+public class LinefinderHFHough extends BenchmarkAlgorithm implements OutputAlgorithm<ArrayList<CommonOutputHF>> {
 	
 	
 	private static final String BASE_ERROR_MSG = "[Line-Finder]";
@@ -33,7 +34,7 @@ public class LinefinderHough extends BenchmarkAlgorithm implements OutputAlgorit
 	private RandomAccessibleInterval<IntType> intimg;
 	private final int framenumber;
 	private final int minlength;
-	private ArrayList<CommonOutput> output;
+	private ArrayList<CommonOutputHF> output;
 	private final int ndims;
 	private  int Maxlabel;
 	private int Roiindex;
@@ -48,7 +49,7 @@ public class LinefinderHough extends BenchmarkAlgorithm implements OutputAlgorit
 	public double rhoPerPixel = 1;
 	
 	
-	public LinefinderHough (final RandomAccessibleInterval<FloatType> source, 
+	public LinefinderHFHough (final RandomAccessibleInterval<FloatType> source, 
 			final RandomAccessibleInterval<FloatType> Preprocessedsource, final int minlength, final int framenumber){
 		
 		this.source = source;
@@ -72,7 +73,7 @@ public class LinefinderHough extends BenchmarkAlgorithm implements OutputAlgorit
 
 	@Override
 	public boolean process() {
-		output = new ArrayList<CommonOutput>();
+		output = new ArrayList<CommonOutputHF>();
 		// Create the Bit image for distance transform and seed image for watershedding
 		final Float ThresholdValue = GlobalThresholding.AutomaticThresholding(Preprocessedsource);
 		RandomAccessibleInterval<BitType> bitimg = new ArrayImgFactory<BitType>().create(Preprocessedsource, new BitType());
@@ -83,10 +84,7 @@ public class LinefinderHough extends BenchmarkAlgorithm implements OutputAlgorit
 		WaterafterDisttransform.process();
 	    intimg = WaterafterDisttransform.getResult();
 		Maxlabel = WaterafterDisttransform.GetMaxlabelsseeded(intimg);
-		final double[] sizes = new double[ndims];
 
-		// Automatic threshold determination for doing the Hough transform
-		Float val = GlobalThresholding.AutomaticThresholding(Preprocessedsource);
 
 		for (int label = 1; label < Maxlabel - 1; label++) {
 
@@ -98,78 +96,11 @@ public class LinefinderHough extends BenchmarkAlgorithm implements OutputAlgorit
 			FinalInterval Realinterval = pair.snd;
 			
 			
-				System.out.println("Doing Hough Transform in Label Number:" + label);
-			double size = Math
-					.sqrt((roiimg.dimension(0) * roiimg.dimension(0) + roiimg.dimension(1) * roiimg.dimension(1)));
-			int minRho = (int) -Math.round(size);
-			int maxRho = -minRho;
-			
-			double[] min = { mintheta, minRho };
-			double[] max = { maxtheta, maxRho };
-			int pixelsTheta = (int) Math.round((maxtheta - mintheta) / thetaPerPixel);
-			int pixelsRho = (int) Math.round((maxRho - minRho) / rhoPerPixel);
-
-			double ratio = (max[0] - min[0]) / (max[1] - min[1]);
-			FinalInterval interval = new FinalInterval(new long[] { pixelsTheta, (long) (pixelsRho * ratio) });
-			final RandomAccessibleInterval<FloatType> houghimage = new ArrayImgFactory<FloatType>().create(interval,
-					new FloatType());
-
-			HoughPushCurves.Houghspace(roiimg, houghimage, min, max, val);
-
-			for (int d = 0; d < houghimage.numDimensions(); ++d)
-				sizes[d] = houghimage.dimension(d);
-
-			// Define Arraylist to get the slope and the intercept of the Hough
-			// detected lines
-			ArrayList<RefinedPeak<Point>> SubpixelMinlist = new ArrayList<RefinedPeak<Point>>(roiimg.numDimensions());
-
-			// Get the list of all the detections
-			SubpixelMinlist = GetLocalmaxmin.HoughspaceMaxima(houghimage, interval, sizes, thetaPerPixel, rhoPerPixel);
-
-			// Reduce the number of detections by picking One line per Label,
-			// using the best detection for each label
-			RefinedPeak<Point> ReducedMinlistsingle =  OverlayLines.ReducedListsingle(roiimg, SubpixelMinlist, sizes, min, max);
-			
-			double slopeandintercept[] = new double[ndims + 1];
-			if (ReducedMinlistsingle!= null){
-			double[] points  = OverlayLines.GetRhoThetasingle(ReducedMinlistsingle, sizes, min, max);
- 
-			
-			
-			RefinedPeak<Point> peak  = OverlayLines.ReducedListsingle(roiimg, SubpixelMinlist, sizes, min, max);
-
-
-			points = OverlayLines.GetRhoThetasingle(peak, sizes, min, max);
-			
 				
-			double slope = -1.0 / (Math.tan(Math.toRadians(points[0])));
-			double intercept = points[1] / Math.sin(Math.toRadians(points[0]));
-			
-			// This step is for prependicular lines
-			 if (Math.abs(slope) != Double.POSITIVE_INFINITY){
-			slopeandintercept[0] = slope;
-			slopeandintercept[1] = intercept +  (Realinterval.realMin(1) - slope * Realinterval.realMin(0));
-			slopeandintercept[2] = Double.MAX_VALUE;
-			}
-			
-			else{
-				
-				slopeandintercept[0] = Double.MAX_VALUE;
-				slopeandintercept[1] = Double.MAX_VALUE;
-				slopeandintercept[2] = points[1] +  Realinterval.realMin(0);	
-			}
-			
-			}
-			/**
-			 * This object has rho, theta, min dimensions, max dimensions of the
-			 * label
-			 * 
-			 */
 			 Roiindex = label;
-			CommonOutput currentOutput = new CommonOutput(framenumber, Roiindex - 1, slopeandintercept, roiimg, ActualRoiimg, Realinterval);
+			CommonOutputHF currentOutput = new CommonOutputHF(framenumber, Roiindex - 1, roiimg, ActualRoiimg, Realinterval);
 			
 			
-			if(slopeandintercept!=null  )
 			output.add(currentOutput);
 			
 			
@@ -180,7 +111,7 @@ public class LinefinderHough extends BenchmarkAlgorithm implements OutputAlgorit
 	}
 
 	@Override
-	public ArrayList<CommonOutput> getResult() {
+	public ArrayList<CommonOutputHF> getResult() {
 
 		return output;
 	}

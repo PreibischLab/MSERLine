@@ -17,6 +17,7 @@ import net.imglib2.PointSampleList;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.BenchmarkAlgorithm;
 import net.imglib2.algorithm.OutputAlgorithm;
+import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.Views;
 import peakFitter.GaussianMaskFitMSER.EndfitMSER;
@@ -187,9 +188,10 @@ implements OutputAlgorithm<Pair<ArrayList<double[]>, ArrayList<double[]>>> {
 			final double ifprep = imgs.get(index).lineparam[2];
 			if ( slope!= Double.MAX_VALUE && intercept!= Double.MAX_VALUE){
 			final Pair<double [], double[]> returnparam = Getfinallineparam(Label, slope, intercept, psf, minlength);
-			if (returnparam!= null )
+			if (returnparam!= null ){
 			startlist.add(returnparam.fst);
 			endlist.add(returnparam.snd);
+			}
 			}
 		}
 		
@@ -287,7 +289,7 @@ public ArrayList<double[]> getEndPoints(){
 		MinandMax[2 * ndims + 2] = 0; 
 		
 		
-		System.out.println("Label: " + label + " " + "MSER Detection: " + " StartX: " + MinandMax[0] + " StartY: "
+		System.out.println("Label: " + label + " " + "Detection: " + " StartX: " + MinandMax[0] + " StartY: "
 				+ MinandMax[1] + " EndX: " + MinandMax[2] + " EndY: " + MinandMax[3]);
 
 		
@@ -554,7 +556,7 @@ public ArrayList<double[]> getEndPoints(){
 
 			RandomAccessibleInterval<FloatType> currentimg = imgs.get(label).Actualroi;
 			FinalInterval interval = imgs.get(label).interval;
-			currentimg = Views.interval(currentimg, interval);			
+			currentimg = Views.interval(currentimg, interval);	
 			Cursor<FloatType> localcursor = Views.iterable(currentimg).localizingCursor();
 
 			while (localcursor.hasNext()) {

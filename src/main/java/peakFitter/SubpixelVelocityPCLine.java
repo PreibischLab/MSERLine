@@ -14,6 +14,7 @@ import graphconstructs.Staticproperties;
 import graphconstructs.Trackproperties;
 import ij.gui.EllipseRoi;
 import labeledObjects.CommonOutput;
+import labeledObjects.CommonOutputHF;
 import labeledObjects.LabelledImg;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
@@ -33,7 +34,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 	private static final String BASE_ERROR_MSG = "[SubpixelVelocity] ";
 	private final RandomAccessibleInterval<FloatType> source;
-	private final ArrayList<CommonOutput> imgs;
+	private final ArrayList<CommonOutputHF> imgs;
 	private final ArrayList<double[]> PrevFrameparamstart;
 	private final ArrayList<double[]> PrevFrameparamend;
 	private final int ndims;
@@ -97,7 +98,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 		this.halfgaussian = halfgaussian;
 	}
 	public SubpixelVelocityPCLine(final RandomAccessibleInterval<FloatType> source,
-			final ArrayList<CommonOutput> imgs, final ArrayList<double[]> PrevFrameparamstart,
+			final ArrayList<CommonOutputHF> imgs, final ArrayList<double[]> PrevFrameparamstart,
 			final ArrayList<double[]> PrevFrameparamend, final double[] psf, final int framenumber) {
 
 		this.source = source;
@@ -404,8 +405,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					double[] startfit = new double[ndims];
 					double[] endfit = new double[ndims];
 
-					final double currentslope; 
-					final double currentintercept;
+				
 
 					System.out.println("Frame: " + framenumber);
 
@@ -490,25 +490,58 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					final double[] finalendpoint = {LMparam[2], LMparam[3]};
 					
 				if (startorend== StartorEnd.Start){
+					
+					// Growth criteria for the start 
+					if (finalstartpoint[0] <= inipos[0]){
 					for (int d = 0; d < ndims; ++d) {
 						returnparam[d] = finalstartpoint[d];
 					}
 					
-					currentslope =  (returnparam[1] - inipos[1]) / (returnparam[0] - inipos[0]);
-					currentintercept = returnparam[1] - currentslope * returnparam[0];
-					System.out.println("Label: " + label + " X: " + returnparam[0] + " Y: " + returnparam[1]  + " " + inipos[0] + " " + inipos[1]);
+					
 						
 					}
 				
 				else{
+					
 					for (int d = 0; d < ndims; ++d) {
 						returnparam[d] = finalendpoint[d];
 					}
-					 currentslope =  (returnparam[1] - inipos[1]) / (returnparam[0] - inipos[0]);
-					 currentintercept = returnparam[1] - currentslope * returnparam[0];
-					 System.out.println("Label: " + label + " X: " + returnparam[0] + " Y: " + returnparam[1] + " " + inipos[0] + " " + inipos[1] +  "Start");
+					
+				
+					
+					
+				}
+				
+				}
+				else{
+					
+					
+					// Growth criteria for the end
+					if (finalendpoint[0] >= inipos[0]){
+					
+					
+					for (int d = 0; d < ndims; ++d) {
+						returnparam[d] = finalendpoint[d];
+					}
+
 				}
 					
+					else{
+						for (int d = 0; d < ndims; ++d) {
+							returnparam[d] = finalstartpoint[d];
+						}
+						
+						
+						
+					}
+					
+					
+				}
+				
+				
+			final double	currentslope =  (returnparam[1] - inipos[1]) / (returnparam[0] - inipos[0]);
+			final double	currentintercept = returnparam[1] - currentslope * returnparam[0];
+				System.out.println("Label: " + label + " X: " + returnparam[0] + " Y: " + returnparam[1]  );
 				
 					returnparam[ndims] = LMparam[2*ndims];
 					returnparam[ndims + 1] = LMparam[2*ndims + 1];
@@ -619,5 +652,27 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 		
 		return distance;
 	}
+	
+	
+public static double dsdist(final double[] cordone, final double[] cordtwo){
+		
+		double distance = Math.pow((cordone[0] - cordtwo[0]),2) + Math.pow((cordone[1] - cordtwo[1]),2);
+		
+		return distance;
+	}
+
+public static double[] Midpoint (final double[] cordone, final double[] cordtwo){
+	int ndims = cordone.length;
+	final double[] midpoint = new double[ndims];
+	
+	for (int d = 0 ; d < ndims; ++d ){
+		
+		midpoint[d] = ( cordone[d] +cordtwo[d] ) / 2;
+	}
+	
+	return midpoint;
+	
+}
+	
 
 }

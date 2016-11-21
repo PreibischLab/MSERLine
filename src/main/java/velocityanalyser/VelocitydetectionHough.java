@@ -12,20 +12,31 @@ import drawandOverlay.DisplaysubGraphend;
 import drawandOverlay.DisplaysubGraphstart;
 import drawandOverlay.OverlayLines;
 import drawandOverlay.PushCurves;
+import getRoi.RoiforMSER;
+import graphconstructs.Staticproperties;
 import graphconstructs.Trackproperties;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
+import ij.gui.EllipseRoi;
 import ij.gui.Overlay;
 import labeledObjects.CommonOutput;
 import labeledObjects.CommonOutputHF;
+import labeledObjects.LabelledImg;
+import labeledObjects.Simpleobject;
 import labeledObjects.Subgraphs;
-import lineFinder.LinefinderHFMSER;
+import lineFinder.LinefinderHFHough;
+import lineFinder.LinefinderHough;
 import lineFinder.LinefinderMSER;
+import mserMethods.GetDelta;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.stats.Normalize;
+import net.imglib2.img.ImagePlusAdapter;
+import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgFactory;
 import net.imglib2.img.display.imagej.ImageJFunctions;
+import net.imglib2.multithreading.SimpleMultiThreading;
+import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
@@ -33,12 +44,12 @@ import peakFitter.SubpixelLengthPCLine;
 import peakFitter.SubpixelVelocityPCLine;
 import preProcessing.MedianFilter2D;
 
-public class VelocitydetectionMSER {
+public class VelocitydetectionHough {
 
 	public static void main(String[] args) throws Exception {
 
 		/***
-		 * MSER Roi's to detect Microtubules and track
+		 * Hough Transform to detect Microtubules and track
 		 * the growth at Sub-pixel accuracy. Optimizers used: Levenberg-Marqurat
 		 * solver and Weighted centre of mass fits. Program reqires PSF of the
 		 * microscope to be computed and analysed and takes the determined
@@ -104,20 +115,17 @@ public class VelocitydetectionMSER {
 			ImageJFunctions.show(inputimg);
 			
 			
-			LinefinderMSER newline = new LinefinderMSER(img, inputimg, minlength, 0);
+		
+			LinefinderHough newline = new LinefinderHough(img, inputimg, minlength, 0);
 			newline.checkInput();
 			newline.process();
-		
 			
 			
 			final ArrayList<CommonOutput> newlinelist = newline.getResult();
 			
 			
 			
-            Overlay overlay = newline.getOverlay();
 			ImageJFunctions.show(inputimg).setTitle("Preprocessed extended image");
-			ImagePlus impcurr = IJ.getImage();
-			impcurr.setOverlay(overlay);
 			
 			RandomAccessibleInterval<FloatType> imgout = new ArrayImgFactory<FloatType>().create(img, new FloatType());
 			
@@ -153,12 +161,13 @@ public class VelocitydetectionMSER {
 			Normalize.normalize(Views.iterable(inputimg), minval, maxval);
 			ImageJFunctions.show(inputimg);
 			
+		
 			/**
 			 * 
-			 * Line finder using MSER 
+			 * Line finder using HoughTransform
 			 * 
 			 */
-			LinefinderMSER newline = new LinefinderMSER(groundframe, inputimg, minlength, 0);
+			LinefinderHough newline = new LinefinderHough(groundframe, inputimg, minlength, 0);
 			newline.checkInput();
 			newline.process();
 			
@@ -167,13 +176,10 @@ public class VelocitydetectionMSER {
 			
 			
 			
-            Overlay overlay = newline.getOverlay();
             ImageJFunctions.show(inputimg).setTitle("Preprocessed extended image");
 		
 
            
-			ImagePlus impcurr = IJ.getImage();
-			impcurr.setOverlay(overlay);
 			
 			RandomAccessibleInterval<FloatType> imgout = new ArrayImgFactory<FloatType>().create(groundframe,
 					new FloatType());
@@ -216,7 +222,14 @@ public class VelocitydetectionMSER {
 
 				ImageJFunctions.show(inputimgpre);
 
-				LinefinderHFMSER newlinenext = new LinefinderHFMSER(currentframe, inputimgpre, minlength, frame);
+		
+				
+				/**
+				 * 
+				 * Line finder using HoughTransform
+				 * 
+				 */
+				LinefinderHFHough newlinenext = new LinefinderHFHough(currentframe, inputimgpre, minlength, frame);
 				newlinenext.checkInput();
 				newlinenext.process();
 				
@@ -224,16 +237,9 @@ public class VelocitydetectionMSER {
 				final ArrayList<CommonOutputHF> newlinenextlist = newlinenext.getResult();
 				
 				
-				Overlay overlaynext = newlinenext.getOverlay();
 	            ImageJFunctions.show(inputimgpre).setTitle("Preprocessed extended image");
 			
 
-	            ImagePlus impcurrnext = IJ.getImage();
-				impcurrnext.setOverlay(overlaynext);
-				/**
-				 * 
-				 * For the start point, getting the track
-				 */
 
 			
 					final SubpixelVelocityPCLine growthtracker = new SubpixelVelocityPCLine(currentframe, newlinenextlist,
