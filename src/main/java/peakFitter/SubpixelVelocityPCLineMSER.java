@@ -28,7 +28,7 @@ import peakFitter.GaussianMaskFitMSER.EndfitMSER;
 import preProcessing.GetLocalmaxmin;
 import util.Boundingboxes;
 
-public class SubpixelVelocityfirstframeMSER extends BenchmarkAlgorithm
+public class SubpixelVelocityPCLineMSER extends BenchmarkAlgorithm
 		implements OutputAlgorithm<Pair<ArrayList<double[]>, ArrayList<double[]>>> {
 
 	private static final String BASE_ERROR_MSG = "[SubpixelVelocity] ";
@@ -50,11 +50,11 @@ public class SubpixelVelocityfirstframeMSER extends BenchmarkAlgorithm
 	public double termepsilon = 1e-1;
 	// Mask fits iteration param
 	public int iterations = 500;
-	public double cutoffdistance = 10;
+	public double cutoffdistance = 20;
 	public boolean halfgaussian = false;
 	public double Intensityratio = 0.5;
 
-	public SubpixelVelocityfirstframeMSER(final RandomAccessibleInterval<FloatType> source,
+	public SubpixelVelocityPCLineMSER(final RandomAccessibleInterval<FloatType> source,
 			final ArrayList<CommonOutput> imgs, final ArrayList<double[]> PrevFrameparamstart,
 			final ArrayList<double[]> PrevFrameparamend, final double[] psf, final int framenumber) {
 
@@ -76,6 +76,12 @@ public class SubpixelVelocityfirstframeMSER extends BenchmarkAlgorithm
 			return false;
 		}
 		return true;
+	}
+	
+	public enum StartorEnd{
+		
+		Start, End
+		
 	}
 
 	@Override
@@ -104,7 +110,7 @@ public class SubpixelVelocityfirstframeMSER extends BenchmarkAlgorithm
 			int labelstart = Getlabel(linepoint, oldslope, oldintercept);
 
 			double[] paramnextframestart = Getfinaltrackparam(PrevFrameparamstart.get(index), labelstart, psf,
-					framenumber);
+					framenumber, StartorEnd.Start);
 
 			if (paramnextframestart == null)
 				paramnextframestart = PrevFrameparamstart.get(index);
@@ -141,7 +147,7 @@ public class SubpixelVelocityfirstframeMSER extends BenchmarkAlgorithm
 			final double oldintercept = PrevFrameparamend.get(index)[ndims + 4];
 
 			int labelend = Getlabel(secondlinepoint, oldslope, oldintercept);
-			double[] paramnextframeend = Getfinaltrackparam(PrevFrameparamend.get(index), labelend, psf, framenumber);
+			double[] paramnextframeend = Getfinaltrackparam(PrevFrameparamend.get(index), labelend, psf, framenumber, StartorEnd.End);
 			if (paramnextframeend == null)
 				paramnextframeend = PrevFrameparamend.get(index);
 			final_paramlistend.add(paramnextframeend);
@@ -269,7 +275,7 @@ public class SubpixelVelocityfirstframeMSER extends BenchmarkAlgorithm
 
 	}
 
-	public double[] Getfinaltrackparam(final double[] iniparam, final int label, final double[] psf, final int rate) {
+	public double[] Getfinaltrackparam(final double[] iniparam, final int label, final double[] psf, final int rate, final StartorEnd startorend) {
 
 		if (iniparam == null || label == Integer.MIN_VALUE)
 			return null;
@@ -310,7 +316,6 @@ public class SubpixelVelocityfirstframeMSER extends BenchmarkAlgorithm
 
 					fixed_param[d] = 1.0 / Math.pow(psf[d], 2);
 					
-					System.out.println(iniparam[d]+ " " +iniparam[d + ndims]);
 				}
 
 				
@@ -319,6 +324,7 @@ public class SubpixelVelocityfirstframeMSER extends BenchmarkAlgorithm
 				
 				final double[] inistartpos = {LMparam[0], LMparam[1]};
 				final double[] iniendpos = {LMparam[2], LMparam[3]};
+				final double[] inipos = {iniparam[0], iniparam[1]};
 				double inicutoffdistance = Distance(inistartpos, iniendpos);
 
 				
@@ -336,9 +342,12 @@ public class SubpixelVelocityfirstframeMSER extends BenchmarkAlgorithm
 					final double[] startpos = new double[ndims];
 					final double[] endpos = new double[ndims];
 
-					
+					for (int d = 0; d < ndims; ++d) {
+						startpos[d] = LMparam[d];
+						endpos[d] = LMparam[d + ndims];
 
-					final double LMdist = sqDistance(startpos, endpos);
+					}
+
 
 					double[] returnparam = new double[ndims + 7];
 
@@ -358,15 +367,11 @@ public class SubpixelVelocityfirstframeMSER extends BenchmarkAlgorithm
 
 					System.out.println("Frame: " + framenumber);
 
-					final double Maskdist = sqDistance(startfit, endfit);
+					
 					// If mask fits fail, return LM solver results
 
 
-						for (int d = 0; d < ndims; ++d) {
-							startpos[d] = LMparam[d];
-							endpos[d] = LMparam[d + ndims];
-
-						}
+						
 						try {
 							endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, iterations,
 									dxvector, newslope, newintercept, maxintensityline, halfgaussian, EndfitMSER.EndfitMSER,
@@ -381,8 +386,13 @@ public class SubpixelVelocityfirstframeMSER extends BenchmarkAlgorithm
 						} catch (Exception e) {
 							e.printStackTrace();
 						}
-						
-						
+						for (int d = 0; d < ndims; ++d) {
+							 LMparam[d] = startfit[d];
+							LMparam[d + ndims] = endpos[d];
+
+						}
+						final double LMdist = sqDistance(startpos, endpos);
+						final double Maskdist = sqDistance(startfit, endfit);
 						
 						if (Math.abs(Math.sqrt(Maskdist)) - Math.sqrt(LMdist) > cutoffdistance) {
 							if (Math.abs(startpos[0] - startfit[0]) >= cutoffdistance / 2
@@ -436,42 +446,27 @@ public class SubpixelVelocityfirstframeMSER extends BenchmarkAlgorithm
 					
 					final double[] finalstartpoint = {LMparam[0], LMparam[1]};
 					final double[] finalendpoint = {LMparam[2], LMparam[3]};
-
-
-					final boolean diststart = Math.abs(Distance(finalstartpoint, inistartpos) - Distance(finalendpoint, iniendpos)) > 0;
-
 					
-
-					// fix the max/ end point
-					if (diststart) {
-
-						for (int d = 0; d < ndims; ++d) {
-							returnparam[d] = finalstartpoint[d];
-						}
+				if (startorend== StartorEnd.Start){
+					for (int d = 0; d < ndims; ++d) {
+						returnparam[d] = finalstartpoint[d];
+					}
+					
+					currentslope =  (returnparam[1] - inipos[1]) / (returnparam[0] - inipos[0]);
+					currentintercept = returnparam[1] - currentslope * returnparam[0];
+					System.out.println("Label: " + label + " X: " + returnparam[0] + " Y: " + returnparam[1]  + " " + inipos[0] + " " + inipos[1]);
 						
-						currentslope =  (returnparam[1] - finalendpoint[1]) / (returnparam[0] - finalendpoint[0]);
-						currentintercept = returnparam[1] - currentslope * returnparam[0];
-						System.out.println("Label: " + label + " "  + " StartX: " + returnparam[0] + " StartY: "
-								+ returnparam[1] + " EndX: " + finalendpoint[0] + " EndY: " + finalendpoint[1]);
-					}
-					// fix the min/ start point
-					else {
-						for (int d = 0; d < ndims; ++d) {
-							returnparam[d] = finalendpoint[d];
-						}
-						 currentslope =  (returnparam[1] - finalstartpoint[1]) / (returnparam[0] - finalstartpoint[0]);
-						 currentintercept = returnparam[1] - currentslope * returnparam[0];
-						 System.out.println("Label: " + label + " "  + " StartX: " + finalstartpoint[0] + " StartY: "
-									+ finalstartpoint[1] + " EndX: " + returnparam[0] + " EndY: " + returnparam[1]);
 					}
 				
-
-
+				else{
+					for (int d = 0; d < ndims; ++d) {
+						returnparam[d] = finalendpoint[d];
+					}
+					 currentslope =  (returnparam[1] - inipos[1]) / (returnparam[0] - inipos[0]);
+					 currentintercept = returnparam[1] - currentslope * returnparam[0];
+					 System.out.println("Label: " + label + " X: " + returnparam[0] + " Y: " + returnparam[1] + " " + inipos[0] + " " + inipos[1] +  "Start");
+				}
 					
-					
-				
-
-
 				
 					returnparam[ndims] = LMparam[2*ndims];
 					returnparam[ndims + 1] = LMparam[2*ndims + 1];
@@ -574,6 +569,13 @@ public class SubpixelVelocityfirstframeMSER extends BenchmarkAlgorithm
 
 		}
 		return (distance);
+	}
+	
+	public static double Xcorddist(final double Xcordone, final double Xcordtwo){
+		
+		double distance = Math.abs(Xcordone - Xcordtwo);
+		
+		return distance;
 	}
 
 }

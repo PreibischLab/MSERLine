@@ -39,7 +39,7 @@ import net.imglib2.view.Views;
 import peakFitter.LinefinderMSER;
 import peakFitter.SubpixelLengthMSER;
 import peakFitter.SubpixelVelocityMSER;
-import peakFitter.SubpixelVelocityfirstframeMSER;
+import peakFitter.SubpixelVelocityPCLineMSER;
 import preProcessing.MedianFilter2D;
 
 public class VelocitydetectionMSER {
@@ -204,7 +204,7 @@ public class VelocitydetectionMSER {
 			// seperate graph for both ends
 			
 			
-			final int maxframe = 5 + 0*(int) img.dimension(ndims - 1);
+			final int maxframe =(int) img.dimension(ndims - 1);
 
 			for (int frame = 1; frame < maxframe; ++frame) {
 
@@ -234,7 +234,7 @@ public class VelocitydetectionMSER {
 				 */
 
 			//	if (frame ==1){
-					final SubpixelVelocityfirstframeMSER growthtracker = new SubpixelVelocityfirstframeMSER(currentframe, newlinenextlist,
+					final SubpixelVelocityPCLineMSER growthtracker = new SubpixelVelocityPCLineMSER(currentframe, newlinenextlist,
 							PrevFrameparam.fst, PrevFrameparam.snd, psf, frame);
 					growthtracker.checkInput();
 					growthtracker.process();
