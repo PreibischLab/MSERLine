@@ -1,4 +1,4 @@
-package peakFitter;
+package LineModels;
 
 public interface MTFitFunction {
 	

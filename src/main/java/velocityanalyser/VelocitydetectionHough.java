@@ -25,7 +25,9 @@ import labeledObjects.CommonOutputHF;
 import labeledObjects.LabelledImg;
 import labeledObjects.Simpleobject;
 import labeledObjects.Subgraphs;
+import lineFinder.Linefinder;
 import lineFinder.LinefinderHFHough;
+import lineFinder.LinefinderHFMSER;
 import lineFinder.LinefinderHough;
 import lineFinder.LinefinderMSER;
 import mserMethods.GetDelta;
@@ -65,7 +67,7 @@ public class VelocitydetectionHough {
 
 				// new File("../res/test-bent.tif"),
 				// new File("../res/Pnoise1snr15.tif"),
-				new File("../res/seed_after.tif"), 
+				new File("../res/test_moving.tif"), 
 			//	new File("../res/small_mt.tif"), 
 							new ArrayImgFactory<FloatType>());
 		
@@ -75,7 +77,7 @@ public class VelocitydetectionHough {
 
 				// new File("../res/test-bent.tif"),
 				// new File("../res/Pnoise1snr15.tif"),
-				new File("../res/seed_after.tif"), 
+				new File("../res/test_moving.tif"), 
 			//	new File("../res/small_mt.tif"), 
 							new ArrayImgFactory<FloatType>());
 		int ndims = img.numDimensions();
@@ -94,14 +96,15 @@ public class VelocitydetectionHough {
 		// Declare all the constants needed by the program here:
 
 
-		// minimum length of the lines to be detected, the smallest possible
-		// number is 2.
-		final int minlength = 2;
+		
 
 		
 		ArrayList<ArrayList<Trackproperties>> Allstart = new ArrayList<ArrayList<Trackproperties>>();
 		ArrayList<ArrayList<Trackproperties>> Allend = new ArrayList<ArrayList<Trackproperties>>();
 		final long radius =  (long) Math.ceil(Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1]));
+		
+		final int minlength = (int)radius;
+		
 		if (ndims == 2) {
 
 
@@ -116,34 +119,19 @@ public class VelocitydetectionHough {
 			
 			
 		
-			LinefinderHough newline = new LinefinderHough(img, inputimg, minlength, 0);
-			newline.checkInput();
-			newline.process();
+			LinefinderHough newlineHough = new LinefinderHough(img, inputimg, minlength, 0);
+			LinefinderMSER newlineMSER = new LinefinderMSER(img, inputimg, minlength, 0);
 			
-			
-			final ArrayList<CommonOutput> newlinelist = newline.getResult();
-			
-			
-			
-			ImageJFunctions.show(inputimg).setTitle("Preprocessed extended image");
-			
-			RandomAccessibleInterval<FloatType> imgout = new ArrayImgFactory<FloatType>().create(img, new FloatType());
-			
-			OverlayLines.Getlines(imgout, newlinelist);
-
-			ImageJFunctions.show(imgout).setTitle("Rough-Reconstruction");
-			
-			
-			RandomAccessibleInterval<FloatType> gaussimg = new ArrayImgFactory<FloatType>().create(img,
-					new FloatType());
 			
 
-			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(img, newlinelist, psf, minlength, 0);
+			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(img, newlineHough, psf, minlength, 0);
 			MTline.checkInput();
 			MTline.process();
 			Pair<ArrayList<double[]>,ArrayList<double[]>> PrevFrameparam = MTline.getResult();
 
 			// Draw the detected lines
+			RandomAccessibleInterval<FloatType> gaussimg = new ArrayImgFactory<FloatType>().create(img,
+					new FloatType());
 			PushCurves.DrawallLine(gaussimg, PrevFrameparam.fst, PrevFrameparam.snd, psf);
 			ImageJFunctions.show(gaussimg).setTitle("Exact-line");
 		}
@@ -162,41 +150,19 @@ public class VelocitydetectionHough {
 			ImageJFunctions.show(inputimg);
 			
 		
-			/**
-			 * 
-			 * Line finder using HoughTransform
-			 * 
-			 */
-			LinefinderHough newline = new LinefinderHough(groundframe, inputimg, minlength, 0);
-			newline.checkInput();
-			newline.process();
-			
-			final ArrayList<CommonOutput> newlinelist = newline.getResult();
-			
-			
-			
-			
-            ImageJFunctions.show(inputimg).setTitle("Preprocessed extended image");
-		
-
-           
-			
-			RandomAccessibleInterval<FloatType> imgout = new ArrayImgFactory<FloatType>().create(groundframe,
-					new FloatType());
-			RandomAccessibleInterval<FloatType> gaussimg = new ArrayImgFactory<FloatType>().create(groundframe,
-					new FloatType());
-			OverlayLines.Getlines(imgout, newlinelist);
-
-			ImageJFunctions.show(imgout).setTitle("Rough-Reconstruction");
+			LinefinderHough newlineHough = new LinefinderHough(groundframe, inputimg, minlength, 0);
+			LinefinderMSER newlineMSER = new LinefinderMSER(groundframe, inputimg, minlength, 0);
 			
 			
 
-			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(groundframe, newlinelist, psf, minlength, 0);
+			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(groundframe, newlineHough, psf, minlength, 0);
 			MTline.checkInput();
 			MTline.process();
 			Pair<ArrayList<double[]>,ArrayList<double[]>> PrevFrameparam = MTline.getResult();
 
 			// Draw the detected lines
+			RandomAccessibleInterval<FloatType> gaussimg = new ArrayImgFactory<FloatType>().create(groundframe,
+					new FloatType());
 			PushCurves.DrawallLine(gaussimg, PrevFrameparam.fst, PrevFrameparam.snd, psf);
 			ImageJFunctions.show(gaussimg).setTitle("Exact-line");
 
@@ -224,25 +190,11 @@ public class VelocitydetectionHough {
 
 		
 				
-				/**
-				 * 
-				 * Line finder using HoughTransform
-				 * 
-				 */
-				LinefinderHFHough newlinenext = new LinefinderHFHough(currentframe, inputimgpre, minlength, frame);
-				newlinenext.checkInput();
-				newlinenext.process();
 				
+				LinefinderHFHough newlinenextHough = new LinefinderHFHough(currentframe, inputimgpre, minlength, frame);
+				LinefinderHFMSER newlinenextMSER = new LinefinderHFMSER(currentframe, inputimgpre, minlength, frame);
 				
-				final ArrayList<CommonOutputHF> newlinenextlist = newlinenext.getResult();
-				
-				
-	            ImageJFunctions.show(inputimgpre).setTitle("Preprocessed extended image");
-			
-
-
-			
-					final SubpixelVelocityPCLine growthtracker = new SubpixelVelocityPCLine(currentframe, newlinenextlist,
+				final SubpixelVelocityPCLine growthtracker = new SubpixelVelocityPCLine(currentframe, newlinenextHough,
 							PrevFrameparam.fst, PrevFrameparam.snd, psf, frame);
 					growthtracker.checkInput();
 					growthtracker.process();
@@ -255,7 +207,7 @@ public class VelocitydetectionHough {
 				Allstart.add(startStateVectors);
 				Allend.add(endStateVectors);
 				// Draw the lines detected in the current frame
-				RandomAccessibleInterval<FloatType> newgaussimg = new ArrayImgFactory<FloatType>().create(groundframe,
+				RandomAccessibleInterval<FloatType> newgaussimg = new ArrayImgFactory<FloatType>().create(currentframe,
 						new FloatType());
 				PushCurves.DrawallLine(newgaussimg, NewFrameparam.fst, NewFrameparam.snd, psf);
 				ImageJFunctions.show(newgaussimg).setTitle("Exact-line");

@@ -9,7 +9,9 @@ import LineModels.GaussianLineds;
 import graphconstructs.Staticproperties;
 import ij.gui.EllipseRoi;
 import labeledObjects.CommonOutput;
+import labeledObjects.CommonOutputHF;
 import labeledObjects.LabelledImg;
+import lineFinder.LinefinderHF;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.Point;
@@ -28,7 +30,7 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 
 	private static final String BASE_ERROR_MSG = "[SubpixelVelocity] ";
 	private final RandomAccessibleInterval<FloatType> source;
-	private final ArrayList<CommonOutput> imgs;
+	private final ArrayList<CommonOutputHF> imgs;
 	private final ArrayList<double[]> PrevFrameparam;
 	private final int ndims;
 	private final int framenumber;
@@ -89,13 +91,14 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 	}
 	
 	public  SubpixelVelocityCline(final RandomAccessibleInterval<FloatType> source, 
-			                      final ArrayList<CommonOutput> imgs,
+			                      final LinefinderHF finder,
 			                       final ArrayList<double[]> PrevFrameparam,
 			                       final double[] psf,
 			                       final int framenumber) {
-		
+		finder.checkInput();
+		finder.process();
+		imgs = finder.getResult();
 		this.source = source;
-		this.imgs = imgs;
 		this.PrevFrameparam = PrevFrameparam;
 		this.psf = psf;
 		this.framenumber = framenumber;
@@ -349,7 +352,7 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 				double inicutoffdistance = Distance(inistartpos, iniendpos);
 
 				// LM solver part
-				if (inicutoffdistance > 2) {
+				if (inicutoffdistance >  2 * iniparam[ndims]) {
 					try {
 						LevenbergMarquardtSolverLine.solve(X, finalparamstart, fixed_param, I, new GaussianLineds(), lambda,
 								termepsilon, maxiter);

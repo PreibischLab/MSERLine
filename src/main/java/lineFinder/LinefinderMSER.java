@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+import graphconstructs.Logger;
 import houghandWatershed.HoughTransformandMser;
 import ij.IJ;
 import ij.ImagePlus;
@@ -33,9 +34,11 @@ import net.imglib2.util.Util;
 import net.imglib2.view.Views;
 import peakFitter.SortListbyproperty;
 
-public class LinefinderMSER extends BenchmarkAlgorithm implements OutputAlgorithm<ArrayList<CommonOutput>>{
+public class LinefinderMSER  implements Linefinder{
 
 	private static final String BASE_ERROR_MSG = "[Line-Finder]";
+	protected String errorMessage;
+	protected Logger logger = Logger.DEFAULT_LOGGER;
 	private final RandomAccessibleInterval<FloatType> source;
 	private final RandomAccessibleInterval<FloatType> Preprocessedsource;
 	private final int framenumber;
@@ -46,8 +49,8 @@ public class LinefinderMSER extends BenchmarkAlgorithm implements OutputAlgorith
 	public final long maxSize = Long.MAX_VALUE;
 	public  double maxVar = 0.5;
 	public double minDiversity = 0;
-	public int maxlines = 10;
-	public final int maxdelta = 20;
+	public int maxlines = 20;
+	public final int maxdelta = 10;
 	private Overlay ov;
 	public boolean darktoBright = false;
 	private int Roiindex;
@@ -87,6 +90,9 @@ public class LinefinderMSER extends BenchmarkAlgorithm implements OutputAlgorith
 		return minSize;
 	}
 	 
+	 public double getDelta() {
+		return delta;
+	}
 	
 	public long getMaxSize() {
 		return maxSize;
@@ -478,6 +484,19 @@ public class LinefinderMSER extends BenchmarkAlgorithm implements OutputAlgorith
 		final EllipseRoi ellipse = new EllipseRoi(x - dx, y - dy, x + dx, y + dy, scale2 / scale1);
 		return ellipse;
 	}
+	@Override
+	public String getErrorMessage() {
+
+		return errorMessage;
+	}
+
+
+@Override
+public void setLogger(Logger logger) {
+	this.logger = logger;
+	
+}
+
 	
 	
 }

@@ -1,7 +1,5 @@
 package LineModels;
 
-import peakFitter.MTFitFunction;
-
 public class GaussianLinemaxds implements MTFitFunction {
 
 	@Override

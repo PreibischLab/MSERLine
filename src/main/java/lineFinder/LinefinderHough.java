@@ -6,6 +6,7 @@ import com.sun.tools.javac.util.Pair;
 
 import drawandOverlay.HoughPushCurves;
 import drawandOverlay.OverlayLines;
+import graphconstructs.Logger;
 import houghandWatershed.WatershedDistimg;
 import labeledObjects.CommonOutput;
 import net.imglib2.FinalInterval;
@@ -24,10 +25,12 @@ import preProcessing.GlobalThresholding;
 import preProcessing.Kernels;
 import util.Boundingboxes;
 
-public class LinefinderHough extends BenchmarkAlgorithm implements OutputAlgorithm<ArrayList<CommonOutput>> {
+public class LinefinderHough implements Linefinder {
 	
 	
 	private static final String BASE_ERROR_MSG = "[Line-Finder]";
+	protected String errorMessage;
+	protected Logger logger = Logger.DEFAULT_LOGGER;
 	private final RandomAccessibleInterval<FloatType> source;
 	private final RandomAccessibleInterval<FloatType> Preprocessedsource;
 	private RandomAccessibleInterval<IntType> intimg;
@@ -183,6 +186,19 @@ public class LinefinderHough extends BenchmarkAlgorithm implements OutputAlgorit
 	public ArrayList<CommonOutput> getResult() {
 
 		return output;
+	}
+
+	@Override
+		public String getErrorMessage() {
+
+			return errorMessage;
+		}
+	
+
+	@Override
+	public void setLogger(Logger logger) {
+		this.logger = logger;
+		
 	}
 	
 

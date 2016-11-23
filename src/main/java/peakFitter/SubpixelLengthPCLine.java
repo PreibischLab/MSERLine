@@ -10,6 +10,7 @@ import ij.gui.EllipseRoi;
 import labeledObjects.CommonOutput;
 import labeledObjects.LabelledImg;
 import labeledObjects.Simpleobject;
+import lineFinder.Linefinder;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.Point;
@@ -150,13 +151,14 @@ implements OutputAlgorithm<Pair<ArrayList<double[]>, ArrayList<double[]>>> {
     
 	
 	public SubpixelLengthPCLine( final RandomAccessibleInterval<FloatType> source, 
-			             final ArrayList<CommonOutput> imgs,
+			             final Linefinder finder,
 			             final double[] psf,
 			             final int minlength,
 			             final int framenumber){
-		
+		finder.checkInput();
+		finder.process();
+		imgs = finder.getResult();
 		this.source = source;
-		this.imgs = imgs;
 		this.psf = psf;
 		this.minlength = minlength;
 		this.framenumber = framenumber;
@@ -283,7 +285,7 @@ public ArrayList<double[]> getEndPoints(){
 		}
 
 		// This parameter is guess estimate for spacing between the Gaussians
-		MinandMax[2 * ndims] = Math.min(psf[0], psf[1]);
+		MinandMax[2 * ndims] =  0.5 * Math.min(psf[0], psf[1]);
 		MinandMax[2 * ndims + 1] = maxintensityline; 
 		// This parameter guess estimates the background noise level
 		MinandMax[2 * ndims + 2] = 0; 

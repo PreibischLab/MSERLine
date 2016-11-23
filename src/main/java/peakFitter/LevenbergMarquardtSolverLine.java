@@ -1,5 +1,6 @@
 package peakFitter;
 import Jama.Matrix;
+import LineModels.MTFitFunction;
 public class LevenbergMarquardtSolverLine {
 	
 		/**

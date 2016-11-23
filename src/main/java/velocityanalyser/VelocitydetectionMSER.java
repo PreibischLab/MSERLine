@@ -20,7 +20,9 @@ import ij.gui.Overlay;
 import labeledObjects.CommonOutput;
 import labeledObjects.CommonOutputHF;
 import labeledObjects.Subgraphs;
+import lineFinder.LinefinderHFHough;
 import lineFinder.LinefinderHFMSER;
+import lineFinder.LinefinderHough;
 import lineFinder.LinefinderMSER;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.stats.Normalize;
@@ -54,7 +56,7 @@ public class VelocitydetectionMSER {
 
 				// new File("../res/test-bent.tif"),
 				// new File("../res/Pnoise1snr15.tif"),
-				new File("../res/seed_after.tif"), 
+				new File("../res/test_moving.tif"), 
 			//	new File("../res/small_mt.tif"), 
 							new ArrayImgFactory<FloatType>());
 		
@@ -64,7 +66,7 @@ public class VelocitydetectionMSER {
 
 				// new File("../res/test-bent.tif"),
 				// new File("../res/Pnoise1snr15.tif"),
-				new File("../res/seed_after.tif"), 
+				new File("../res/test_moving.tif"), 
 			//	new File("../res/small_mt.tif"), 
 							new ArrayImgFactory<FloatType>());
 		int ndims = img.numDimensions();
@@ -83,14 +85,16 @@ public class VelocitydetectionMSER {
 		// Declare all the constants needed by the program here:
 
 
-		// minimum length of the lines to be detected, the smallest possible
-		// number is 2.
-		final int minlength = 2;
 
 		
 		ArrayList<ArrayList<Trackproperties>> Allstart = new ArrayList<ArrayList<Trackproperties>>();
 		ArrayList<ArrayList<Trackproperties>> Allend = new ArrayList<ArrayList<Trackproperties>>();
 		final long radius =  (long) Math.ceil(Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1]));
+
+		// minimum length of the lines to be detected, the smallest possible
+		// number is 2.
+		final int minlength = (int) radius;
+		
 		if (ndims == 2) {
 
 
@@ -104,38 +108,23 @@ public class VelocitydetectionMSER {
 			ImageJFunctions.show(inputimg);
 			
 			
-			LinefinderMSER newline = new LinefinderMSER(img, inputimg, minlength, 0);
-			newline.checkInput();
-			newline.process();
-		
-			
-			
-			final ArrayList<CommonOutput> newlinelist = newline.getResult();
-			
-			
-			
-            Overlay overlay = newline.getOverlay();
+			LinefinderMSER newlineMser = new LinefinderMSER(img, inputimg, minlength, 0);
+			LinefinderHough newlineHough = new LinefinderHough(img, inputimg, minlength, 0);
+            Overlay overlay = newlineMser.getOverlay();
 			ImageJFunctions.show(inputimg).setTitle("Preprocessed extended image");
 			ImagePlus impcurr = IJ.getImage();
 			impcurr.setOverlay(overlay);
 			
-			RandomAccessibleInterval<FloatType> imgout = new ArrayImgFactory<FloatType>().create(img, new FloatType());
-			
-			OverlayLines.Getlines(imgout, newlinelist);
-
-			ImageJFunctions.show(imgout).setTitle("Rough-Reconstruction");
 			
 			
-			RandomAccessibleInterval<FloatType> gaussimg = new ArrayImgFactory<FloatType>().create(img,
-					new FloatType());
-			
-
-			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(img, newlinelist, psf, minlength, 0);
+			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(img, newlineMser, psf, minlength, 0);
 			MTline.checkInput();
 			MTline.process();
 			Pair<ArrayList<double[]>,ArrayList<double[]>> PrevFrameparam = MTline.getResult();
 
 			// Draw the detected lines
+			RandomAccessibleInterval<FloatType> gaussimg = new ArrayImgFactory<FloatType>().create(img,
+					new FloatType());
 			PushCurves.DrawallLine(gaussimg, PrevFrameparam.fst, PrevFrameparam.snd, psf);
 			ImageJFunctions.show(gaussimg).setTitle("Exact-line");
 		}
@@ -155,38 +144,29 @@ public class VelocitydetectionMSER {
 			
 			/**
 			 * 
-			 * Line finder using MSER 
+			 * Line finder using MSER or Hough
 			 * 
 			 */
-			LinefinderMSER newline = new LinefinderMSER(groundframe, inputimg, minlength, 0);
-			newline.checkInput();
-			newline.process();
-			
-			final ArrayList<CommonOutput> newlinelist = newline.getResult();
+			LinefinderMSER newlineMser = new LinefinderMSER(groundframe, inputimg, minlength, 0);
+			LinefinderHough newlineHough = new LinefinderHough(groundframe, inputimg, minlength, 0);
 			
 			
-			
-			
-            Overlay overlay = newline.getOverlay();
+            Overlay overlay = newlineMser.getOverlay();
             ImageJFunctions.show(inputimg).setTitle("Preprocessed extended image");
 		
 
            
 			ImagePlus impcurr = IJ.getImage();
 			impcurr.setOverlay(overlay);
-			
-			RandomAccessibleInterval<FloatType> imgout = new ArrayImgFactory<FloatType>().create(groundframe,
-					new FloatType());
+		
 			RandomAccessibleInterval<FloatType> gaussimg = new ArrayImgFactory<FloatType>().create(groundframe,
 					new FloatType());
-			OverlayLines.Getlines(imgout, newlinelist);
-
-			ImageJFunctions.show(imgout).setTitle("Rough-Reconstruction");
 			
 			
 
-			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(groundframe, newlinelist, psf, minlength, 0);
+			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(groundframe, newlineMser, psf, minlength, 0);
 			MTline.checkInput();
+			
 			MTline.process();
 			Pair<ArrayList<double[]>,ArrayList<double[]>> PrevFrameparam = MTline.getResult();
 
@@ -216,15 +196,10 @@ public class VelocitydetectionMSER {
 
 				ImageJFunctions.show(inputimgpre);
 
-				LinefinderHFMSER newlinenext = new LinefinderHFMSER(currentframe, inputimgpre, minlength, frame);
-				newlinenext.checkInput();
-				newlinenext.process();
+				LinefinderHFMSER newlinenextMser = new LinefinderHFMSER(currentframe, inputimgpre, minlength, frame);
+				LinefinderHFHough newlinenextHough = new LinefinderHFHough(currentframe, inputimgpre, minlength, frame);
 				
-				
-				final ArrayList<CommonOutputHF> newlinenextlist = newlinenext.getResult();
-				
-				
-				Overlay overlaynext = newlinenext.getOverlay();
+				Overlay overlaynext = newlinenextMser.getOverlay();
 	            ImageJFunctions.show(inputimgpre).setTitle("Preprocessed extended image");
 			
 
@@ -232,11 +207,12 @@ public class VelocitydetectionMSER {
 				impcurrnext.setOverlay(overlaynext);
 				/**
 				 * 
-				 * For the start point, getting the track
+				 * Getting tracks for both the ends
+				 * 
 				 */
 
 			
-					final SubpixelVelocityPCLine growthtracker = new SubpixelVelocityPCLine(currentframe, newlinenextlist,
+					final SubpixelVelocityPCLine growthtracker = new SubpixelVelocityPCLine(currentframe, newlinenextMser,
 							PrevFrameparam.fst, PrevFrameparam.snd, psf, frame);
 					growthtracker.checkInput();
 					growthtracker.process();
