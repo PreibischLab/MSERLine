@@ -1,13 +1,13 @@
 package LineModels;
 
-public class GaussianLinefixedds implements MTFitFunction {
+public class GaussianLinefixedIds implements MTFitFunction {
 
 	@Override
 	public double val(double[] x, double[] a, double[] b) {
 		final int ndims = x.length;
 		
 		
-		return  a[2 * ndims] * Etotal(x, a, b) + a[2 * ndims + 1] ;
+		return  b[ndims + 1] * Etotal(x, a, b) + b[ndims + 2] ;
 		
 	}
 
@@ -17,21 +17,18 @@ public class GaussianLinefixedds implements MTFitFunction {
 
 		if (k < ndims) {
 
-			return 2 * b[k] * (x[k] - a[k])  * a[2 *ndims ] * Estart(x, a, b);
+			return 2 * b[k] * (x[k] - a[k])  * b[ndims + 1] * Estart(x, a, b);
 
 		}
 
 		else if (k >= ndims && k <= ndims + 1) {
 			int dim = k - ndims;
-			return 2 * b[dim] * (x[dim] - a[k])  * a[2 * ndims ] * Eend(x, a, b);
+			return 2 * b[dim] * (x[dim] - a[k])  * b[ndims + 1] * Eend(x, a, b);
 
 		}
 
-		else if (k == 2 * ndims)
-			return Etotal(x, a, b);
-		else if (k == 2 * ndims + 1)
-			return 1.0;
 		
+
 		
 		else
 			return 0;

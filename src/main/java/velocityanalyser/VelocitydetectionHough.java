@@ -44,6 +44,8 @@ import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import peakFitter.SubpixelLengthPCLine;
 import peakFitter.SubpixelVelocityPCLine;
+import preProcessing.GetLocalmaxmin;
+import preProcessing.Kernels;
 import preProcessing.MedianFilter2D;
 
 public class VelocitydetectionHough {
@@ -67,7 +69,7 @@ public class VelocitydetectionHough {
 
 				// new File("../res/test-bent.tif"),
 				// new File("../res/Pnoise1snr15.tif"),
-				new File("../res/test_moving.tif"), 
+				new File("../res/test_stack_multi.tif"), 
 			//	new File("../res/small_mt.tif"), 
 							new ArrayImgFactory<FloatType>());
 		
@@ -77,7 +79,7 @@ public class VelocitydetectionHough {
 
 				// new File("../res/test-bent.tif"),
 				// new File("../res/Pnoise1snr15.tif"),
-				new File("../res/test_moving.tif"), 
+				new File("../res/test_stack_multi.tif"), 
 			//	new File("../res/small_mt.tif"), 
 							new ArrayImgFactory<FloatType>());
 		int ndims = img.numDimensions();
@@ -145,7 +147,9 @@ public class VelocitydetectionHough {
 			
 			final MedianFilter2D<FloatType> medfilter = new MedianFilter2D<FloatType>(groundframepre, 1);
 			medfilter.process();
-			RandomAccessibleInterval<FloatType> inputimg = medfilter.getResult();
+			RandomAccessibleInterval<FloatType> preinputimg = medfilter.getResult();
+			
+			RandomAccessibleInterval<FloatType> inputimg = Kernels.CannyEdge(preinputimg);
 			Normalize.normalize(Views.iterable(inputimg), minval, maxval);
 			ImageJFunctions.show(inputimg);
 			
@@ -183,7 +187,8 @@ public class VelocitydetectionHough {
 
 				final MedianFilter2D<FloatType> medfiltercurr = new MedianFilter2D<FloatType>(currentframepre, 1);
 				medfiltercurr.process();
-				RandomAccessibleInterval<FloatType> inputimgpre = medfiltercurr.getResult();
+				RandomAccessibleInterval<FloatType> preinputimgpre = medfiltercurr.getResult();
+				RandomAccessibleInterval<FloatType> inputimgpre = Kernels.CannyEdge(preinputimgpre);
 				Normalize.normalize(Views.iterable(inputimgpre), minval, maxval);
 
 				ImageJFunctions.show(inputimgpre);

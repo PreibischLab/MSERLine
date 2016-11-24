@@ -156,8 +156,7 @@ public class PushCurves {
 			// Increment from starting position (min) towards max
 
 			newpos[0] = position[0] + stepsize;
-			newpos[1] = // amplitude * SinCosinelut.getTable().getSine(newpos[0]
-						// + phase);
+			newpos[1] = 
 					amplitude * Math.sin(Math.toRadians(newpos[0] + phase));
 			// General Stopping criteria of moving along a curve, when we hit a
 			// boundary

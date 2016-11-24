@@ -8,6 +8,7 @@ import org.jgrapht.graph.SimpleWeightedGraph;
 
 import com.sun.tools.javac.util.Pair;
 
+import drawandOverlay.DisplayGraph;
 import drawandOverlay.DisplaysubGraphend;
 import drawandOverlay.DisplaysubGraphstart;
 import drawandOverlay.OverlayLines;
@@ -56,7 +57,7 @@ public class VelocitydetectionMSER {
 
 				// new File("../res/test-bent.tif"),
 				// new File("../res/Pnoise1snr15.tif"),
-				new File("../res/test_moving.tif"), 
+				new File("../res/test_stack_multi.tif"), 
 			//	new File("../res/small_mt.tif"), 
 							new ArrayImgFactory<FloatType>());
 		
@@ -66,7 +67,7 @@ public class VelocitydetectionMSER {
 
 				// new File("../res/test-bent.tif"),
 				// new File("../res/Pnoise1snr15.tif"),
-				new File("../res/test_moving.tif"), 
+				new File("../res/test_stack_multi.tif"), 
 			//	new File("../res/small_mt.tif"), 
 							new ArrayImgFactory<FloatType>());
 		int ndims = img.numDimensions();
@@ -109,6 +110,7 @@ public class VelocitydetectionMSER {
 			
 			
 			LinefinderMSER newlineMser = new LinefinderMSER(img, inputimg, minlength, 0);
+			newlineMser.setMaxlines(40);
 			LinefinderHough newlineHough = new LinefinderHough(img, inputimg, minlength, 0);
             Overlay overlay = newlineMser.getOverlay();
 			ImageJFunctions.show(inputimg).setTitle("Preprocessed extended image");
@@ -148,16 +150,11 @@ public class VelocitydetectionMSER {
 			 * 
 			 */
 			LinefinderMSER newlineMser = new LinefinderMSER(groundframe, inputimg, minlength, 0);
+			newlineMser.setMaxlines(100);
 			LinefinderHough newlineHough = new LinefinderHough(groundframe, inputimg, minlength, 0);
 			
 			
-            Overlay overlay = newlineMser.getOverlay();
-            ImageJFunctions.show(inputimg).setTitle("Preprocessed extended image");
-		
-
            
-			ImagePlus impcurr = IJ.getImage();
-			impcurr.setOverlay(overlay);
 		
 			RandomAccessibleInterval<FloatType> gaussimg = new ArrayImgFactory<FloatType>().create(groundframe,
 					new FloatType());
@@ -169,7 +166,13 @@ public class VelocitydetectionMSER {
 			
 			MTline.process();
 			Pair<ArrayList<double[]>,ArrayList<double[]>> PrevFrameparam = MTline.getResult();
+			 Overlay overlay = newlineMser.getOverlay();
+	            ImageJFunctions.show(inputimg).setTitle("Preprocessed extended image");
+			
 
+	           
+				ImagePlus impcurr = IJ.getImage();
+				impcurr.setOverlay(overlay);
 			// Draw the detected lines
 			PushCurves.DrawallLine(gaussimg, PrevFrameparam.fst, PrevFrameparam.snd, psf);
 			ImageJFunctions.show(gaussimg).setTitle("Exact-line");
@@ -199,12 +202,6 @@ public class VelocitydetectionMSER {
 				LinefinderHFMSER newlinenextMser = new LinefinderHFMSER(currentframe, inputimgpre, minlength, frame);
 				LinefinderHFHough newlinenextHough = new LinefinderHFHough(currentframe, inputimgpre, minlength, frame);
 				
-				Overlay overlaynext = newlinenextMser.getOverlay();
-	            ImageJFunctions.show(inputimgpre).setTitle("Preprocessed extended image");
-			
-
-	            ImagePlus impcurrnext = IJ.getImage();
-				impcurrnext.setOverlay(overlaynext);
 				/**
 				 * 
 				 * Getting tracks for both the ends
@@ -219,7 +216,13 @@ public class VelocitydetectionMSER {
 					Pair<ArrayList<double[]>, ArrayList<double[]>> NewFrameparam = growthtracker.getResult();
 					ArrayList<Trackproperties> startStateVectors = growthtracker.getstartStateVectors();
 					ArrayList<Trackproperties> endStateVectors = growthtracker.getendStateVectors();
-			
+
+					Overlay overlaynext = newlinenextMser.getOverlay();
+		            ImageJFunctions.show(inputimgpre).setTitle("Preprocessed extended image");
+				
+
+		            ImagePlus impcurrnext = IJ.getImage();
+					impcurrnext.setOverlay(overlaynext);
 				PrevFrameparam = NewFrameparam;
 				
 				Allstart.add(startStateVectors);
@@ -227,8 +230,8 @@ public class VelocitydetectionMSER {
 				// Draw the lines detected in the current frame
 				RandomAccessibleInterval<FloatType> newgaussimg = new ArrayImgFactory<FloatType>().create(groundframe,
 						new FloatType());
-				PushCurves.DrawallLine(newgaussimg, NewFrameparam.fst, NewFrameparam.snd, psf);
-				ImageJFunctions.show(newgaussimg).setTitle("Exact-line");
+				//PushCurves.DrawallLine(newgaussimg, NewFrameparam.fst, NewFrameparam.snd, psf);
+				//ImageJFunctions.show(newgaussimg).setTitle("Exact-line");
 
 			}
 
@@ -240,6 +243,9 @@ public class VelocitydetectionMSER {
 			ImagePlus impstart = ImageJFunctions.show(img);
 			ImagePlus impend = ImageJFunctions.show(preprocessedimg);
 			
+			ImagePlus impstartsec = ImageJFunctions.show(img);
+			ImagePlus impendsec = ImageJFunctions.show(preprocessedimg);
+			
 			final Trackstart trackerstart = new Trackstart(Allstart, maxframe);
 			final Trackend trackerend = new Trackend(Allend, maxframe);
 			trackerstart.process();
@@ -249,6 +255,10 @@ public class VelocitydetectionMSER {
 			DisplaysubGraphstart displaytrackstart = new DisplaysubGraphstart(impstart, subgraphstart);
 			displaytrackstart.getImp();
 			impstart.draw();
+			
+			DisplayGraph displaygraphtrackstart = new DisplayGraph(impstartsec, graphstart);
+			displaygraphtrackstart.getImp();
+			impstartsec.draw();
 
 			trackerend.process();
 			SimpleWeightedGraph<double[], DefaultWeightedEdge> graphend = trackerend.getResult();
@@ -257,6 +267,11 @@ public class VelocitydetectionMSER {
 			DisplaysubGraphend displaytrackend = new DisplaysubGraphend(impend, subgraphend);
 			displaytrackend.getImp();
 			impend.draw();
+			
+			DisplayGraph displaygraphtrackend = new DisplayGraph(impendsec, graphend);
+			displaygraphtrackend.getImp();
+			impendsec.draw();
+			
 
 		}
 		

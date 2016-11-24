@@ -112,6 +112,8 @@ public class LevenbergMarquardtSolverLine {
 						done = true;
 					}
 				}
+				if (iter > 200)
+				System.out.println("LM solver unable to find extrema after" + iter + " iterations");
 				if (iter >= maxiter) done = true;
 
 				// in the C++ version, found that changing this to e1 >= e0
@@ -119,15 +121,24 @@ public class LevenbergMarquardtSolverLine {
 				//
 				if (e1 > e0 || Double.isNaN(e1)) { // new location worse than before
 					lambda *= 10.;
+					
 				}
 				else {		// new location better, accept new parameters
 					lambda *= 0.1;
+				
 					e0 = e1;
+					
 					// simply assigning a = na will not get results copied back to caller
 					for( int i = 0; i < nparm; i++ ) {
 						a[i] = na[i];
+						
 					}
 				}
+				for( int i = 0; i < nparm; i++ ) {
+					if (Math.abs(a[i] - na[i]) < 0.0001)
+						done = true;
+				}
+				
 
 			} while(!done);
 
