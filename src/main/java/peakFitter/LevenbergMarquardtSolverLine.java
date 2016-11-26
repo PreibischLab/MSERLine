@@ -108,11 +108,11 @@ public class LevenbergMarquardtSolverLine {
 				}
 				else {
 					term++;
-					if (term == 4) {
+					if (term == 2) {
 						done = true;
 					}
 				}
-				if (iter > 200)
+				if (iter > maxiter -10)
 				System.out.println("LM solver unable to find extrema after" + iter + " iterations");
 				if (iter >= maxiter) done = true;
 
@@ -135,7 +135,7 @@ public class LevenbergMarquardtSolverLine {
 					}
 				}
 				for( int i = 0; i < nparm; i++ ) {
-					if (Math.abs(a[i] - na[i]) < 0.0001)
+					if (Math.abs(a[i] - na[i]) < 1.0E-8)
 						done = true;
 				}
 				

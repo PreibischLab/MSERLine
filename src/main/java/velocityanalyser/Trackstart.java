@@ -64,7 +64,7 @@ public class Trackstart implements Linetracker {
 					
 					
 					double sqdist = Distance(source.oldpoint, source.newpoint);
-					
+					if (sqdist > 0){
 					synchronized (graph) {
 						
 						graph.addVertex(source.oldpoint);
@@ -82,7 +82,7 @@ public class Trackstart implements Linetracker {
 					Subgraphs currentframegraph = new Subgraphs(frame - 1, frame, subgraph);
 					Framedgraph.add(currentframegraph);
 				}
-				
+				}
 				System.out.println("Moving to next frame!");
 			}
 			

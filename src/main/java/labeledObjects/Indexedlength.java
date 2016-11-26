@@ -4,22 +4,36 @@ package labeledObjects;
 
 public final class Indexedlength {
 
-	public final int Label;
-	public final double length;
-	public final double[] startpos;
-	public final double[] endpos;
+	public final int currentLabel;
+	public final int seedLabel;
+	public final int framenumber;
+	public final double ds;
+	public final double lineintensity;
+	public final double background;
+	public final double[] currentpos;
+	public final double[] fixedpos;
 	public final double slope;
 	public final double intercept;
+	public final double originalslope;
+	public final double originalintercept;
 	
 
-	public Indexedlength(final int Label, final double length, final double[] startpos, final double[] endpos, 
-			final double slope, final double intercept) {
-		this.Label = Label;
-		this.length = length;
-		this.startpos = startpos;
-		this.endpos = endpos;
+	public Indexedlength(final int currentLabel, final int seedLabel, final int framenumber,
+			final double ds, final double lineintensity, final double background,
+			final double[] currentpos, final double[] fixedpos, 
+			final double slope, final double intercept, final double originalslope, final double originalintercept) {
+		this.currentLabel = currentLabel;
+		this.seedLabel = seedLabel;
+		this.framenumber = framenumber;
+		this.ds = ds;
+		this.lineintensity = lineintensity;
+		this.background = background;
+		this.currentpos = currentpos;
+		this.fixedpos = fixedpos;
 		this.slope = slope;
 		this.intercept = intercept;
+		this.originalslope = originalslope;
+		this.originalintercept = originalintercept;
 
 		
 	}

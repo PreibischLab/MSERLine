@@ -17,6 +17,7 @@ import graphconstructs.Trackproperties;
 import ij.gui.EllipseRoi;
 import labeledObjects.CommonOutput;
 import labeledObjects.CommonOutputHF;
+import labeledObjects.Indexedlength;
 import labeledObjects.LabelledImg;
 import lineFinder.LinefinderHF;
 import net.imglib2.Cursor;
@@ -34,17 +35,17 @@ import preProcessing.GetLocalmaxmin;
 import util.Boundingboxes;
 
 public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
-		implements OutputAlgorithm<Pair<ArrayList<double[]>, ArrayList<double[]>>> {
+		implements OutputAlgorithm<Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>>> {
 
 	private static final String BASE_ERROR_MSG = "[SubpixelVelocity] ";
 	private final RandomAccessibleInterval<FloatType> source;
 	private final ArrayList<CommonOutputHF> imgs;
-	private final ArrayList<double[]> PrevFrameparamstart;
-	private final ArrayList<double[]> PrevFrameparamend;
+	private final ArrayList<Indexedlength> PrevFrameparamstart;
+	private final ArrayList<Indexedlength> PrevFrameparamend;
 	private final int ndims;
 	private final int framenumber;
-	private ArrayList<double[]> final_paramliststart;
-	private ArrayList<double[]> final_paramlistend;
+	private ArrayList<Indexedlength> final_paramliststart;
+	private ArrayList<Indexedlength> final_paramlistend;
 	private ArrayList<Trackproperties> startinframe;
 	private ArrayList<Trackproperties> endinframe;
 	private final double[] psf;
@@ -55,7 +56,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 	public double termepsilon = 1e-1;
 	// Mask fits iteration param
 	public int iterations = 100;
-	public double cutoffdistance = 20;
+	public double cutoffdistance = 30;
 	public boolean halfgaussian = false;
 	public double Intensityratio = 0.5;
 
@@ -104,7 +105,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 	}
 
 	public SubpixelVelocityPCLine(final RandomAccessibleInterval<FloatType> source, final LinefinderHF linefinder,
-			final ArrayList<double[]> PrevFrameparamstart, final ArrayList<double[]> PrevFrameparamend,
+			final ArrayList<Indexedlength> PrevFrameparamstart, final ArrayList<Indexedlength> PrevFrameparamend,
 			final double[] psf, final int framenumber) {
 
 		linefinder.checkInput();
@@ -138,103 +139,112 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 	@Override
 	public boolean process() {
 
-		final_paramliststart = new ArrayList<double[]>();
-		final_paramlistend = new ArrayList<double[]>();
+		final_paramliststart = new ArrayList<Indexedlength>();
+		final_paramlistend = new ArrayList<Indexedlength>();
 
 		startinframe = new ArrayList<Trackproperties>();
 		endinframe = new ArrayList<Trackproperties>();
 
-		final int oldframenumber = (int) PrevFrameparamstart.get(PrevFrameparamstart.size() - 1)[ndims + 6];
+		final int oldframenumber = PrevFrameparamstart.get(PrevFrameparamstart.size() - 1).framenumber;
 		final int framediff = framenumber - oldframenumber;
 
 		for (int index = 0; index < PrevFrameparamstart.size(); ++index) {
 
-			final int seedlabel = (int) PrevFrameparamstart.get(index)[ndims + 5];
 
-			final double oldslope = PrevFrameparamstart.get(index)[ndims + 3];
+			final double originalslope = PrevFrameparamstart.get(index).slope;
 
-			final double oldintercept = PrevFrameparamstart.get(index)[ndims + 4];
+			final double originalintercept = PrevFrameparamstart.get(index).intercept;
 
-			final int seedlabelend = (int) PrevFrameparamend.get(index)[ndims + 5];
 
-			final double oldslopeend = PrevFrameparamend.get(index)[ndims + 3];
-
-			final double oldinterceptend = PrevFrameparamend.get(index)[ndims + 4];
 
 			Point linepoint = new Point(ndims);
 			linepoint.setPosition(
-					new long[] { (long) PrevFrameparamstart.get(index)[0], (long) PrevFrameparamstart.get(index)[1] });
+					new long[] { (long) PrevFrameparamstart.get(index).currentpos[0], (long) PrevFrameparamstart.get(index).currentpos[1] });
+			Point fixedstartpoint = new Point(ndims);
+			fixedstartpoint.setPosition(
+					new long[] { (long) PrevFrameparamstart.get(index).fixedpos[0], (long) PrevFrameparamstart.get(index).fixedpos[1] });
 
-			Point secondlinepoint = new Point(ndims);
-			secondlinepoint.setPosition(
-					new long[] { (long) PrevFrameparamend.get(index)[0], (long) PrevFrameparamend.get(index)[1] });
+			
+		
 
-			int labelstart = Getlabel(linepoint, secondlinepoint, oldslope, oldintercept);
-			int labelend = Getlabel(secondlinepoint, linepoint, oldslopeend, oldinterceptend);
-
-			double[] paramnextframestart;
-			try {
+			int labelstart = Getlabel(fixedstartpoint, originalslope, originalintercept);
+			Indexedlength paramnextframestart;
+			
+			if (labelstart!=Integer.MIN_VALUE)
+			
 				paramnextframestart = Getfinaltrackparam(PrevFrameparamstart.get(index), labelstart, psf,
 						framenumber, StartorEnd.Start);
-			
-
-			if (paramnextframestart == null)
+			else
 				paramnextframestart = PrevFrameparamstart.get(index);
+           if (paramnextframestart == null)
+        	   paramnextframestart = PrevFrameparamstart.get(index);
+		
 
 			final_paramliststart.add(paramnextframestart);
 
-			final double[] oldstartpoint = { PrevFrameparamstart.get(index)[0], PrevFrameparamstart.get(index)[1] };
+			final double[] oldstartpoint =  PrevFrameparamstart.get(index).currentpos;
 
-			final double[] newstartpoint = { paramnextframestart[0], paramnextframestart[1] };
+			final double[] newstartpoint = paramnextframestart.currentpos;
 
-			final double newstartslope = (paramnextframestart[3] - paramnextframestart[1])
-					/ (paramnextframestart[2] - paramnextframestart[0]);
-			final double newstartintercept = paramnextframestart[1] - newstartslope * paramnextframestart[0];
+			final double newstartslope = paramnextframestart.slope;
+			final double newstartintercept = paramnextframestart.intercept;
 			final double[] directionstart = { (newstartpoint[0] - oldstartpoint[0]) / framediff,
 					(newstartpoint[1] - oldstartpoint[1]) / framediff };
 
 			final Trackproperties startedge = new Trackproperties(labelstart, oldstartpoint, newstartpoint,
-					newstartslope, newstartintercept, directionstart, seedlabel, framenumber);
+					newstartslope, newstartintercept);
 
 			startinframe.add(startedge);
-			} catch (Exception e) {
-				e.printStackTrace();
+			
 			}
-			double[] paramnextframeend;
-			try {
+			for (int index = 0; index < PrevFrameparamend.size(); ++index) {
+				
+				Point secondlinepoint = new Point(ndims);
+				secondlinepoint.setPosition(
+						new long[] { (long) PrevFrameparamend.get(index).currentpos[0], (long) PrevFrameparamend.get(index).currentpos[1] });
+				Point fixedendpoint = new Point(ndims);
+				fixedendpoint.setPosition(
+						new long[] { (long) PrevFrameparamend.get(index).fixedpos[0], (long) PrevFrameparamend.get(index).fixedpos[1] });
+
+				final double originalslopeend = PrevFrameparamend.get(index).originalslope;
+
+				final double originalinterceptend = PrevFrameparamend.get(index).originalintercept;
+				int labelend = Getlabel(fixedendpoint, originalslopeend, originalinterceptend);
+			Indexedlength paramnextframeend;
+			
+			if (labelend != Integer.MIN_VALUE)
 				paramnextframeend = Getfinaltrackparam(PrevFrameparamend.get(index), labelend, psf, framenumber,
 						StartorEnd.End);
-			
+			else
+				paramnextframeend = PrevFrameparamend.get(index);
 			if (paramnextframeend == null)
 				paramnextframeend = PrevFrameparamend.get(index);
+			
 			final_paramlistend.add(paramnextframeend);
 
-			final double[] oldendpoint = { PrevFrameparamend.get(index)[0], PrevFrameparamend.get(index)[1] };
+			final double[] oldendpoint =  PrevFrameparamend.get(index).currentpos;
 
-			double[] newendpoint = { paramnextframeend[0], paramnextframeend[1] };
+			double[] newendpoint = paramnextframeend.currentpos;
 
-			final double newendslope = (paramnextframeend[3] - paramnextframeend[1])
-					/ (paramnextframeend[2] - paramnextframeend[0]);
-			final double newendintercept = paramnextframeend[1] - newendslope * paramnextframeend[0];
+			final double newendslope = paramnextframeend.slope;
+			final double newendintercept = paramnextframeend.intercept;
 			final double[] directionend = { (newendpoint[0] - oldendpoint[0]) / framediff,
 					(newendpoint[1] - oldendpoint[1]) / framediff };
 
 			final Trackproperties endedge = new Trackproperties(labelend, oldendpoint, newendpoint, newendslope,
-					newendintercept, directionend, seedlabelend, framenumber);
+					newendintercept);
 
 			endinframe.add(endedge);
-			} catch (Exception e) {
-				e.printStackTrace();
+			
 			}
-		}
 
 		return true;
 	}
 
 	@Override
-	public Pair<ArrayList<double[]>, ArrayList<double[]>> getResult() {
+	public Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> getResult() {
 
-		Pair<ArrayList<double[]>, ArrayList<double[]>> listpair = new Pair<ArrayList<double[]>, ArrayList<double[]>>(
+		Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> listpair = new Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>>(
 				final_paramliststart, final_paramlistend);
 
 		return listpair;
@@ -250,7 +260,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 	
 
-	private final double[] MakerepeatedLineguess(double[] iniparam, int label) {
+	private final double[] MakerepeatedLineguess(Indexedlength iniparam, int label) {
 		long[] newposition = new long[ndims];
 		double[] minVal = { Double.MAX_VALUE, Double.MAX_VALUE };
 		double[] maxVal = { -Double.MIN_VALUE, -Double.MIN_VALUE };
@@ -261,9 +271,8 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 		currentimg = Views.interval(currentimg, interval);
 
-		double slope = iniparam[ndims + 3];
-		double intercept = iniparam[ndims + 4];
-		double newintercept = intercept;
+		double slope = iniparam.slope;
+		double intercept = iniparam.intercept;
 
 		final Cursor<FloatType> outcursor = Views.iterable(currentimg).localizingCursor();
 
@@ -277,7 +286,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 				outcursor.localize(newposition);
 
 				long pointonline = (long) (outcursor.getLongPosition(1) - slope * outcursor.getLongPosition(0)
-						- newintercept);
+						- intercept);
 
 				// To get the min and max co-rodinates along the line so we
 				// have starting points to
@@ -315,8 +324,8 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 		}
 		MinandMax[2 * ndims] = 0.5 * Math.min(psf[0], psf[1]);
-		MinandMax[2 * ndims + 1] = iniparam[ndims + 1];
-		MinandMax[2 * ndims + 2] = iniparam[ndims + 2];
+		MinandMax[2 * ndims + 1] = iniparam.lineintensity;
+		MinandMax[2 * ndims + 2] = iniparam.background;
 		for (int d = 0; d < ndims; ++d) {
 
 			if (MinandMax[d] == Double.MAX_VALUE || MinandMax[d + ndims] == -Double.MIN_VALUE)
@@ -332,36 +341,24 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 	}
 
-	public double[] Getfinaltrackparam(final double[] iniparam, final int label, final double[] psf, final int rate,
-			final StartorEnd startorend) throws Exception {
+	public Indexedlength Getfinaltrackparam(final Indexedlength iniparam, final int label, final double[] psf, final int rate,
+			final StartorEnd startorend) {
 
-		if (iniparam == null || label == Integer.MIN_VALUE)
-			return null;
+			
 
-		else {
-
-			PointSampleList<FloatType> datalist = gatherfullData(label);
-			final Cursor<FloatType> listcursor = datalist.localizingCursor();
-			double[][] X = new double[(int) datalist.size()][ndims];
-			double[] I = new double[(int) datalist.size()];
-			int index = 0;
-			while (listcursor.hasNext()) {
-				listcursor.fwd();
-
-				for (int d = 0; d < ndims; d++) {
-					X[index][d] = listcursor.getDoublePosition(d);
-				}
-
-				I[index] = listcursor.get().getRealDouble();
-
-				index++;
-			}
-
+		
 			final double[] LMparam = MakerepeatedLineguess(iniparam, label);
 			if (LMparam == null)
-				return null;
+				return iniparam;
 
 			else {
+				
+				final double[] inistartpos = { LMparam[0], LMparam[1] };
+				final double[] iniendpos = { LMparam[2], LMparam[3] };
+				final double[] inipos = { iniparam.currentpos[0], iniparam.currentpos[1] };
+				double inicutoffdistance = Distance(inistartpos, iniendpos);
+
+				final long radius = (long) Math.max(psf[0], psf[1]);
 				RandomAccessibleInterval<FloatType> currentimg = imgs.get(label).Actualroi;
 
 				FinalInterval interval = imgs.get(label).interval;
@@ -376,30 +373,44 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 				}
 				
-			
+				PointSampleList<FloatType> datalist = gatherfullData(label);
+				final Cursor<FloatType> listcursor = datalist.localizingCursor();
+				double[][] X = new double[(int) datalist.size()][ndims];
+				double[] I = new double[(int) datalist.size()];
+				int index = 0;
+				while (listcursor.hasNext()) {
+					listcursor.fwd();
+
+					for (int d = 0; d < ndims; d++) {
+						X[index][d] = listcursor.getDoublePosition(d);
+					}
+
+					I[index] = listcursor.get().getRealDouble();
+
+					index++;
+				}
+
 
 				System.out.println("Label: " + label + " " + "Initial guess: " + " StartX: " + LMparam[0] + " StartY: "
 						+ LMparam[1] + " EndX: " + LMparam[2] + " EndY: " + LMparam[3]);
 
-				final double[] inistartpos = { LMparam[0], LMparam[1] };
-				final double[] iniendpos = { LMparam[2], LMparam[3] };
-				final double[] inipos = { iniparam[0], iniparam[1] };
-				double inicutoffdistance = Distance(inistartpos, iniendpos);
+				final double[] safeparam = LMparam.clone();
 
-				double slope = (iniendpos[1] - inistartpos[1]) / (iniendpos[0] - inistartpos[0]);
-				final long radius = (long) Math.max(psf[0], psf[1]);
-
+				if (inicutoffdistance >  radius){
 				// LM solver part
-				if (inicutoffdistance >  radius) {
 					
-						final long start = System.currentTimeMillis();
-						LevenbergMarquardtSolverLine.solve(X, LMparam, fixed_param, I, new GaussianLineds(),
-								lambda, termepsilon, maxiter);
-						final long end = System.currentTimeMillis();
-						processingTime = end - start;
+						try {
+							LevenbergMarquardtSolverLine.solve(X, LMparam, fixed_param, I, new GaussianLineds(),
+									lambda, termepsilon, maxiter);
+						} catch (Exception e1) {
+							e1.printStackTrace();
+						}
 					
-					System.out.println("LM solver done");
-
+						for (int j = 0; j < LMparam.length; j++) {
+							if (Double.isNaN(LMparam[j]))
+								LMparam[j] = safeparam[j];
+						}
+					
 					final double[] startpos = new double[ndims];
 					final double[] endpos = new double[ndims];
 
@@ -409,7 +420,6 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 					}
 
-					double[] returnparam = new double[ndims + 7];
 
 					final double maxintensityline = GetLocalmaxmin.computeMaxIntensity(currentimg);
 
@@ -461,6 +471,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 							}
 						}
+					}
 
 						if (Math.abs(startpos[0] - startfit[0]) >= cutoffdistance
 								|| Math.abs(startpos[1] - startfit[1]) >= cutoffdistance
@@ -475,7 +486,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 						}
 
-					}
+					
 
 					for (int d = 0; d < ndims; ++d) {
 						if (Double.isNaN(startfit[d]) || Double.isNaN(endfit[d])) {
@@ -487,68 +498,54 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 					}
 
-					for (int j = 0; j < LMparam.length; j++) {
-						if (Double.isNaN(LMparam[j]))
-							LMparam[j] = iniparam[j];
-					}
+					final int seedLabel = iniparam.seedLabel;
 
 					final double[] finalstartpoint = { LMparam[0], LMparam[1] };
 					final double[] finalendpoint = { LMparam[2], LMparam[3] };
 
 					if (startorend== StartorEnd.Start){
+						final double currentslope = (finalstartpoint[1] - inipos[1]) / (finalstartpoint[0] - inipos[0]);
+						final double currentintercept = finalstartpoint[1] - currentslope * finalstartpoint[0];
 						
-						
-						
-						for (int d = 0; d < ndims; ++d) {
-							returnparam[d] = finalstartpoint[d];
-						}
-						
-					
+						Indexedlength PointofInterest = new Indexedlength(label, seedLabel, framenumber, 
+								LMparam[2 * ndims], LMparam[2 * ndims + 1], 
+								LMparam[2 * ndims + 2], finalstartpoint, iniparam.fixedpos, currentslope, currentintercept,
+								iniparam.originalslope, iniparam.originalintercept);
+					System.out.println("New X: " + finalstartpoint[0] + " New Y: " + finalstartpoint[1]);
+						return PointofInterest;
 					}
 					else{
 						
-						for (int d = 0; d < ndims; ++d) {
-							returnparam[d] = finalendpoint[d];
-						}
 
-							
-							
+						final double currentslope = (finalendpoint[1] - inipos[1]) / (finalendpoint[0] - inipos[0]);
+						final double currentintercept = finalendpoint[1] - currentslope * finalendpoint[0];
 						
+						Indexedlength PointofInterest = new Indexedlength(label, seedLabel, framenumber, 
+								LMparam[2 * ndims], LMparam[2 * ndims + 1], 
+								LMparam[2 * ndims + 2], finalendpoint, iniparam.fixedpos, currentslope, currentintercept,
+								iniparam.originalslope, iniparam.originalintercept);
+						System.out.println("New X: " + finalendpoint[0] + " New Y: " + finalendpoint[1]);
+							
+						return PointofInterest;
 						
 						
 					}
-
-					final double currentslope = (returnparam[1] - inipos[1]) / (returnparam[0] - inipos[0]);
-					final double currentintercept = returnparam[1] - currentslope * returnparam[0];
-					System.out.println("Label: " + label + " X: " + returnparam[0] + " Y: " + returnparam[1]);
-
-					returnparam[ndims] = LMparam[2*ndims];
-					returnparam[ndims + 1] = LMparam[2*ndims + 1];
-					returnparam[ndims + 2] = LMparam[2*ndims + 2];
-
-					returnparam[ndims + 3] = currentslope;
-					returnparam[ndims + 4] = currentintercept;
-
-					returnparam[ndims + 5] = iniparam[7];
-					returnparam[ndims + 6] = framenumber;
-
-					return returnparam;
 				}
-
-				else {
-
-					double[] failparam = new double[iniparam.length];
-					failparam = iniparam;
-					failparam[ndims + 6] = framenumber;
-					System.out.println("Returning failparam");
-					return failparam;
-
-				}
-			}
-
+			
+				else 
+					return null;
+			
 		}
-
 	}
+		
+					
+					
+				
+			
+
+		
+
+	
 
 	private PointSampleList<FloatType> gatherfullData(final int label) {
 		final PointSampleList<FloatType> datalist = new PointSampleList<FloatType>(ndims);
@@ -564,6 +561,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 		while (localcursor.hasNext()) {
 			localcursor.fwd();
 
+			
 			Point newpoint = new Point(localcursor);
 			datalist.add(newpoint, localcursor.get().copy());
 
@@ -572,10 +570,11 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 		return datalist;
 	}
 
-	public int Getlabel(final Point linepoint, Point secondlinepoint, final double oldslope,
-			final double oldintercept) {
+	public int Getlabel(final Point fixedpoint, final double originalslope,
+			final double originalintercept) {
 
 		ArrayList<Integer> currentlabel = new ArrayList<Integer>();
+		
 		int finallabel = Integer.MIN_VALUE;
 		int pointonline = Integer.MAX_VALUE;
 		for (int index = 0; index < imgs.size(); ++index) {
@@ -584,9 +583,9 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			FinalInterval interval = imgs.get(index).interval;
 			currentimg = Views.interval(currentimg, interval);
 
-			if (linepoint.getIntPosition(0) >= interval.min(0) && linepoint.getIntPosition(0) <= interval.max(0)
-					&& linepoint.getIntPosition(1) >= interval.min(1)
-					&& linepoint.getIntPosition(1) <= interval.max(1)) {
+			if (fixedpoint.getIntPosition(0) >= interval.min(0) && fixedpoint.getIntPosition(0) <= interval.max(0)
+					&& fixedpoint.getIntPosition(1) >= interval.min(1)
+					&& fixedpoint.getIntPosition(1) <= interval.max(1)) {
 
 				currentlabel.add(imgs.get(index).roilabel);
 			}
@@ -595,7 +594,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 		for (int index = 0; index < currentlabel.size(); ++index) {
 			int distfromline = (int) Math
-					.abs(linepoint.getIntPosition(1) - oldslope * linepoint.getIntPosition(0) - oldintercept);
+					.abs(fixedpoint.getIntPosition(1) - originalslope * fixedpoint.getIntPosition(0) - originalintercept);
 
 			if (distfromline < pointonline) {
 

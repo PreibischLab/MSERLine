@@ -20,6 +20,7 @@ import ij.ImagePlus;
 import ij.gui.Overlay;
 import labeledObjects.CommonOutput;
 import labeledObjects.CommonOutputHF;
+import labeledObjects.Indexedlength;
 import labeledObjects.Subgraphs;
 import lineFinder.LinefinderHFHough;
 import lineFinder.LinefinderHFMSER;
@@ -122,13 +123,13 @@ public class VelocitydetectionMSER {
 			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(img, newlineMser, psf, minlength, 0);
 			MTline.checkInput();
 			MTline.process();
-			Pair<ArrayList<double[]>,ArrayList<double[]>> PrevFrameparam = MTline.getResult();
+			Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = MTline.getResult();
 
 			// Draw the detected lines
 			RandomAccessibleInterval<FloatType> gaussimg = new ArrayImgFactory<FloatType>().create(img,
 					new FloatType());
-			PushCurves.DrawallLine(gaussimg, PrevFrameparam.fst, PrevFrameparam.snd, psf);
-			ImageJFunctions.show(gaussimg).setTitle("Exact-line");
+		//	PushCurves.DrawallLine(gaussimg, PrevFrameparam.fst, PrevFrameparam.snd, psf);
+		//	ImageJFunctions.show(gaussimg).setTitle("Exact-line");
 		}
 
 		if (ndims > 2) {
@@ -165,7 +166,7 @@ public class VelocitydetectionMSER {
 			MTline.checkInput();
 			
 			MTline.process();
-			Pair<ArrayList<double[]>,ArrayList<double[]>> PrevFrameparam = MTline.getResult();
+			Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = MTline.getResult();
 			 Overlay overlay = newlineMser.getOverlay();
 	            ImageJFunctions.show(inputimg).setTitle("Preprocessed extended image");
 			
@@ -174,8 +175,8 @@ public class VelocitydetectionMSER {
 				ImagePlus impcurr = IJ.getImage();
 				impcurr.setOverlay(overlay);
 			// Draw the detected lines
-			PushCurves.DrawallLine(gaussimg, PrevFrameparam.fst, PrevFrameparam.snd, psf);
-			ImageJFunctions.show(gaussimg).setTitle("Exact-line");
+		//	PushCurves.DrawallLine(gaussimg, PrevFrameparam.fst, PrevFrameparam.snd, psf);
+		//	ImageJFunctions.show(gaussimg).setTitle("Exact-line");
 
 			
 			
@@ -185,7 +186,7 @@ public class VelocitydetectionMSER {
 			// seperate graph for both ends
 			
 			
-			final int maxframe =(int) img.dimension(ndims - 1);
+			final int maxframe = (int) img.dimension(ndims - 1);
 
 			for (int frame = 1; frame < maxframe; ++frame) {
 
@@ -213,7 +214,7 @@ public class VelocitydetectionMSER {
 							PrevFrameparam.fst, PrevFrameparam.snd, psf, frame);
 					growthtracker.checkInput();
 					growthtracker.process();
-					Pair<ArrayList<double[]>, ArrayList<double[]>> NewFrameparam = growthtracker.getResult();
+					Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> NewFrameparam = growthtracker.getResult();
 					ArrayList<Trackproperties> startStateVectors = growthtracker.getstartStateVectors();
 					ArrayList<Trackproperties> endStateVectors = growthtracker.getendStateVectors();
 

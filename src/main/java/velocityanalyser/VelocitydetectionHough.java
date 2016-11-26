@@ -22,6 +22,7 @@ import ij.gui.EllipseRoi;
 import ij.gui.Overlay;
 import labeledObjects.CommonOutput;
 import labeledObjects.CommonOutputHF;
+import labeledObjects.Indexedlength;
 import labeledObjects.LabelledImg;
 import labeledObjects.Simpleobject;
 import labeledObjects.Subgraphs;
@@ -129,13 +130,13 @@ public class VelocitydetectionHough {
 			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(img, newlineHough, psf, minlength, 0);
 			MTline.checkInput();
 			MTline.process();
-			Pair<ArrayList<double[]>,ArrayList<double[]>> PrevFrameparam = MTline.getResult();
+			Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = MTline.getResult();
 
 			// Draw the detected lines
 			RandomAccessibleInterval<FloatType> gaussimg = new ArrayImgFactory<FloatType>().create(img,
 					new FloatType());
-			PushCurves.DrawallLine(gaussimg, PrevFrameparam.fst, PrevFrameparam.snd, psf);
-			ImageJFunctions.show(gaussimg).setTitle("Exact-line");
+			//PushCurves.DrawallLine(gaussimg, PrevFrameparam.fst, PrevFrameparam.snd, psf);
+			//ImageJFunctions.show(gaussimg).setTitle("Exact-line");
 		}
 
 		if (ndims > 2) {
@@ -143,7 +144,7 @@ public class VelocitydetectionHough {
 
 			RandomAccessibleInterval<FloatType> groundframe = Views.hyperSlice(img, ndims - 1, 0);
 			RandomAccessibleInterval<FloatType> groundframepre = Views.hyperSlice(preprocessedimg, ndims - 1, 0);
-
+			ImageJFunctions.show(groundframe);
 			
 			final MedianFilter2D<FloatType> medfilter = new MedianFilter2D<FloatType>(groundframepre, 1);
 			medfilter.process();
@@ -162,13 +163,13 @@ public class VelocitydetectionHough {
 			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(groundframe, newlineHough, psf, minlength, 0);
 			MTline.checkInput();
 			MTline.process();
-			Pair<ArrayList<double[]>,ArrayList<double[]>> PrevFrameparam = MTline.getResult();
+			Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = MTline.getResult();
 
 			// Draw the detected lines
 			RandomAccessibleInterval<FloatType> gaussimg = new ArrayImgFactory<FloatType>().create(groundframe,
 					new FloatType());
-			PushCurves.DrawallLine(gaussimg, PrevFrameparam.fst, PrevFrameparam.snd, psf);
-			ImageJFunctions.show(gaussimg).setTitle("Exact-line");
+		//	PushCurves.DrawallLine(gaussimg, PrevFrameparam.fst, PrevFrameparam.snd, psf);
+		//	ImageJFunctions.show(gaussimg).setTitle("Exact-line");
 
 			
 			
@@ -185,6 +186,7 @@ public class VelocitydetectionHough {
 				IntervalView<FloatType> currentframe = Views.hyperSlice(img, ndims - 1, frame);
 				IntervalView<FloatType> currentframepre = Views.hyperSlice(preprocessedimg, ndims - 1, frame);
 
+				ImageJFunctions.show(currentframe);
 				final MedianFilter2D<FloatType> medfiltercurr = new MedianFilter2D<FloatType>(currentframepre, 1);
 				medfiltercurr.process();
 				RandomAccessibleInterval<FloatType> preinputimgpre = medfiltercurr.getResult();
@@ -203,7 +205,7 @@ public class VelocitydetectionHough {
 							PrevFrameparam.fst, PrevFrameparam.snd, psf, frame);
 					growthtracker.checkInput();
 					growthtracker.process();
-					Pair<ArrayList<double[]>, ArrayList<double[]>> NewFrameparam = growthtracker.getResult();
+					Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> NewFrameparam = growthtracker.getResult();
 					ArrayList<Trackproperties> startStateVectors = growthtracker.getstartStateVectors();
 					ArrayList<Trackproperties> endStateVectors = growthtracker.getendStateVectors();
 			
@@ -214,8 +216,8 @@ public class VelocitydetectionHough {
 				// Draw the lines detected in the current frame
 				RandomAccessibleInterval<FloatType> newgaussimg = new ArrayImgFactory<FloatType>().create(currentframe,
 						new FloatType());
-				PushCurves.DrawallLine(newgaussimg, NewFrameparam.fst, NewFrameparam.snd, psf);
-				ImageJFunctions.show(newgaussimg).setTitle("Exact-line");
+			//	PushCurves.DrawallLine(newgaussimg, NewFrameparam.fst, NewFrameparam.snd, psf);
+			//	ImageJFunctions.show(newgaussimg).setTitle("Exact-line");
 
 			}
 

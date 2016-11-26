@@ -8,6 +8,7 @@ import com.sun.tools.javac.util.Pair;
 import LineModels.GaussianLineds;
 import ij.gui.EllipseRoi;
 import labeledObjects.CommonOutput;
+import labeledObjects.Indexedlength;
 import labeledObjects.LabelledImg;
 import labeledObjects.Simpleobject;
 import lineFinder.Linefinder;
@@ -26,15 +27,15 @@ import preProcessing.GetLocalmaxmin;
 import util.Boundingboxes;
 
 public class SubpixelLengthPCLine extends BenchmarkAlgorithm
-implements OutputAlgorithm<Pair<ArrayList<double[]>, ArrayList<double[]>>> {
+implements OutputAlgorithm<Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>>> {
 	
 	private static final String BASE_ERROR_MSG = "[SubpixelLine] ";
 	private final RandomAccessibleInterval<FloatType> source;
 	private final ArrayList<CommonOutput> imgs;
 	private final int ndims;
-	private Pair<ArrayList<double[]>, ArrayList<double[]>> pair_paramlist;
-	private ArrayList<double[]> startlist;
-	private ArrayList<double[]> endlist;
+	private Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> pair_paramlist;
+	private ArrayList<Indexedlength> startlist;
+	private ArrayList<Indexedlength> endlist;
 	private final double[] psf;
 	private final int minlength;
 	private final int framenumber;
@@ -155,6 +156,7 @@ implements OutputAlgorithm<Pair<ArrayList<double[]>, ArrayList<double[]>>> {
 			             final double[] psf,
 			             final int minlength,
 			             final int framenumber){
+		
 		finder.checkInput();
 		finder.process();
 		imgs = finder.getResult();
@@ -180,8 +182,8 @@ implements OutputAlgorithm<Pair<ArrayList<double[]>, ArrayList<double[]>>> {
 	public boolean process() {
 		
 		
-		startlist = new ArrayList<double[]>();
-		endlist = new ArrayList<double[]>();
+		startlist = new ArrayList<Indexedlength>();
+		endlist = new ArrayList<Indexedlength>();
 		for (int index = 0; index < imgs.size() ; ++index) {
 			
 			final int Label = imgs.get(index).roilabel;
@@ -189,7 +191,7 @@ implements OutputAlgorithm<Pair<ArrayList<double[]>, ArrayList<double[]>>> {
 			final double intercept = imgs.get(index).lineparam[1];
 			final double ifprep = imgs.get(index).lineparam[2];
 			if ( slope!= Double.MAX_VALUE && intercept!= Double.MAX_VALUE){
-			final Pair<double [], double[]> returnparam = Getfinallineparam(Label, slope, intercept, psf, minlength);
+			final Pair<Indexedlength, Indexedlength> returnparam = Getfinallineparam(Label, slope, intercept, psf, minlength);
 			if (returnparam!= null ){
 			startlist.add(returnparam.fst);
 			endlist.add(returnparam.snd);
@@ -197,24 +199,24 @@ implements OutputAlgorithm<Pair<ArrayList<double[]>, ArrayList<double[]>>> {
 			}
 		}
 		
-		pair_paramlist = new Pair<ArrayList<double[]>, ArrayList<double[]>>(startlist, endlist);
+		pair_paramlist = new Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>>(startlist, endlist);
 
 		return true;
 	}
 
 	@Override
-	public Pair<ArrayList<double[]>, ArrayList<double[]>> getResult() {
+	public Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> getResult() {
 		
 		
 		return pair_paramlist;
 	}
 
-	public ArrayList<double[]> getStartPoints(){
+	public ArrayList<Indexedlength> getStartPoints(){
 		
 		return startlist;
 	}
 	
-public ArrayList<double[]> getEndPoints(){
+public ArrayList<Indexedlength> getEndPoints(){
 		
 		return endlist;
 	}
@@ -319,7 +321,7 @@ public ArrayList<double[]> getEndPoints(){
 	
 	// Get line parameters for fitting line to a line in a label
 
-		public Pair<double[], double[]> Getfinallineparam(final int label, final double slope, final double intercept, final double[] psf,
+		public Pair<Indexedlength, Indexedlength> Getfinallineparam(final int label, final double slope, final double intercept, final double[] psf,
 				final double minlength)  {
 
 			PointSampleList<FloatType> datalist = gatherfullData(label);
@@ -429,9 +431,9 @@ public ArrayList<double[]> getEndPoints(){
 					 * dimensions of returnparam =  2 * ndims + 3 for the free parameters
 					 * + 4 for the label and the frame number information.
 					 */
-					double[] returnparam = new double[2 * ndims + 7];
-					double[] startparam = new double[2 * ndims + 5];
-					double[] endparam = new double[2 * ndims + 5];
+					double[] returnparam = new double[2 * ndims ];
+					double[] startparam = new double[ndims ];
+					double[] endparam = new double[ndims];
 					
 					for (int d = 0; d < ndims; ++d) {
 						returnparam[d] = startfit[d];
@@ -480,34 +482,26 @@ public ArrayList<double[]> getEndPoints(){
 
 						}
 					}
-					
+
+					final double currentslope = (returnparam[3] - returnparam[1]) / (returnparam[2] - returnparam[0]);
+					final double currentintercept = returnparam[3] - currentslope * returnparam[2];
 
 					System.out.println("Fits :" + "StartX:" + returnparam[0] + " StartY:" + returnparam[1] + " " + "EndX:"
 							+ returnparam[2] + "EndY: " + returnparam[3] + " " + "ds: " + finalparamstart[4] );
 
 					System.out.println("Length: " + Distance(new double[]{returnparam[0],  returnparam[1]},new double[]{returnparam[2],  returnparam[3]} ));
+
+					final Indexedlength startPart = new Indexedlength(label, label, framenumber, finalparamstart[4],
+							finalparamstart[5], finalparamstart[6], startparam,
+							startparam , currentslope, currentintercept , currentslope, currentintercept);
+					
+					final Indexedlength endPart = new Indexedlength(label, label, framenumber, finalparamstart[4],
+							finalparamstart[5], finalparamstart[6], endparam,
+							endparam, currentslope, currentintercept, currentslope, currentintercept);
 					
 					
-					returnparam[2 * ndims] = finalparamstart[4];
-					returnparam[2 * ndims + 1] = finalparamstart[5];
-					returnparam[2 * ndims + 2] = finalparamstart[6];
 					
-					final double currentslope = (returnparam[3] - returnparam[1]) / (returnparam[2] - returnparam[0]);
-					final double currentintercept = returnparam[3] - currentslope * returnparam[2];
-					returnparam[2 * ndims + 3] = currentslope;
-					returnparam[2 * ndims + 4] = currentintercept;
-					
-					returnparam[2 * ndims + 5] = label;
-					returnparam[2 * ndims + 6] = framenumber;
-					
-					for (int d =  ndims ; d <  ndims + 7; ++d){
-						
-						startparam[d] = returnparam[d +ndims  ];
-						endparam[d] = returnparam[d + ndims  ];
-						
-					}
-					
-					final Pair<double[], double[]> pair = new Pair<double[], double[]> ( startparam, endparam);
+					final Pair<Indexedlength, Indexedlength> pair = new Pair<Indexedlength, Indexedlength> ( startPart, endPart);
 					return pair;
 
 				}
