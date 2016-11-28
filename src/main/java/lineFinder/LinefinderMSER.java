@@ -250,8 +250,8 @@ public class LinefinderMSER  implements Linefinder{
 					
 
 				}
-				
 				double[] slopeandintercept = new double[ndims + 1];
+				double[] slopeandinterceptCI = new double[ndims + 3];
 				
 				
 				
@@ -262,10 +262,15 @@ public class LinefinderMSER  implements Linefinder{
 				
 				slopeandintercept = LargestEigenvector(mean, covar);
 				
-				CommonOutput currentOutput = new CommonOutput(framenumber, Roiindex, slopeandintercept, Roiimg, ActualRoiimg, interval);
+				for (int d = 0; d < ndims; ++d){
+					slopeandinterceptCI[d] = slopeandintercept[d];
+					slopeandinterceptCI[d + ndims ] = 0;
+				}
+				
+				CommonOutput currentOutput = new CommonOutput(framenumber, Roiindex, slopeandinterceptCI, Roiimg, ActualRoiimg, interval);
 				
 				
-				if(slopeandintercept!=null  )
+				if(slopeandinterceptCI!=null  )
 				output.add(currentOutput);
 				
 				}

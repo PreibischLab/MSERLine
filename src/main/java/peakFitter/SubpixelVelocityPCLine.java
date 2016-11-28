@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import com.sun.tools.javac.util.Pair;
 
 import LineModels.GaussianLineds;
+import LineModels.GaussianSplineds;
+import LineModels.MTFitFunction;
+import LineModels.UseLineModel.UserChoiceModel;
 import graphconstructs.Trackproperties;
 import labeledObjects.CommonOutputHF;
 import labeledObjects.Indexedlength;
@@ -35,6 +38,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 	private ArrayList<Trackproperties> startinframe;
 	private ArrayList<Trackproperties> endinframe;
 	private final double[] psf;
+	
 
 	// LM solver iteration params
 	public int maxiter = 500;
@@ -42,10 +46,10 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 	public double termepsilon = 1e-1;
 	// Mask fits iteration param
 	public int iterations = 100;
-	public double cutoffdistance = 30;
+	public double cutoffdistance = 50;
 	public boolean halfgaussian = false;
 	public double Intensityratio = 0.5;
-
+	private final UserChoiceModel model;
 	public void setCutoffdistance(double cutoffdistance) {
 		this.cutoffdistance = cutoffdistance;
 	}
@@ -92,7 +96,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 	public SubpixelVelocityPCLine(final RandomAccessibleInterval<FloatType> source, final LinefinderHF linefinder,
 			final ArrayList<Indexedlength> PrevFrameparamstart, final ArrayList<Indexedlength> PrevFrameparamend,
-			final double[] psf, final int framenumber) {
+			final double[] psf, final int framenumber, final UserChoiceModel model) {
 
 		linefinder.checkInput();
 		linefinder.process();
@@ -103,6 +107,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 		this.psf = psf;
 		this.framenumber = framenumber;
 		this.ndims = source.numDimensions();
+		this.model = model;
 		assert (PrevFrameparamend.size() == PrevFrameparamstart.size());
 	}
 
@@ -122,6 +127,12 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 	}
 
+	
+	public enum Fitfunctiontype{
+		
+		
+	}
+	
 	@Override
 	public boolean process() {
 
@@ -141,7 +152,9 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 			final double originalintercept = PrevFrameparamstart.get(index).originalintercept;
 
+			final double Curvature = PrevFrameparamstart.get(index).Curvature;
 
+			final double Inflection= PrevFrameparamstart.get(index).Inflection;
 
 			Point linepoint = new Point(ndims);
 			linepoint.setPosition(
@@ -259,37 +272,42 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 		double slope = iniparam.originalslope;
 		double intercept = iniparam.originalintercept;
+		double Curvature = iniparam.Curvature;
+		double Inflection = iniparam.Inflection;
 
 		final Cursor<FloatType> outcursor = Views.iterable(currentimg).localizingCursor();
 
 		final double maxintensityline = GetLocalmaxmin.computeMaxIntensity(currentimg);
-		while (outcursor.hasNext()) {
+		
+		
+		if (model ==  UserChoiceModel.Line){
+			while (outcursor.hasNext()) {
 
-			outcursor.fwd();
+				outcursor.fwd();
 
-			if (outcursor.get().get() / maxintensityline > Intensityratio) {
+				if (outcursor.get().get() / maxintensityline > Intensityratio) {
 
-				outcursor.localize(newposition);
+					outcursor.localize(newposition);
 
-				long pointonline = (long) (outcursor.getLongPosition(1) - slope * outcursor.getLongPosition(0)
-						- intercept);
+					long pointonline = (long) (outcursor.getLongPosition(1) - slope * outcursor.getLongPosition(0)
+							- intercept);
 
-				// To get the min and max co-rodinates along the line so we
-				// have starting points to
-				// move on the line smoothly
+					// To get the min and max co-rodinates along the line so we
+					// have starting points to
+					// move on the line smoothly
 
-				if (pointonline == 0) {
-					for (int d = 0; d < ndims; ++d) {
-						if (outcursor.getDoublePosition(d) <= minVal[d])
-							minVal[d] = outcursor.getDoublePosition(d);
+					if (pointonline == 0) {
+						for (int d = 0; d < ndims; ++d) {
+							if (outcursor.getDoublePosition(d) <= minVal[d])
+								minVal[d] = outcursor.getDoublePosition(d);
 
-						if (outcursor.getDoublePosition(d) >= maxVal[d])
-							maxVal[d] = outcursor.getDoublePosition(d);
+							if (outcursor.getDoublePosition(d) >= maxVal[d])
+								maxVal[d] = outcursor.getDoublePosition(d);
 
+						}
 					}
 				}
 			}
-		}
 		final double[] MinandMax = new double[2 * ndims + 3];
 
 		if (slope >= 0) {
@@ -322,8 +340,83 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 				return null;
 
 		}
-
 		return MinandMax;
+		}
+		
+		else {
+			while (outcursor.hasNext()) {
+
+				outcursor.fwd();
+
+				if (outcursor.get().get() / maxintensityline > Intensityratio) {
+
+					outcursor.localize(newposition);
+
+					long pointoncurve = (long) (outcursor.getLongPosition(1) - slope * outcursor.getLongPosition(0) - Curvature* outcursor.getLongPosition(0) *outcursor.getLongPosition(0) 
+							- Inflection *outcursor.getLongPosition(0) *outcursor.getLongPosition(0) *outcursor.getLongPosition(0) 
+							- intercept);
+
+					// To get the min and max co-rodinates along the line so we
+					// have starting points to
+					// move on the line smoothly
+
+					if (pointoncurve == 0) {
+						for (int d = 0; d < ndims; ++d) {
+							if (outcursor.getDoublePosition(d) <= minVal[d])
+								minVal[d] = outcursor.getDoublePosition(d);
+
+							if (outcursor.getDoublePosition(d) >= maxVal[d])
+								maxVal[d] = outcursor.getDoublePosition(d);
+
+						}
+					}
+				}
+			}
+			final double[] MinandMax = new double[2 * ndims + 6];
+
+			if (slope >= 0) {
+				for (int d = 0; d < ndims; ++d) {
+
+					MinandMax[d] = minVal[d];
+					MinandMax[d + ndims] = maxVal[d];
+				}
+
+			}
+
+			if (slope < 0) {
+
+				MinandMax[0] = minVal[0];
+				MinandMax[1] = maxVal[1];
+				MinandMax[2] = maxVal[0];
+				MinandMax[3] = minVal[1];
+
+			}
+			MinandMax[2 * ndims] = 0.5 * Math.min(psf[0], psf[1]);
+			MinandMax[2 * ndims + 1] = iniparam.lineintensity;
+			MinandMax[2 * ndims + 2] = iniparam.background;
+			
+			
+			MinandMax[2 * ndims + 3] = slope;
+			MinandMax[2 * ndims + 4] = Curvature;
+			MinandMax[2 * ndims + 5] = Inflection;
+			for (int d = 0; d < ndims; ++d) {
+
+				if (MinandMax[d] == Double.MAX_VALUE || MinandMax[d + ndims] == -Double.MIN_VALUE)
+					return null;
+				if (MinandMax[d] >= source.dimension(d) || MinandMax[d + ndims] >= source.dimension(d))
+					return null;
+				if (MinandMax[d] <= 0 || MinandMax[d + ndims] <= 0)
+					return null;
+
+			}
+			return MinandMax;
+			}
+		
+			
+		
+		
+		
+		
 
 	}
 
@@ -381,12 +474,19 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						+ LMparam[1] + " EndX: " + LMparam[2] + " EndY: " + LMparam[3]);
 
 				final double[] safeparam = LMparam.clone();
-
+				MTFitFunction UserChoiceFunction = null;
+				if (model == UserChoiceModel.Line){
+					UserChoiceFunction = new GaussianLineds();
+				}
+				if (model == UserChoiceModel.Spline){
+					
+					UserChoiceFunction = new GaussianSplineds();
+				}
 				if (inicutoffdistance >  radius){
 				// LM solver part
 					
 						try {
-							LevenbergMarquardtSolverLine.solve(X, LMparam, fixed_param, I, new GaussianLineds(),
+							LevenbergMarquardtSolverLine.solve(X, LMparam, fixed_param, I, UserChoiceFunction,
 									lambda, termepsilon, maxiter);
 						} catch (Exception e1) {
 							e1.printStackTrace();
@@ -488,7 +588,8 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 					final double[] finalstartpoint = { LMparam[0], LMparam[1] };
 					final double[] finalendpoint = { LMparam[2], LMparam[3] };
-
+					
+					if (model == UserChoiceModel.Line){
 					if (startorend== StartorEnd.Start){
 						final double currentslope = (finalstartpoint[1] - inipos[1]) / (finalstartpoint[0] - inipos[0]);
 						final double currentintercept = finalstartpoint[1] - currentslope * finalstartpoint[0];
@@ -517,7 +618,48 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						
 					}
 				}
-			
+					
+					else{
+						if (startorend== StartorEnd.Start){
+							final double currentslope = LMparam[2 * ndims + 3];
+							
+
+							final double Curvature = LMparam[2 * ndims + 4];
+							final double Inflection = LMparam[2 * ndims + 5];
+							final double currentintercept = finalendpoint[1] - currentslope *finalendpoint[0] - Curvature * finalendpoint[0] * finalendpoint[0]- Inflection * finalendpoint[0] * finalendpoint[0] *  finalendpoint[0] ;
+							System.out.println("Curvature: " + Curvature + " " + "Inflection" + Inflection  );
+							Indexedlength PointofInterest = new Indexedlength(label, seedLabel, framenumber, 
+									LMparam[2 * ndims], LMparam[2 * ndims + 1], 
+									LMparam[2 * ndims + 2], finalstartpoint, iniparam.fixedpos, currentslope, currentintercept,
+									iniparam.originalslope, iniparam.originalintercept, Curvature, Inflection);
+						System.out.println("New X: " + finalstartpoint[0] + " New Y: " + finalstartpoint[1]);
+							return PointofInterest;
+						}
+						else{
+							
+
+							final double currentslope = (finalendpoint[1] - inipos[1]) / (finalendpoint[0] - inipos[0]);
+							final double currentintercept = finalendpoint[1] - currentslope * finalendpoint[0];
+							final double Curvature = LMparam[2 * ndims + 3];
+							final double Inflection = LMparam[2 * ndims + 4];
+							System.out.println("Curvature: " + Curvature + " " + "Inflection" + Inflection  );
+							Indexedlength PointofInterest = new Indexedlength(label, seedLabel, framenumber, 
+									LMparam[2 * ndims], LMparam[2 * ndims + 1], 
+									LMparam[2 * ndims + 2], finalendpoint, iniparam.fixedpos, currentslope, currentintercept,
+									iniparam.originalslope, iniparam.originalintercept, Curvature, Inflection);
+							System.out.println("New X: " + finalendpoint[0] + " New Y: " + finalendpoint[1]);
+								
+							return PointofInterest;
+							
+							
+						}
+					}
+					
+					
+					
+				}
+					
+				
 				else 
 					return null;
 			

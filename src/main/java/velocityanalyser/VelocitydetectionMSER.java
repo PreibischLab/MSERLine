@@ -8,6 +8,8 @@ import org.jgrapht.graph.SimpleWeightedGraph;
 
 import com.sun.tools.javac.util.Pair;
 
+import LineModels.MTFitFunction;
+import LineModels.UseLineModel.UserChoiceModel;
 import drawandOverlay.DisplayGraph;
 import drawandOverlay.DisplaysubGraphend;
 import drawandOverlay.DisplaysubGraphstart;
@@ -47,9 +49,9 @@ public class VelocitydetectionMSER {
 		new ImageJ();
 
 		// Load the stack of images
-		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("../res/test_stack_multi.tif"), new ArrayImgFactory<FloatType>());
+		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("../res/test_bentline.tif"), new ArrayImgFactory<FloatType>());
 		
-		RandomAccessibleInterval<FloatType> preprocessedimg = util.ImgLib2Util.openAs32Bit( new File("../res/test_stack_multi.tif"), new ArrayImgFactory<FloatType>());
+		RandomAccessibleInterval<FloatType> preprocessedimg = util.ImgLib2Util.openAs32Bit( new File("../res/test_bentline.tif"), new ArrayImgFactory<FloatType>());
 		int ndims = img.numDimensions();
 		 
 		 
@@ -86,11 +88,12 @@ public class VelocitydetectionMSER {
 
 			Normalize.normalize(Views.iterable(inputimg), minval, maxval);
 
-			ImageJFunctions.show(inputimg);
+			ImageJFunctions.show(img);
 			
 		    LinefindingMethod findLinesVia =  LinefindingMethod.MSER;
+		    UserChoiceModel userChoiceModel = UserChoiceModel.Line;
 		
-		    Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = FindlinesVia.LinefindingMethod(img, inputimg, minlength, 0, psf, findLinesVia);
+		    Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = FindlinesVia.LinefindingMethod(img, inputimg, minlength, 0, psf, findLinesVia, userChoiceModel);
 			
 
 			// Draw the detected lines
@@ -113,16 +116,16 @@ public class VelocitydetectionMSER {
 			medfilter.process();
 			RandomAccessibleInterval<FloatType> inputimg = medfilter.getResult();
 			Normalize.normalize(Views.iterable(inputimg), minval, maxval);
-			ImageJFunctions.show(inputimg);
+			ImageJFunctions.show(groundframe);
 			
 			/**
 			 * 
 			 * Line finder using MSER or Hough or a combination
 			 * 
 			 */
-			 LinefindingMethod findLinesVia =  LinefindingMethod.Hough;
-				
-			    Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, inputimg, minlength, 0, psf, findLinesVia);
+			 LinefindingMethod findLinesVia =  LinefindingMethod.MSER;
+			 UserChoiceModel userChoiceModel = UserChoiceModel.Spline;
+			    Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, inputimg, minlength, 0, psf, findLinesVia, userChoiceModel);
 				
 	            ImageJFunctions.show(inputimg).setTitle("Preprocessed extended image");
 			
@@ -141,7 +144,7 @@ public class VelocitydetectionMSER {
 			// seperate graph for both ends
 			
 			
-			final int maxframe = (int) img.dimension(ndims - 1);
+			final int maxframe = 5 + 0*(int) img.dimension(ndims - 1);
 
 			for (int frame = 1; frame < maxframe; ++frame) {
 
@@ -153,7 +156,7 @@ public class VelocitydetectionMSER {
 				RandomAccessibleInterval<FloatType> inputimgpre = medfiltercurr.getResult();
 				Normalize.normalize(Views.iterable(inputimgpre), minval, maxval);
 
-				ImageJFunctions.show(inputimgpre);
+				ImageJFunctions.show(currentframe);
 
 				
 				/**
@@ -162,9 +165,9 @@ public class VelocitydetectionMSER {
 				 * 
 				 */
 				 LinefindingMethod findLinesViaHF =  LinefindingMethod.MSER;
-			
+				 UserChoiceModel userChoiceModelHF = UserChoiceModel.Spline;
 				 Pair<Pair<ArrayList<Trackproperties>, ArrayList<Trackproperties>>,Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>>> returnVector =
-						 FindlinesVia.LinefindingMethodHF(currentframe, inputimgpre, PrevFrameparam, minlength, frame, psf, findLinesViaHF);
+						 FindlinesVia.LinefindingMethodHF(currentframe, inputimgpre, PrevFrameparam, minlength, frame, psf, findLinesViaHF, userChoiceModelHF);
 				 
 				 Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> NewFrameparam = returnVector.snd;
 				 

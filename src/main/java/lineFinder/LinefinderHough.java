@@ -133,7 +133,7 @@ public class LinefinderHough implements Linefinder {
 			// using the best detection for each label
 			RefinedPeak<Point> ReducedMinlistsingle =  OverlayLines.ReducedListsingle(roiimg, SubpixelMinlist, sizes, min, max);
 			
-			double slopeandintercept[] = new double[ndims + 1];
+			double slopeandinterceptCI[] = new double[ndims + 3];
 			if (ReducedMinlistsingle!= null){
 			double[] points  = OverlayLines.GetRhoThetasingle(ReducedMinlistsingle, sizes, min, max);
  
@@ -148,11 +148,12 @@ public class LinefinderHough implements Linefinder {
 			double slope = -1.0 / (Math.tan(Math.toRadians(points[0])));
 			double intercept = points[1] / Math.sin(Math.toRadians(points[0]));
 			
-			slopeandintercept[0] = slope;
-			slopeandintercept[1] = intercept +  (Realinterval.realMin(1) - slope * Realinterval.realMin(0));
-			slopeandintercept[2] = Double.MAX_VALUE;
+			slopeandinterceptCI[0] = slope;
+			slopeandinterceptCI[1] = intercept +  (Realinterval.realMin(1) - slope * Realinterval.realMin(0));
+			slopeandinterceptCI[2] = Double.MAX_VALUE;
 			
-			
+			for (int d = 0; d < ndims; ++d)
+				slopeandinterceptCI[d + ndims] = 0;
 			}
 			/**
 			 * This object has rho, theta, min dimensions, max dimensions of the
@@ -160,10 +161,10 @@ public class LinefinderHough implements Linefinder {
 			 * 
 			 */
 			 Roiindex = label;
-			CommonOutput currentOutput = new CommonOutput(framenumber, Roiindex - 1, slopeandintercept, roiimg, ActualRoiimg, Realinterval);
+			CommonOutput currentOutput = new CommonOutput(framenumber, Roiindex - 1, slopeandinterceptCI, roiimg, ActualRoiimg, Realinterval);
 			
 			
-			if(slopeandintercept!=null  )
+			if(slopeandinterceptCI!=null  )
 			output.add(currentOutput);
 			
 			

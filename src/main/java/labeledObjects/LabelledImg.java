@@ -12,6 +12,7 @@ public class LabelledImg {
 	public final RandomAccessibleInterval<FloatType> Actualroiimg;
 	public final EllipseRoi roi;
 	public final double[] slopeandintercept;
+	public final double[] curvatureInflection;
 	public final double[] mean;
 	public final double[] covar;
 	public final double prepline;
@@ -20,6 +21,7 @@ public class LabelledImg {
 			final RandomAccessibleInterval<FloatType> Actualroiimg,
 			final EllipseRoi roi,
 			final double[] slopeandintercept,
+			final double[] curvatureInflection,
 			final double[] mean,
 			final double[] covar){
 		
@@ -28,7 +30,8 @@ public class LabelledImg {
 		this.Actualroiimg = Actualroiimg;
 		this.roi = roi;
 		this.slopeandintercept = slopeandintercept;
-		this.prepline = Double.NaN;
+		this.curvatureInflection = curvatureInflection;
+		this.prepline = Double.MAX_VALUE;
 		this.mean = mean;
 		this.covar = covar;
 	}

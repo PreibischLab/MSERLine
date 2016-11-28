@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import com.sun.tools.javac.util.Pair;
 
+import LineModels.UseLineModel.UserChoiceModel;
 import graphconstructs.Trackproperties;
 import ij.IJ;
 import ij.ImagePlus;
@@ -25,7 +26,7 @@ public  class FindlinesVia {
       protected LinefindingMethod MSER, Hough, MSERwHough;
 
 	public static Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> LinefindingMethod(final RandomAccessibleInterval<FloatType> source,
-			final RandomAccessibleInterval<FloatType> Preprocessedsource, final int minlength, final int framenumber, final double[] psf,  final LinefindingMethod findlines ) {
+			final RandomAccessibleInterval<FloatType> Preprocessedsource, final int minlength, final int framenumber, final double[] psf,  final LinefindingMethod findlines, final UserChoiceModel model ) {
 
 		
 		Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>>	PrevFrameparam = null;
@@ -36,7 +37,7 @@ public  class FindlinesVia {
 			LinefinderMSER newlineMser = new LinefinderMSER(source, Preprocessedsource, minlength, framenumber);
 			newlineMser.setMaxlines(40);
 
-			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(source, newlineMser, psf, minlength, 0);
+			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(source, newlineMser, psf, minlength, model, 0);
 			MTline.checkInput();
 			MTline.process();
 			PrevFrameparam = MTline.getResult();
@@ -52,7 +53,7 @@ public  class FindlinesVia {
 		{
 			LinefinderHough newlineHough = new LinefinderHough(source, Preprocessedsource, minlength, framenumber);
 
-			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(source, newlineHough, psf, minlength, 0);
+			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(source, newlineHough, psf, minlength, model, 0);
 			MTline.checkInput();
 			MTline.process();
 			PrevFrameparam = MTline.getResult();
@@ -66,7 +67,7 @@ public  class FindlinesVia {
 			LinefinderMSERwHough newlineMserwHough = new LinefinderMSERwHough(source, Preprocessedsource, minlength, framenumber);
 			newlineMserwHough.setMaxlines(40);
 
-			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(source, newlineMserwHough, psf, minlength, 0);
+			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(source, newlineMserwHough, psf, minlength, model, 0);
 			MTline.checkInput();
 			MTline.process();
 			PrevFrameparam = MTline.getResult();
@@ -84,7 +85,7 @@ public  class FindlinesVia {
 			LinefinderMSER newlineMser = new LinefinderMSER(source, Preprocessedsource, minlength, framenumber);
 			newlineMser.setMaxlines(40);
 
-			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(source, newlineMser, psf, minlength, 0);
+			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(source, newlineMser, psf, minlength, model, 0);
 			MTline.checkInput();
 			MTline.process();
 			PrevFrameparam = MTline.getResult();
@@ -105,7 +106,7 @@ public  class FindlinesVia {
 
 	public static Pair<Pair<ArrayList<Trackproperties>, ArrayList<Trackproperties>>,Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>>> LinefindingMethodHF(final RandomAccessibleInterval<FloatType> source,
 			final RandomAccessibleInterval<FloatType> Preprocessedsource,Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam,
-			final int minlength, final int framenumber, final double[] psf,  final LinefindingMethod findlines ) {
+			final int minlength, final int framenumber, final double[] psf,  final LinefindingMethod findlines, final UserChoiceModel model ) {
 
 		Pair<Pair<ArrayList<Trackproperties>, ArrayList<Trackproperties>>,Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>>> returnVector = null;
 		
@@ -117,7 +118,7 @@ public  class FindlinesVia {
 			newlinenextMser.setMaxlines(40);
 
 			final SubpixelVelocityPCLine growthtracker = new SubpixelVelocityPCLine(source, newlinenextMser,
-					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber);
+					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber, model);
 			growthtracker.checkInput();
 			growthtracker.process();
 			
@@ -141,7 +142,7 @@ public  class FindlinesVia {
 		{
 			LinefinderHFHough newlineHough = new LinefinderHFHough(source, Preprocessedsource, minlength, framenumber);
 			final SubpixelVelocityPCLine growthtracker = new SubpixelVelocityPCLine(source, newlineHough,
-					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber);
+					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber, model);
 			growthtracker.checkInput();
 			growthtracker.process();
 			
@@ -163,7 +164,7 @@ public  class FindlinesVia {
 			newlinenextMser.setMaxlines(40);
 
 			final SubpixelVelocityPCLine growthtracker = new SubpixelVelocityPCLine(source, newlinenextMser,
-					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber);
+					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber, model);
 			growthtracker.checkInput();
 			growthtracker.process();
 			
@@ -189,7 +190,7 @@ public  class FindlinesVia {
 			newlinenextMser.setMaxlines(40);
 
 			final SubpixelVelocityPCLine growthtracker = new SubpixelVelocityPCLine(source, newlinenextMser,
-					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber);
+					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber, model);
 			growthtracker.checkInput();
 			growthtracker.process();
 			

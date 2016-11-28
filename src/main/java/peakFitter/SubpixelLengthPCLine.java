@@ -6,6 +6,10 @@ import java.util.ArrayList;
 import com.sun.tools.javac.util.Pair;
 
 import LineModels.GaussianLineds;
+import LineModels.GaussianSplineds;
+import LineModels.MTFitFunction;
+import LineModels.UseLineModel;
+import LineModels.UseLineModel.UserChoiceModel;
 import ij.gui.EllipseRoi;
 import labeledObjects.CommonOutput;
 import labeledObjects.Indexedlength;
@@ -39,6 +43,7 @@ implements OutputAlgorithm<Pair<ArrayList<Indexedlength>, ArrayList<Indexedlengt
 	private final double[] psf;
 	private final int minlength;
 	private final int framenumber;
+	private final UserChoiceModel model;
 	// LM solver iteration params
 	public int maxiter = 500;
 	public double lambda = 1e-3;
@@ -155,6 +160,7 @@ implements OutputAlgorithm<Pair<ArrayList<Indexedlength>, ArrayList<Indexedlengt
 			             final Linefinder finder,
 			             final double[] psf,
 			             final int minlength,
+			             final UserChoiceModel model,
 			             final int framenumber){
 		
 		finder.checkInput();
@@ -164,6 +170,7 @@ implements OutputAlgorithm<Pair<ArrayList<Indexedlength>, ArrayList<Indexedlengt
 		this.psf = psf;
 		this.minlength = minlength;
 		this.framenumber = framenumber;
+		this.model = model;
 		this.ndims = source.numDimensions();
 		
 	}
@@ -190,8 +197,10 @@ implements OutputAlgorithm<Pair<ArrayList<Indexedlength>, ArrayList<Indexedlengt
 			final double slope = imgs.get(index).lineparam[0];
 			final double intercept = imgs.get(index).lineparam[1];
 			final double ifprep = imgs.get(index).lineparam[2];
+			final double Curvature = imgs.get(index).lineparam[3];
+			final double Inflection = imgs.get(index).lineparam[4];
 			if ( slope!= Double.MAX_VALUE && intercept!= Double.MAX_VALUE){
-			final Pair<Indexedlength, Indexedlength> returnparam = Getfinallineparam(Label, slope, intercept, psf, minlength);
+			final Pair<Indexedlength, Indexedlength> returnparam = Getfinallineparam(Label, slope, intercept, Curvature, Inflection, psf, minlength);
 			if (returnparam!= null ){
 			startlist.add(returnparam.fst);
 			endlist.add(returnparam.snd);
@@ -221,7 +230,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 		return endlist;
 	}
 	
-	private final double[] MakeimprovedLineguess(double slope, double intercept, double[] psf, int label)  {
+	private final double[] MakeimprovedLineguess(double slope, double intercept, double Curvature, double Inflection, double[] psf, int label)  {
 		long[] newposition = new long[ndims];
 		double[] minVal = { Double.MAX_VALUE, Double.MAX_VALUE };
 		double[] maxVal = { -Double.MIN_VALUE, -Double.MIN_VALUE };
@@ -236,36 +245,40 @@ public ArrayList<Indexedlength> getEndPoints(){
 
 		final double maxintensityline = GetLocalmaxmin.computeMaxIntensity(currentimg);
 
-           while(inputcursor.hasNext()){
-			
-			inputcursor.fwd();
-			
-			if (inputcursor.get().get()/maxintensityline > Intensityratio){
-			
-				inputcursor.localize(newposition);
-				long pointonline = (long) (newposition[1] - slope * newposition[0] - intercept);
+           
 
-				// To get the min and max co-rodinates along the line so we have
-				// starting points to
-				// move on the line smoothly
-				
-				if (pointonline == 0) {
+           
+           if (model ==  UserChoiceModel.Line){
+        	   
+        	   while(inputcursor.hasNext()){
+       			
+       			inputcursor.fwd();
+       			
+       			if (inputcursor.get().get()/maxintensityline > Intensityratio){
+       			
+       				inputcursor.localize(newposition);
+       				long pointonline = (long) (newposition[1] - slope * newposition[0] - intercept);
 
-					for (int d = 0; d < ndims; ++d) {
-						if (inputcursor.getDoublePosition(d) <= minVal[d])
-							minVal[d] = inputcursor.getDoublePosition(d);
+       				// To get the min and max co-rodinates along the line so we have
+       				// starting points to
+       				// move on the line smoothly
+       				
+       				if (pointonline == 0) {
 
-						if (inputcursor.getDoublePosition(d) >= maxVal[d])
-							maxVal[d] = inputcursor.getDoublePosition(d);
+       					for (int d = 0; d < ndims; ++d) {
+       						if (inputcursor.getDoublePosition(d) <= minVal[d])
+       							minVal[d] = inputcursor.getDoublePosition(d);
 
-					}
+       						if (inputcursor.getDoublePosition(d) >= maxVal[d])
+       							maxVal[d] = inputcursor.getDoublePosition(d);
 
-				}
+       					}
 
-			
-			}
-           }
+       				}
 
+       			
+       			}
+                  }
 		final double[] MinandMax = new double[2 * ndims + 3];
 
 		if (slope >= 0) {
@@ -310,18 +323,93 @@ public ArrayList<Indexedlength> getEndPoints(){
 			}
 		
 
-		
-		
-
-		
-
 		return MinandMax;
+           }
+           
+           else {
+        	   while(inputcursor.hasNext()){
+       			
+       			inputcursor.fwd();
+       			
+       			if (inputcursor.get().get()/maxintensityline > Intensityratio){
+       			
+       				inputcursor.localize(newposition);
+       				long pointoncurve = (long) (newposition[1] - slope * newposition[0] 
+       						- Curvature * newposition[0]  * newposition[0]  - Inflection *newposition[0] *newposition[0] *newposition[0]   - intercept);
+
+       				// To get the min and max co-rodinates along the line so we have
+       				// starting points to
+       				// move on the line smoothly
+       				
+       				if (pointoncurve == 0) {
+
+       					for (int d = 0; d < ndims; ++d) {
+       						if (inputcursor.getDoublePosition(d) <= minVal[d])
+       							minVal[d] = inputcursor.getDoublePosition(d);
+
+       						if (inputcursor.getDoublePosition(d) >= maxVal[d])
+       							maxVal[d] = inputcursor.getDoublePosition(d);
+
+       					}
+
+       				}
+
+       			
+       			}
+                  }
+   			final double[] MinandMax = new double[2 * ndims + 6];
+   			if (slope >= 0) {
+   				for (int d = 0; d < ndims; ++d) {
+
+   					MinandMax[d] = minVal[d];
+   					MinandMax[d + ndims] = maxVal[d];
+   				}
+
+   			}
+
+   			if (slope < 0) {
+
+   				MinandMax[0] = minVal[0];
+   				MinandMax[1] = maxVal[1];
+   				MinandMax[2] = maxVal[0];
+   				MinandMax[3] = minVal[1];
+
+   			}
+
+   			// This parameter is guess estimate for spacing between the Gaussians
+   			MinandMax[2 * ndims] =  0.5 * Math.min(psf[0], psf[1]);
+   			MinandMax[2 * ndims + 1] = maxintensityline; 
+   			// This parameter guess estimates the background noise level
+   			MinandMax[2 * ndims + 2] = 0; 
+   			
+   			MinandMax[2 * ndims + 3] = slope; 
+   			MinandMax[2 * ndims + 4] = 0; 
+   			MinandMax[2 * ndims + 5] = 0; 
+   			System.out.println("Label: " + label + " " + "Detection: " + " StartX: " + MinandMax[0] + " StartY: "
+   					+ MinandMax[1] + " EndX: " + MinandMax[2] + " EndY: " + MinandMax[3]);
+
+   			
+   			
+   				for (int d = 0; d < ndims; ++d) {
+
+   					if (MinandMax[d] == Double.MAX_VALUE || MinandMax[d + ndims] == -Double.MIN_VALUE)
+   						return null;
+   					if (MinandMax[d] >= source.dimension(d) || MinandMax[d + ndims] >= source.dimension(d))
+   						return null;
+   					if (MinandMax[d] <= 0 || MinandMax[d + ndims] <= 0)
+   						return null;
+
+   				}
+   			
+
+   			return MinandMax;
+   	           }
 
 	}
 	
 	// Get line parameters for fitting line to a line in a label
 
-		public Pair<Indexedlength, Indexedlength> Getfinallineparam(final int label, final double slope, final double intercept, final double[] psf,
+		public Pair<Indexedlength, Indexedlength> Getfinallineparam(final int label, final double slope, final double intercept, final double Curvature, final double Inflection, final double[] psf,
 				final double minlength)  {
 
 			PointSampleList<FloatType> datalist = gatherfullData(label);
@@ -342,7 +430,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 				index++;
 			}
 
-			final double[] start_param = MakeimprovedLineguess(slope, intercept, psf, label);
+			final double[] start_param = MakeimprovedLineguess(slope, intercept, Curvature, Inflection, psf, label);
 			if (start_param == null)
 				return null;
 
@@ -371,12 +459,20 @@ public ArrayList<Indexedlength> getEndPoints(){
 				inicutoffdistance = Distance(inistartpos, iniendpos);
 				
 				
+				MTFitFunction UserChoiceFunction = null;
+				if (model == UserChoiceModel.Line){
+					UserChoiceFunction = new GaussianLineds();
+				}
+				if (model == UserChoiceModel.Spline){
+					
+					UserChoiceFunction = new GaussianSplineds();
+				}
 				
 				
 				
 				if (inicutoffdistance > minlength) {
 					try {
-						LevenbergMarquardtSolverLine.solve(X, finalparamstart, fixed_param, I, new GaussianLineds(), lambda,
+						LevenbergMarquardtSolverLine.solve(X, finalparamstart, fixed_param, I, UserChoiceFunction, lambda,
 								termepsilon, maxiter);
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -483,6 +579,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 						}
 					}
 
+					if (model == UserChoiceModel.Line){
 					final double currentslope = (returnparam[3] - returnparam[1]) / (returnparam[2] - returnparam[0]);
 					final double currentintercept = returnparam[3] - currentslope * returnparam[2];
 
@@ -503,6 +600,35 @@ public ArrayList<Indexedlength> getEndPoints(){
 					
 					final Pair<Indexedlength, Indexedlength> pair = new Pair<Indexedlength, Indexedlength> ( startPart, endPart);
 					return pair;
+					}
+					
+					else{
+						final double currentslope = finalparamstart[2 * ndims + 3];
+						
+
+						final double currentCurvature = finalparamstart[2 * ndims + 4];
+						final double currentInflection = finalparamstart[2 * ndims + 5];
+						final double currentintercept = returnparam[3] - currentslope * returnparam[2] - currentCurvature * returnparam[2] * returnparam[2] - currentInflection * returnparam[2] * returnparam[2] *  returnparam[2] ;
+						System.out.println("Fits :" + "StartX:" + returnparam[0] + " StartY:" + returnparam[1] + " " + "EndX:"
+								+ returnparam[2] + "EndY: " + returnparam[3] + " " + "ds: " + finalparamstart[4] );
+
+						System.out.println("Length: " + Distance(new double[]{returnparam[0],  returnparam[1]},new double[]{returnparam[2],  returnparam[3]} ));
+
+						final Indexedlength startPart = new Indexedlength(label, label, framenumber, finalparamstart[4],
+								finalparamstart[5], finalparamstart[6], startparam,
+								startparam , currentslope, currentintercept , currentslope, currentintercept, Curvature, Inflection);
+						
+						final Indexedlength endPart = new Indexedlength(label, label, framenumber, finalparamstart[4],
+								finalparamstart[5], finalparamstart[6], endparam,
+								endparam, currentslope, currentintercept, currentslope, currentintercept, Curvature, Inflection);
+						
+						
+						
+						final Pair<Indexedlength, Indexedlength> pair = new Pair<Indexedlength, Indexedlength> ( startPart, endPart);
+						return pair;
+						
+						
+					}
 
 				}
 

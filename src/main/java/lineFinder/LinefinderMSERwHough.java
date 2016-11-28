@@ -253,7 +253,7 @@ public class LinefinderMSERwHough  implements Linefinder{
 				}
 				
 				double[] slopeandintercept = new double[ndims + 1];
-				
+				double[] slopeandinterceptCI = new double[ndims + 3];
 				
 				
 				HoughTransformandMser viaHough = new HoughTransformandMser(Roiindex, Roiimg);
@@ -262,11 +262,14 @@ public class LinefinderMSERwHough  implements Linefinder{
 				slopeandintercept = viaHough.getResult();
 				
 				// Obtain the slope and intercept of the line by obtaining the major axis of the ellipse (super fast and accurate)
-				
+				for (int d = 0; d < ndims; ++d){
+					slopeandinterceptCI[d] = slopeandintercept[d];
+					slopeandinterceptCI[d + ndims ] = 0;
+				}
 					
 				
 				
-				CommonOutput currentOutput = new CommonOutput(framenumber, Roiindex, slopeandintercept, Roiimg, ActualRoiimg, interval);
+				CommonOutput currentOutput = new CommonOutput(framenumber, Roiindex, slopeandinterceptCI, Roiimg, ActualRoiimg, interval);
 				
 				
 				if(slopeandintercept!=null  )
