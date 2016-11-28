@@ -212,7 +212,7 @@ public class RoiforMSER extends BenchmarkAlgorithm
 				// Obtain the slope and intercept of the line by obtaining the major axis of the ellipse (super fast and accurate)
 				if (doHough){
 					
-					HoughTransformandMser viaHough = new HoughTransformandMser(Roiindex, Roiimg, ellipseroi, minlength);
+					HoughTransformandMser viaHough = new HoughTransformandMser(Roiindex, Roiimg);
 					viaHough.checkInput();
 					viaHough.process();
 					slopeandintercept = viaHough.getResult();

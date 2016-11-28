@@ -1,35 +1,19 @@
 package houghandWatershed;
 
 import java.util.ArrayList;
-import java.util.Iterator;
-
-import com.sun.tools.javac.util.Pair;
-
 import drawandOverlay.HoughPushCurves;
 import drawandOverlay.OverlayLines;
 import ij.gui.EllipseRoi;
-import labeledObjects.LabelledImg;
-import labeledObjects.Lineobjects;
-import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.Point;
-import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.BenchmarkAlgorithm;
 import net.imglib2.algorithm.OutputAlgorithm;
 import net.imglib2.algorithm.localextrema.RefinedPeak;
-import net.imglib2.img.ImgFactory;
 import net.imglib2.img.array.ArrayImgFactory;
-import net.imglib2.img.display.imagej.ImageJFunctions;
-import net.imglib2.type.logic.BitType;
-import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.util.Util;
-import net.imglib2.view.Views;
 import preProcessing.GetLocalmaxmin;
 import preProcessing.GlobalThresholding;
-import preProcessing.Kernels;
-import util.Boundingboxes;
 
 /**
  * Hough transform of images that operates on 2D images.
@@ -46,9 +30,7 @@ public class HoughTransformandMser extends BenchmarkAlgorithm implements OutputA
 
 	private static final String BASE_ERROR_MSG = "[HoughTransform2D] ";
 	private final RandomAccessibleInterval<FloatType> source;
-	private final EllipseRoi roi;
 	private final int label;
-	private final double minlength;
 	private double[] slopeandintercept;
 
 	/**
@@ -68,13 +50,11 @@ public class HoughTransformandMser extends BenchmarkAlgorithm implements OutputA
 	 * 
 	 */
 
-	public HoughTransformandMser(final int label, final RandomAccessibleInterval<FloatType> source,
-			final EllipseRoi roi, final double minlength) {
+	public HoughTransformandMser(final int label, final RandomAccessibleInterval<FloatType> source) {
 
 		this.source = source;
 		this.label = label;
-		this.minlength = minlength;
-		this.roi = roi;
+		
 
 	}
 
@@ -99,21 +79,13 @@ public class HoughTransformandMser extends BenchmarkAlgorithm implements OutputA
 
 		final int ndims = source.numDimensions();
 
+		final Float ThresholdValue = GlobalThresholding.AutomaticThresholding(source);
+		
+		
 		final double[] sizes = new double[ndims];
-
-		// Automatic threshold determination for doing the Hough transform
-
-		slopeandintercept = new double[ndims + 1];
-
-		Pair<RandomAccessibleInterval<FloatType>, FinalInterval> pair = Boundingboxes.CurrentLabelImage(source, roi);
-		RandomAccessibleInterval<FloatType> outimg = pair.fst;
-		Float val = GlobalThresholding.AutomaticThresholding(outimg);
-
-		FinalInterval Realinterval = pair.snd;
-
-		long intervalsize = (long) Math.sqrt(Realinterval.dimension(0) * Realinterval.dimension(0)
-				+ Realinterval.dimension(1) * Realinterval.dimension(1));
-		if (intervalsize > minlength) {
+        slopeandintercept = new double[ndims + 1];
+	           
+			
 			System.out.println("Doing Hough Transform to determine line parameters in Label:" + " " + label);
 			// Set size of pixels in Hough space
 			int mintheta = 0;
@@ -123,7 +95,7 @@ public class HoughTransformandMser extends BenchmarkAlgorithm implements OutputA
 
 			int maxtheta = 240;
 			double size = Math
-					.sqrt((outimg.dimension(0) * outimg.dimension(0) + outimg.dimension(1) * outimg.dimension(1)));
+					.sqrt((source.dimension(0) * source.dimension(0) + source.dimension(1) * source.dimension(1)));
 			int minRho = (int) -Math.round(size);
 			int maxRho = -minRho;
 			double thetaPerPixel = 1;
@@ -138,7 +110,7 @@ public class HoughTransformandMser extends BenchmarkAlgorithm implements OutputA
 			final RandomAccessibleInterval<FloatType> houghimage = new ArrayImgFactory<FloatType>().create(interval,
 					new FloatType());
 
-			HoughPushCurves.Houghspace(outimg, houghimage, min, max, val);
+			HoughPushCurves.Houghspace(source, houghimage, min, max, ThresholdValue);
 
 			for (int d = 0; d < houghimage.numDimensions(); ++d)
 				sizes[d] = houghimage.dimension(d);
@@ -147,7 +119,7 @@ public class HoughTransformandMser extends BenchmarkAlgorithm implements OutputA
 			// Hough
 			// detected lines
 			ArrayList<RefinedPeak<Point>> SubpixelMinlist = new ArrayList<RefinedPeak<Point>>(
-					outimg.numDimensions());
+					source.numDimensions());
 
 			// Get the list of all the detections
 			SubpixelMinlist = GetLocalmaxmin.HoughspaceMaxima(houghimage, interval, sizes, thetaPerPixel, rhoPerPixel);
@@ -155,32 +127,23 @@ public class HoughTransformandMser extends BenchmarkAlgorithm implements OutputA
 			// Reduce the number of detections by picking One line per
 			// Label,
 			// using the best detection for each label
-			RefinedPeak<Point> ReducedMinlistsingle = OverlayLines.ReducedListsingle(outimg, SubpixelMinlist, sizes,
+			RefinedPeak<Point> ReducedMinlistsingle = OverlayLines.ReducedListsingle(source, SubpixelMinlist, sizes,
 					min, max);
 
 			if (ReducedMinlistsingle != null) {
 				double[] points = OverlayLines.GetRhoThetasingle(ReducedMinlistsingle, sizes, min, max);
 
-				RefinedPeak<Point> peak = OverlayLines.ReducedListsingle(outimg, SubpixelMinlist, sizes, min, max);
+				RefinedPeak<Point> peak = OverlayLines.ReducedListsingle(source, SubpixelMinlist, sizes, min, max);
 
 				points = OverlayLines.GetRhoThetasingle(peak, sizes, min, max);
 
 				double slope = -1.0 / (Math.tan(Math.toRadians(points[0])));
 				double intercept = points[1] / Math.sin(Math.toRadians(points[0]));
 
-				// This step is for prependicular lines
-				 if (Math.abs(slope) < 20) {
 				slopeandintercept[0] = slope;
 				slopeandintercept[1] = intercept;
 				slopeandintercept[2] = Double.MAX_VALUE;
-				 }
-
-				else {
-
-				 slopeandintercept[0] = Double.MAX_VALUE;
-				 slopeandintercept[1] = Double.MAX_VALUE;
-				 slopeandintercept[2] = points[1] ;
-				 }
+				 
 
 			}
 			/**
@@ -188,7 +151,7 @@ public class HoughTransformandMser extends BenchmarkAlgorithm implements OutputA
 			 * label
 			 * 
 			 */
-		}
+		
 
 		return true;
 	}

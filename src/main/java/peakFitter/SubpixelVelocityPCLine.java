@@ -1,30 +1,17 @@
 package peakFitter;
 
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
-
 import com.sun.tools.javac.util.Pair;
 
 import LineModels.GaussianLineds;
-import LineModels.GaussianLinefixedIds;
-import LineModels.GaussianLinefixedds;
-import LineModels.GaussianLinemaxds;
-import LineModels.GaussianLineminds;
-import graphconstructs.Staticproperties;
 import graphconstructs.Trackproperties;
-import ij.gui.EllipseRoi;
-import labeledObjects.CommonOutput;
 import labeledObjects.CommonOutputHF;
 import labeledObjects.Indexedlength;
-import labeledObjects.LabelledImg;
 import lineFinder.LinefinderHF;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.Point;
 import net.imglib2.PointSampleList;
-import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.BenchmarkAlgorithm;
 import net.imglib2.algorithm.OutputAlgorithm;
@@ -32,7 +19,6 @@ import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.Views;
 import peakFitter.GaussianMaskFitMSER.EndfitMSER;
 import preProcessing.GetLocalmaxmin;
-import util.Boundingboxes;
 
 public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 		implements OutputAlgorithm<Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>>> {
@@ -151,9 +137,9 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 		for (int index = 0; index < PrevFrameparamstart.size(); ++index) {
 
 
-			final double originalslope = PrevFrameparamstart.get(index).slope;
+			final double originalslope = PrevFrameparamstart.get(index).originalslope;
 
-			final double originalintercept = PrevFrameparamstart.get(index).intercept;
+			final double originalintercept = PrevFrameparamstart.get(index).originalintercept;
 
 
 
@@ -186,13 +172,13 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 			final double[] newstartpoint = paramnextframestart.currentpos;
 
-			final double newstartslope = paramnextframestart.slope;
-			final double newstartintercept = paramnextframestart.intercept;
+			final double newstartslope = originalslope;
+			final double newstartintercept = originalintercept;
 			final double[] directionstart = { (newstartpoint[0] - oldstartpoint[0]) / framediff,
 					(newstartpoint[1] - oldstartpoint[1]) / framediff };
 
 			final Trackproperties startedge = new Trackproperties(labelstart, oldstartpoint, newstartpoint,
-					newstartslope, newstartintercept);
+					newstartslope, newstartintercept, originalslope, originalintercept, PrevFrameparamstart.get(index).seedLabel, PrevFrameparamstart.get(index).fixedpos);
 
 			startinframe.add(startedge);
 			
@@ -226,13 +212,13 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 			double[] newendpoint = paramnextframeend.currentpos;
 
-			final double newendslope = paramnextframeend.slope;
-			final double newendintercept = paramnextframeend.intercept;
+			final double newendslope = originalslopeend;
+			final double newendintercept = originalinterceptend;
 			final double[] directionend = { (newendpoint[0] - oldendpoint[0]) / framediff,
 					(newendpoint[1] - oldendpoint[1]) / framediff };
 
 			final Trackproperties endedge = new Trackproperties(labelend, oldendpoint, newendpoint, newendslope,
-					newendintercept);
+					newendintercept, originalslopeend, originalinterceptend, PrevFrameparamend.get(index).seedLabel, PrevFrameparamend.get(index).fixedpos);
 
 			endinframe.add(endedge);
 			
@@ -271,8 +257,8 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 		currentimg = Views.interval(currentimg, interval);
 
-		double slope = iniparam.slope;
-		double intercept = iniparam.intercept;
+		double slope = iniparam.originalslope;
+		double intercept = iniparam.originalintercept;
 
 		final Cursor<FloatType> outcursor = Views.iterable(currentimg).localizingCursor();
 
@@ -358,7 +344,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 				final double[] inipos = { iniparam.currentpos[0], iniparam.currentpos[1] };
 				double inicutoffdistance = Distance(inistartpos, iniendpos);
 
-				final long radius = (long) Math.max(psf[0], psf[1]);
+				final long radius = (long) ( Math.min(psf[0], psf[1]));
 				RandomAccessibleInterval<FloatType> currentimg = imgs.get(label).Actualroi;
 
 				FinalInterval interval = imgs.get(label).interval;
@@ -423,8 +409,8 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 					final double maxintensityline = GetLocalmaxmin.computeMaxIntensity(currentimg);
 
-					double newslope = (endpos[1] - startpos[1]) / (endpos[0] - startpos[0]);
-					double newintercept = (endpos[1] - newslope * endpos[0]);
+					double newslope = iniparam.originalslope;
+					double newintercept = iniparam.originalintercept;
 					double dx = LMparam[ 2 *ndims] / Math.sqrt(1 + newslope * newslope);
 					double dy = newslope * dx;
 					double[] dxvector = { dx, dy };

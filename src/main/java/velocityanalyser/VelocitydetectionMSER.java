@@ -11,21 +11,14 @@ import com.sun.tools.javac.util.Pair;
 import drawandOverlay.DisplayGraph;
 import drawandOverlay.DisplaysubGraphend;
 import drawandOverlay.DisplaysubGraphstart;
-import drawandOverlay.OverlayLines;
 import drawandOverlay.PushCurves;
 import graphconstructs.Trackproperties;
-import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
-import ij.gui.Overlay;
-import labeledObjects.CommonOutput;
-import labeledObjects.CommonOutputHF;
 import labeledObjects.Indexedlength;
 import labeledObjects.Subgraphs;
-import lineFinder.LinefinderHFHough;
-import lineFinder.LinefinderHFMSER;
-import lineFinder.LinefinderHough;
-import lineFinder.LinefinderMSER;
+import lineFinder.FindlinesVia;
+import lineFinder.FindlinesVia.LinefindingMethod;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.stats.Normalize;
 import net.imglib2.img.array.ArrayImgFactory;
@@ -33,8 +26,6 @@ import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
-import peakFitter.SubpixelLengthPCLine;
-import peakFitter.SubpixelVelocityPCLine;
 import preProcessing.MedianFilter2D;
 
 public class VelocitydetectionMSER {
@@ -42,9 +33,13 @@ public class VelocitydetectionMSER {
 	public static void main(String[] args) throws Exception {
 
 		/***
-		 * MSER Roi's to detect Microtubules and track
-		 * the growth at Sub-pixel accuracy. Optimizers used: Levenberg-Marqurat
-		 * solver and Weighted centre of mass fits. Program reqires PSF of the
+		 * Detect Microtubules and track
+		 * the growth at Sub-pixel accuracy. 
+		 * Line finding Interface: MSER, HOUGH, MSERwHOUGH. 
+		 * Sub Pixel Optimizers used: Levenberg-Marqurat
+		 * solver and Weighted centre of mass fits. 
+		 * 
+		 * Program reqires PSF of the
 		 * microscope to be computed and analysed and takes the determined
 		 * Sigmas as the input. @ Varun Kapoor
 		 */
@@ -52,28 +47,12 @@ public class VelocitydetectionMSER {
 		new ImageJ();
 
 		// Load the stack of images
-		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(
-				// new
-				// File("../res/2016-09-28_bovine_cy5seeds_cy3tub_6uM_seeds.tif"),
-
-				// new File("../res/test-bent.tif"),
-				// new File("../res/Pnoise1snr15.tif"),
-				new File("../res/test_stack_multi.tif"), 
-			//	new File("../res/small_mt.tif"), 
-							new ArrayImgFactory<FloatType>());
+		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("../res/test_stack_multi.tif"), new ArrayImgFactory<FloatType>());
 		
-		RandomAccessibleInterval<FloatType> preprocessedimg = util.ImgLib2Util.openAs32Bit(
-				// new
-				 //File("../res/2016-09-28_bovine_cy5seeds_cy3tub_6uM_seeds.tif"),
-
-				// new File("../res/test-bent.tif"),
-				// new File("../res/Pnoise1snr15.tif"),
-				new File("../res/test_stack_multi.tif"), 
-			//	new File("../res/small_mt.tif"), 
-							new ArrayImgFactory<FloatType>());
+		RandomAccessibleInterval<FloatType> preprocessedimg = util.ImgLib2Util.openAs32Bit( new File("../res/test_stack_multi.tif"), new ArrayImgFactory<FloatType>());
 		int ndims = img.numDimensions();
 		 
-		  
+		 
 		
 		// Normalize the intensity of the whole stack to be between min and max
 		// value specified here
@@ -109,27 +88,18 @@ public class VelocitydetectionMSER {
 
 			ImageJFunctions.show(inputimg);
 			
+		    LinefindingMethod findLinesVia =  LinefindingMethod.MSER;
+		
+		    Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = FindlinesVia.LinefindingMethod(img, inputimg, minlength, 0, psf, findLinesVia);
 			
-			LinefinderMSER newlineMser = new LinefinderMSER(img, inputimg, minlength, 0);
-			newlineMser.setMaxlines(40);
-			LinefinderHough newlineHough = new LinefinderHough(img, inputimg, minlength, 0);
-            Overlay overlay = newlineMser.getOverlay();
-			ImageJFunctions.show(inputimg).setTitle("Preprocessed extended image");
-			ImagePlus impcurr = IJ.getImage();
-			impcurr.setOverlay(overlay);
-			
-			
-			
-			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(img, newlineMser, psf, minlength, 0);
-			MTline.checkInput();
-			MTline.process();
-			Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = MTline.getResult();
 
 			// Draw the detected lines
 			RandomAccessibleInterval<FloatType> gaussimg = new ArrayImgFactory<FloatType>().create(img,
 					new FloatType());
-		//	PushCurves.DrawallLine(gaussimg, PrevFrameparam.fst, PrevFrameparam.snd, psf);
-		//	ImageJFunctions.show(gaussimg).setTitle("Exact-line");
+			PushCurves.DrawstartLine(gaussimg, PrevFrameparam.fst,PrevFrameparam.snd, psf);
+			ImageJFunctions.show(gaussimg).setTitle("Exact-line-start");
+			
+			
 		}
 
 		if (ndims > 2) {
@@ -147,37 +117,22 @@ public class VelocitydetectionMSER {
 			
 			/**
 			 * 
-			 * Line finder using MSER or Hough
+			 * Line finder using MSER or Hough or a combination
 			 * 
 			 */
-			LinefinderMSER newlineMser = new LinefinderMSER(groundframe, inputimg, minlength, 0);
-			newlineMser.setMaxlines(100);
-			LinefinderHough newlineHough = new LinefinderHough(groundframe, inputimg, minlength, 0);
-			
-			
-           
-		
-			RandomAccessibleInterval<FloatType> gaussimg = new ArrayImgFactory<FloatType>().create(groundframe,
-					new FloatType());
-			
-			
-
-			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(groundframe, newlineMser, psf, minlength, 0);
-			MTline.checkInput();
-			
-			MTline.process();
-			Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = MTline.getResult();
-			 Overlay overlay = newlineMser.getOverlay();
+			 LinefindingMethod findLinesVia =  LinefindingMethod.Hough;
+				
+			    Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, inputimg, minlength, 0, psf, findLinesVia);
+				
 	            ImageJFunctions.show(inputimg).setTitle("Preprocessed extended image");
 			
 
-	           
-				ImagePlus impcurr = IJ.getImage();
-				impcurr.setOverlay(overlay);
+	    
 			// Draw the detected lines
-		//	PushCurves.DrawallLine(gaussimg, PrevFrameparam.fst, PrevFrameparam.snd, psf);
-		//	ImageJFunctions.show(gaussimg).setTitle("Exact-line");
-
+	            RandomAccessibleInterval<FloatType> gaussimg = new ArrayImgFactory<FloatType>().create(groundframe,
+						new FloatType());
+			PushCurves.DrawstartLine(gaussimg, PrevFrameparam.fst,PrevFrameparam.snd, psf);
+			ImageJFunctions.show(gaussimg).setTitle("Exact-line-start");
 			
 			
 
@@ -200,30 +155,26 @@ public class VelocitydetectionMSER {
 
 				ImageJFunctions.show(inputimgpre);
 
-				LinefinderHFMSER newlinenextMser = new LinefinderHFMSER(currentframe, inputimgpre, minlength, frame);
-				LinefinderHFHough newlinenextHough = new LinefinderHFHough(currentframe, inputimgpre, minlength, frame);
 				
 				/**
 				 * 
 				 * Getting tracks for both the ends
 				 * 
 				 */
-
+				 LinefindingMethod findLinesViaHF =  LinefindingMethod.MSER;
 			
-					final SubpixelVelocityPCLine growthtracker = new SubpixelVelocityPCLine(currentframe, newlinenextMser,
-							PrevFrameparam.fst, PrevFrameparam.snd, psf, frame);
-					growthtracker.checkInput();
-					growthtracker.process();
-					Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> NewFrameparam = growthtracker.getResult();
-					ArrayList<Trackproperties> startStateVectors = growthtracker.getstartStateVectors();
-					ArrayList<Trackproperties> endStateVectors = growthtracker.getendStateVectors();
+				 Pair<Pair<ArrayList<Trackproperties>, ArrayList<Trackproperties>>,Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>>> returnVector =
+						 FindlinesVia.LinefindingMethodHF(currentframe, inputimgpre, PrevFrameparam, minlength, frame, psf, findLinesViaHF);
+				 
+				 Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> NewFrameparam = returnVector.snd;
+				 
+					
+					ArrayList<Trackproperties> startStateVectors = returnVector.fst.fst;
+					ArrayList<Trackproperties> endStateVectors = returnVector.fst.snd;
 
-					Overlay overlaynext = newlinenextMser.getOverlay();
 		            ImageJFunctions.show(inputimgpre).setTitle("Preprocessed extended image");
 				
 
-		            ImagePlus impcurrnext = IJ.getImage();
-					impcurrnext.setOverlay(overlaynext);
 				PrevFrameparam = NewFrameparam;
 				
 				Allstart.add(startStateVectors);
@@ -231,12 +182,11 @@ public class VelocitydetectionMSER {
 				// Draw the lines detected in the current frame
 				RandomAccessibleInterval<FloatType> newgaussimg = new ArrayImgFactory<FloatType>().create(groundframe,
 						new FloatType());
-				//PushCurves.DrawallLine(newgaussimg, NewFrameparam.fst, NewFrameparam.snd, psf);
-				//ImageJFunctions.show(newgaussimg).setTitle("Exact-line");
+				PushCurves.DrawstartLine(newgaussimg, NewFrameparam.fst,NewFrameparam.snd, psf);
+				ImageJFunctions.show(newgaussimg).setTitle("Exact-line-start");
 
 			}
 
-			// Overlay the graphs on the stack
 
 			// Make graph to track the start and the end point
 			// Show the stack

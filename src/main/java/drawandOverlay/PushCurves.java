@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import houghandWatershed.Finalfunction;
 import houghandWatershed.TransformCordinates;
 import ij.gui.EllipseRoi;
+import labeledObjects.Indexedlength;
 import labeledObjects.LabelledImg;
 import net.imglib2.Cursor;
 import net.imglib2.Point;
@@ -274,9 +275,9 @@ public class PushCurves {
 
 	
 	
-	// Draw a line between starting and end point
-		public static void DrawallLine(RandomAccessibleInterval<FloatType> imgout, final ArrayList<double[]> startlist,
-				final ArrayList<double[]> endlist,
+	// Draw a line between start end of the MT
+		public static void DrawstartLine(RandomAccessibleInterval<FloatType> imgout, final ArrayList<Indexedlength> startlist,
+				final ArrayList<Indexedlength> endlist,
 				final double[] sigma) {
 
 			int ndims = imgout.numDimensions();
@@ -287,8 +288,8 @@ public class PushCurves {
 			double[] endline = new double[ndims];
 
 			for (int d = 0; d < ndims; ++d) {
-				startline[d] = startlist.get(index)[d];
-				endline[d] = endlist.get(index)[d];
+				startline[d] = startlist.get(index).currentpos[d];
+				endline[d] = endlist.get(index).currentpos[d];
 			}
 
 			double slope = (endline[1] - startline[1]) / (endline[0] - startline[0]);
@@ -322,7 +323,7 @@ public class PushCurves {
 			}
 		}
 
-	
+		
 	public static void Drawexactline(RandomAccessibleInterval<FloatType> imgout, double slope, double intercept,
 			final IntensityType setintensity) {
 

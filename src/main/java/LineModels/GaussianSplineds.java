@@ -1,13 +1,13 @@
 package LineModels;
 
-public class GaussianLineminds implements MTFitFunction {
+public class GaussianSplineds implements MTFitFunction {
 
 	@Override
 	public double val(double[] x, double[] a, double[] b) {
 		final int ndims = x.length;
 		
 		
-		return  a[ndims + 1] * Etotal(x, a, b) + a[ndims + 2] ;
+		return  a[2 * ndims + 1] * Etotal(x, a, b) + a[2 * ndims + 2] ;
 		
 	}
 
@@ -15,26 +15,27 @@ public class GaussianLineminds implements MTFitFunction {
 	public double grad(double[] x, double[] a, double[] b, int k) {
 		final int ndims = x.length;
 
-		
-		// The end point of the Gaussian, start point is fixed
 		if (k < ndims) {
 
-			return 2 * b[k] * (x[k] - a[k])  * a[ndims + 1] * Eend(x, a, b);
+			return 2 * b[k] * (x[k] - a[k])  * a[2 * ndims + 1] * Estart(x, a, b);
 
 		}
 
-		
+		else if (k >= ndims && k <= ndims + 1) {
+			int dim = k - ndims;
+			return 2 * b[dim] * (x[dim] - a[k])  * a[2 * ndims + 1] * Eend(x, a, b);
 
-		// ds parameter derivative
-		else if (k ==  ndims)
-			return  a[ndims + 1] *Estartds(x, a, b);
+		}
+
+		else if (k == 2 * ndims)
+			return  a[2 * ndims + 1] *Estartds(x, a, b);
 		
-		// Intensity of the line
-		else if (k == ndims + 1)
+		
+		else if (k == 2 * ndims + 1)
 			return Etotal(x, a, b);
 		
-		// Background Noise
-		else if (k == ndims + 2)
+		
+		else if (k == 2 * ndims + 2)
 			return 1.0;
 
 		
@@ -52,20 +53,19 @@ public class GaussianLineminds implements MTFitFunction {
 	 * determined are the start and the end points of the line
 	 * 
 	 */
-	
+
 	private static final double Estart(final double[] x, final double[] a, final double[] b) {
-		final int ndims = x.length;
+
 		double sum = 0;
 		double di;
 		for (int i = 0; i < x.length; i++) {
-			di = x[i] - b[i + ndims];
+			di = x[i] - a[i];
 			sum += b[i] * di * di;
 		}
 
 		return Math.exp(-sum);
 
 	}
-	
 
 	private static final double Estartds(final double[] x, final double[] a, final double[] b) {
 
@@ -76,13 +76,13 @@ public class GaussianLineminds implements MTFitFunction {
 		double[] maxVal = new double[ndims];
 
 		for (int i = 0; i < x.length; i++) {
-			minVal[i] = b[i + ndims];
-			maxVal[i] = a[i];
+			minVal[i] = a[i];
+			maxVal[i] = a[ndims + i];
 		}
 		double slope = (maxVal[1] - minVal[1]) / (maxVal[0] - minVal[0]);
 		
 		
-		double ds = Math.abs(a[ndims]);
+		double ds = Math.abs(a[2 * ndims]);
 
 		double[] dxvector = { ds / Math.sqrt( 1 + slope * slope) , slope * ds/ Math.sqrt( 1 + slope * slope)  };
 		double[] dxvectorderiv = { 1/ Math.sqrt( 1 + slope * slope) , slope/ Math.sqrt( 1 + slope * slope)  };
@@ -119,8 +119,9 @@ public class GaussianLineminds implements MTFitFunction {
 
 		double sum = 0;
 		double di;
+		int ndims = x.length;
 		for (int i = 0; i < x.length; i++) {
-			di = x[i] - a[i];
+			di = x[i] - a[i + ndims];
 			sum += b[i] * di * di;
 		}
 
@@ -141,8 +142,8 @@ public class GaussianLineminds implements MTFitFunction {
 		double[] maxVal = new double[ndims];
 
 		for (int i = 0; i < x.length; i++) {
-			minVal[i] = b[i + ndims];
-			maxVal[i] = a[i];
+			minVal[i] = a[i];
+			maxVal[i] = a[ndims + i];
 		}
 		double slope = (maxVal[1] - minVal[1]) / (maxVal[0] - minVal[0]);
 		double sum = 0;
@@ -150,7 +151,7 @@ public class GaussianLineminds implements MTFitFunction {
 		double di;
 		
 		
-		double ds = Math.abs(a[ndims]);
+		double ds = Math.abs(a[2 * ndims]);
 
 		double[] dxvector = { ds/ Math.sqrt( 1 + slope * slope) , slope * ds/ Math.sqrt( 1 + slope * slope)  };
 
@@ -192,3 +193,4 @@ public class GaussianLineminds implements MTFitFunction {
 	}
 
 }
+

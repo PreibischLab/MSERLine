@@ -148,19 +148,10 @@ public class LinefinderHough implements Linefinder {
 			double slope = -1.0 / (Math.tan(Math.toRadians(points[0])));
 			double intercept = points[1] / Math.sin(Math.toRadians(points[0]));
 			
-			// This step is for prependicular lines
-			 if (Math.abs(slope) != Double.POSITIVE_INFINITY){
 			slopeandintercept[0] = slope;
 			slopeandintercept[1] = intercept +  (Realinterval.realMin(1) - slope * Realinterval.realMin(0));
 			slopeandintercept[2] = Double.MAX_VALUE;
-			}
 			
-			else{
-				
-				slopeandintercept[0] = Double.MAX_VALUE;
-				slopeandintercept[1] = Double.MAX_VALUE;
-				slopeandintercept[2] = points[1] +  Realinterval.realMin(0);	
-			}
 			
 			}
 			/**
