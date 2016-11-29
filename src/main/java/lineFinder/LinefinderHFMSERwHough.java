@@ -252,23 +252,17 @@ public class LinefinderHFMSERwHough implements LinefinderHF{
 
 				}
 				
-				double[] slopeandintercept = new double[ndims + 1];
 				
 				
 				
 				
 				// Obtain the slope and intercept of the line by obtaining the major axis of the ellipse (super fast and accurate)
 				
-					
-				HoughTransformandMser viaHough = new HoughTransformandMser(Roiindex, Roiimg);
-				viaHough.checkInput();
-				viaHough.process();
-				slopeandintercept = viaHough.getResult();
+				
 				
 				CommonOutputHF currentOutput = new CommonOutputHF(framenumber, Roiindex, Roiimg, ActualRoiimg, interval);
 				
 				
-				if(slopeandintercept!=null  )
 				output.add(currentOutput);
 				
 				}

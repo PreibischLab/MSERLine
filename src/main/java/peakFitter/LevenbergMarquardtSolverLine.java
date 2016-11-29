@@ -108,7 +108,7 @@ public class LevenbergMarquardtSolverLine {
 				}
 				else {
 					term++;
-					if (term == 2) {
+					if (term == 4) {
 						done = true;
 					}
 				}
@@ -135,7 +135,7 @@ public class LevenbergMarquardtSolverLine {
 					}
 				}
 				for( int i = 0; i < nparm; i++ ) {
-					if (Math.abs(a[i] - na[i]) < 1.0E-8)
+					if (Math.abs(a[i] - na[i]) < 1.0E-10)
 						done = true;
 				}
 				

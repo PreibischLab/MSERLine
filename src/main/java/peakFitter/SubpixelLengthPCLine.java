@@ -6,7 +6,8 @@ import java.util.ArrayList;
 import com.sun.tools.javac.util.Pair;
 
 import LineModels.GaussianLineds;
-import LineModels.GaussianSplineds;
+import LineModels.GaussianLinedsHF;
+import LineModels.GaussianSplinefixedslopesecorder;
 import LineModels.MTFitFunction;
 import LineModels.UseLineModel;
 import LineModels.UseLineModel.UserChoiceModel;
@@ -196,9 +197,8 @@ implements OutputAlgorithm<Pair<ArrayList<Indexedlength>, ArrayList<Indexedlengt
 			final int Label = imgs.get(index).roilabel;
 			final double slope = imgs.get(index).lineparam[0];
 			final double intercept = imgs.get(index).lineparam[1];
-			final double ifprep = imgs.get(index).lineparam[2];
-			final double Curvature = imgs.get(index).lineparam[3];
-			final double Inflection = imgs.get(index).lineparam[4];
+			final double Curvature = imgs.get(index).lineparam[2];
+			final double Inflection = imgs.get(index).lineparam[3];
 			if ( slope!= Double.MAX_VALUE && intercept!= Double.MAX_VALUE){
 			final Pair<Indexedlength, Indexedlength> returnparam = Getfinallineparam(Label, slope, intercept, Curvature, Inflection, psf, minlength);
 			if (returnparam!= null ){
@@ -303,7 +303,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 		MinandMax[2 * ndims] =  0.5 * Math.min(psf[0], psf[1]);
 		MinandMax[2 * ndims + 1] = maxintensityline; 
 		// This parameter guess estimates the background noise level
-		MinandMax[2 * ndims + 2] = 0; 
+		MinandMax[2 * ndims + 2] = 0.5; 
 		
 		
 		System.out.println("Label: " + label + " " + "Detection: " + " StartX: " + MinandMax[0] + " StartY: "
@@ -326,7 +326,9 @@ public ArrayList<Indexedlength> getEndPoints(){
 		return MinandMax;
            }
            
-           else {
+          
+
+           if (model ==  UserChoiceModel.Splineordersec ) {
         	   while(inputcursor.hasNext()){
        			
        			inputcursor.fwd();
@@ -335,7 +337,7 @@ public ArrayList<Indexedlength> getEndPoints(){
        			
        				inputcursor.localize(newposition);
        				long pointoncurve = (long) (newposition[1] - slope * newposition[0] 
-       						- Curvature * newposition[0]  * newposition[0]  - Inflection *newposition[0] *newposition[0] *newposition[0]   - intercept);
+       						    - intercept);
 
        				// To get the min and max co-rodinates along the line so we have
        				// starting points to
@@ -380,11 +382,11 @@ public ArrayList<Indexedlength> getEndPoints(){
    			MinandMax[2 * ndims] =  0.5 * Math.min(psf[0], psf[1]);
    			MinandMax[2 * ndims + 1] = maxintensityline; 
    			// This parameter guess estimates the background noise level
-   			MinandMax[2 * ndims + 2] = 0; 
+   			MinandMax[2 * ndims + 2] = 0.5; 
    			
    			MinandMax[2 * ndims + 3] = slope; 
-   			MinandMax[2 * ndims + 4] = 0; 
-   			MinandMax[2 * ndims + 5] = 0; 
+   			MinandMax[2 * ndims + 4] = Curvature; 
+   			MinandMax[2 * ndims + 5] = intercept; 
    			System.out.println("Label: " + label + " " + "Detection: " + " StartX: " + MinandMax[0] + " StartY: "
    					+ MinandMax[1] + " EndX: " + MinandMax[2] + " EndY: " + MinandMax[3]);
 
@@ -404,7 +406,10 @@ public ArrayList<Indexedlength> getEndPoints(){
 
    			return MinandMax;
    	           }
-
+           
+           else 
+        	   return null;
+           
 	}
 	
 	// Get line parameters for fitting line to a line in a label
@@ -445,13 +450,14 @@ public ArrayList<Indexedlength> getEndPoints(){
 				
 				currentimg = Views.interval(currentimg, interval);
 
-				final double[] fixed_param = new double[ndims];
+				final double[] fixed_param = new double[ndims + 2];
 
 				for (int d = 0; d < ndims; ++d) {
 
 					fixed_param[d] = 1.0 / Math.pow(psf[d], 2);
 				}
-
+				fixed_param[ndims] = slope;
+				fixed_param[ndims + 1] = intercept;
 			
 				double inicutoffdistance = 0;
 				final double[] inistartpos = { start_param[0], start_param[1] };
@@ -460,14 +466,11 @@ public ArrayList<Indexedlength> getEndPoints(){
 				
 				
 				MTFitFunction UserChoiceFunction = null;
-				if (model == UserChoiceModel.Line){
-					UserChoiceFunction = new GaussianLineds();
-				}
-				if (model == UserChoiceModel.Spline){
-					
-					UserChoiceFunction = new GaussianSplineds();
-				}
 				
+					UserChoiceFunction = new GaussianLineds();
+				
+				
+				 
 				
 				
 				if (inicutoffdistance > minlength) {
@@ -498,8 +501,14 @@ public ArrayList<Indexedlength> getEndPoints(){
 					double[] startfit = new double[ndims];
 					double[] endfit = new double[ndims];
 					final double maxintensityline = GetLocalmaxmin.computeMaxIntensity(currentimg);
-
-
+					double[] startparam = new double[ndims ];
+					double[] endparam = new double[ndims];
+					for (int d = 0; d < ndims; ++d) {
+						
+						startparam[d] = startpos[d];
+						endparam[d] = endpos[d];
+					}
+					
 					System.out.println("Doing Mask Fits: ");
 					try {
 								
@@ -527,13 +536,10 @@ public ArrayList<Indexedlength> getEndPoints(){
 					 * dimensions of returnparam =  2 * ndims + 3 for the free parameters
 					 * + 4 for the label and the frame number information.
 					 */
-					double[] returnparam = new double[2 * ndims ];
-					double[] startparam = new double[ndims ];
-					double[] endparam = new double[ndims];
+					
 					
 					for (int d = 0; d < ndims; ++d) {
-						returnparam[d] = startfit[d];
-						returnparam[ndims + d] = endfit[d];
+						
 						startparam[d] = startfit[d];
 						endparam[d] = endfit[d];
 					}
@@ -545,8 +551,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 						System.out.println("Mask fits fail, both cords move far, returning LM solver results!");
 
 						for (int d = 0; d < ndims; ++d) {
-							returnparam[d] = startpos[d];
-							returnparam[ndims + d] = endpos[d];
+							
 							startparam[d] = startpos[d];
 							endparam[d] = endpos[d];
 						}
@@ -555,8 +560,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 							|| Math.abs(endpos[0] - endfit[0]) >= cutoffdistance  || Math.abs(endpos[1] - endfit[1]) >= cutoffdistance  ){
 						System.out.println("Mask fits fail, one cord moves too much, returning LM solver results!");
 						for (int d = 0; d < ndims; ++d) {
-							returnparam[d] = startpos[d];
-							returnparam[ndims + d] = endpos[d];
+							
 							startparam[d] = startpos[d];
 							endparam[d] = endpos[d];
 						}
@@ -571,22 +575,21 @@ public ArrayList<Indexedlength> getEndPoints(){
 					for (int d = 0; d < ndims; ++d) {
 						if (Double.isNaN(startfit[d]) || Double.isNaN(endfit[d])) {
 							System.out.println("Mask fits fail, returning LM solver results!");
-							returnparam[d] = startpos[d];
-							returnparam[ndims + d] = endpos[d];
+							
 							startparam[d] = startpos[d];
 							endparam[d] = endpos[d];
 
 						}
 					}
+					
+					
+					final double currentslope = (endparam[1] - startparam[1]) / (endparam[0] - startparam[0]);
+					final double currentintercept = endparam[1] - currentslope * endparam[0];
 
-					if (model == UserChoiceModel.Line){
-					final double currentslope = (returnparam[3] - returnparam[1]) / (returnparam[2] - returnparam[0]);
-					final double currentintercept = returnparam[3] - currentslope * returnparam[2];
+					System.out.println("Fits :" + "StartX:" + startparam[0] + " StartY:" + startparam[1] + " " + "EndX:"
+							+ endparam[0] + "EndY: " + endparam[1] + " " + "ds: " + finalparamstart[4] );
 
-					System.out.println("Fits :" + "StartX:" + returnparam[0] + " StartY:" + returnparam[1] + " " + "EndX:"
-							+ returnparam[2] + "EndY: " + returnparam[3] + " " + "ds: " + finalparamstart[4] );
-
-					System.out.println("Length: " + Distance(new double[]{returnparam[0],  returnparam[1]},new double[]{returnparam[2],  returnparam[3]} ));
+					System.out.println("Length: " + Distance(new double[]{startparam[0],  startparam[1]},new double[]{endparam[0],  endparam[1]} ));
 
 					final Indexedlength startPart = new Indexedlength(label, label, framenumber, finalparamstart[4],
 							finalparamstart[5], finalparamstart[6], startparam,
@@ -600,35 +603,8 @@ public ArrayList<Indexedlength> getEndPoints(){
 					
 					final Pair<Indexedlength, Indexedlength> pair = new Pair<Indexedlength, Indexedlength> ( startPart, endPart);
 					return pair;
-					}
 					
-					else{
-						final double currentslope = finalparamstart[2 * ndims + 3];
-						
-
-						final double currentCurvature = finalparamstart[2 * ndims + 4];
-						final double currentInflection = finalparamstart[2 * ndims + 5];
-						final double currentintercept = returnparam[3] - currentslope * returnparam[2] - currentCurvature * returnparam[2] * returnparam[2] - currentInflection * returnparam[2] * returnparam[2] *  returnparam[2] ;
-						System.out.println("Fits :" + "StartX:" + returnparam[0] + " StartY:" + returnparam[1] + " " + "EndX:"
-								+ returnparam[2] + "EndY: " + returnparam[3] + " " + "ds: " + finalparamstart[4] );
-
-						System.out.println("Length: " + Distance(new double[]{returnparam[0],  returnparam[1]},new double[]{returnparam[2],  returnparam[3]} ));
-
-						final Indexedlength startPart = new Indexedlength(label, label, framenumber, finalparamstart[4],
-								finalparamstart[5], finalparamstart[6], startparam,
-								startparam , currentslope, currentintercept , currentslope, currentintercept, Curvature, Inflection);
-						
-						final Indexedlength endPart = new Indexedlength(label, label, framenumber, finalparamstart[4],
-								finalparamstart[5], finalparamstart[6], endparam,
-								endparam, currentslope, currentintercept, currentslope, currentintercept, Curvature, Inflection);
-						
-						
-						
-						final Pair<Indexedlength, Indexedlength> pair = new Pair<Indexedlength, Indexedlength> ( startPart, endPart);
-						return pair;
-						
-						
-					}
+					
 
 				}
 

@@ -30,7 +30,7 @@ import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import preProcessing.MedianFilter2D;
 
-public class VelocitydetectionMSER {
+public class Velocitydetector {
 
 	public static void main(String[] args) throws Exception {
 
@@ -49,9 +49,9 @@ public class VelocitydetectionMSER {
 		new ImageJ();
 
 		// Load the stack of images
-		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("../res/test_bentline.tif"), new ArrayImgFactory<FloatType>());
+		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("../res/test_bent.tif"), new ArrayImgFactory<FloatType>());
 		
-		RandomAccessibleInterval<FloatType> preprocessedimg = util.ImgLib2Util.openAs32Bit( new File("../res/test_bentline.tif"), new ArrayImgFactory<FloatType>());
+		RandomAccessibleInterval<FloatType> preprocessedimg = util.ImgLib2Util.openAs32Bit( new File("../res/test_bent.tif"), new ArrayImgFactory<FloatType>());
 		int ndims = img.numDimensions();
 		 
 		 
@@ -91,9 +91,8 @@ public class VelocitydetectionMSER {
 			ImageJFunctions.show(img);
 			
 		    LinefindingMethod findLinesVia =  LinefindingMethod.MSER;
-		    UserChoiceModel userChoiceModel = UserChoiceModel.Line;
 		
-		    Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = FindlinesVia.LinefindingMethod(img, inputimg, minlength, 0, psf, findLinesVia, userChoiceModel);
+		    Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = FindlinesVia.LinefindingMethod(img, inputimg, minlength, 0, psf, findLinesVia, UserChoiceModel.Line);
 			
 
 			// Draw the detected lines
@@ -124,8 +123,7 @@ public class VelocitydetectionMSER {
 			 * 
 			 */
 			 LinefindingMethod findLinesVia =  LinefindingMethod.MSER;
-			 UserChoiceModel userChoiceModel = UserChoiceModel.Spline;
-			    Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, inputimg, minlength, 0, psf, findLinesVia, userChoiceModel);
+			    Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, inputimg, minlength, 0, psf, findLinesVia, UserChoiceModel.Line);
 				
 	            ImageJFunctions.show(inputimg).setTitle("Preprocessed extended image");
 			
@@ -144,7 +142,7 @@ public class VelocitydetectionMSER {
 			// seperate graph for both ends
 			
 			
-			final int maxframe = 5 + 0*(int) img.dimension(ndims - 1);
+			final int maxframe = (int) img.dimension(ndims - 1);
 
 			for (int frame = 1; frame < maxframe; ++frame) {
 
@@ -165,7 +163,7 @@ public class VelocitydetectionMSER {
 				 * 
 				 */
 				 LinefindingMethod findLinesViaHF =  LinefindingMethod.MSER;
-				 UserChoiceModel userChoiceModelHF = UserChoiceModel.Spline;
+				 UserChoiceModel userChoiceModelHF = UserChoiceModel.Splineordersec;
 				 Pair<Pair<ArrayList<Trackproperties>, ArrayList<Trackproperties>>,Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>>> returnVector =
 						 FindlinesVia.LinefindingMethodHF(currentframe, inputimgpre, PrevFrameparam, minlength, frame, psf, findLinesViaHF, userChoiceModelHF);
 				 

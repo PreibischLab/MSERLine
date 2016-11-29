@@ -250,8 +250,8 @@ public class LinefinderMSER  implements Linefinder{
 					
 
 				}
-				double[] slopeandintercept = new double[ndims + 1];
-				double[] slopeandinterceptCI = new double[ndims + 3];
+				double[] slopeandintercept = new double[ndims];
+				double[] slopeandinterceptCI = new double[2*ndims];
 				
 				
 				
@@ -261,7 +261,7 @@ public class LinefinderMSER  implements Linefinder{
 					
 				
 				slopeandintercept = LargestEigenvector(mean, covar);
-				
+				if (slopeandintercept!= null){
 				for (int d = 0; d < ndims; ++d){
 					slopeandinterceptCI[d] = slopeandintercept[d];
 					slopeandinterceptCI[d + ndims ] = 0;
@@ -270,9 +270,8 @@ public class LinefinderMSER  implements Linefinder{
 				CommonOutput currentOutput = new CommonOutput(framenumber, Roiindex, slopeandinterceptCI, Roiimg, ActualRoiimg, interval);
 				
 				
-				if(slopeandinterceptCI!=null  )
 				output.add(currentOutput);
-				
+				}
 				}
 				
 			}
@@ -326,16 +325,13 @@ public class LinefinderMSER  implements Linefinder{
         final double intercept = mean[1] - mean[0] * slope;
        
         if (Math.abs(slope) != Double.POSITIVE_INFINITY){
-        double[] pair = {slope, intercept, Double.MAX_VALUE};
+        double[] pair = {slope, intercept};
         return pair;
       
         }
-        
-        else {
-        	
-        	double[] prependicular = {Double.MAX_VALUE, Double.MAX_VALUE, mean[0]};
-        	return prependicular;
-        	}
+        else
+        	return null;
+       
         	 
        
 		

@@ -5,12 +5,13 @@ public class UseLineModel {
 	
 	public static enum UserChoiceModel {
 		
-		Line, Spline;
+		Line,  LineHF, Splineordersec;
 	}
 	
 	
 	protected static UserChoiceModel Line;
-	protected static UserChoiceModel Spline;
+	protected static UserChoiceModel LineHF;
+	protected static UserChoiceModel Splineordersec;
 	
 	
 	

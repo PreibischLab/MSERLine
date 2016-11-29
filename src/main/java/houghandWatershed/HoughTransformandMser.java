@@ -83,7 +83,7 @@ public class HoughTransformandMser extends BenchmarkAlgorithm implements OutputA
 		
 		
 		final double[] sizes = new double[ndims];
-        slopeandintercept = new double[ndims + 1];
+        slopeandintercept = new double[ndims];
 	           
 			
 			System.out.println("Doing Hough Transform to determine line parameters in Label:" + " " + label);
@@ -142,7 +142,7 @@ public class HoughTransformandMser extends BenchmarkAlgorithm implements OutputA
 
 				slopeandintercept[0] = slope;
 				slopeandintercept[1] = intercept;
-				slopeandintercept[2] = Double.MAX_VALUE;
+				
 				 
 
 			}

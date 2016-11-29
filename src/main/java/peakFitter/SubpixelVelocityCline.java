@@ -6,10 +6,12 @@ import java.util.Iterator;
 import java.util.Set;
 
 import LineModels.GaussianLineds;
+import LineModels.UseLineModel.UserChoiceModel;
 import graphconstructs.Staticproperties;
 import ij.gui.EllipseRoi;
 import labeledObjects.CommonOutput;
 import labeledObjects.CommonOutputHF;
+import labeledObjects.Indexedlength;
 import labeledObjects.LabelledImg;
 import lineFinder.LinefinderHF;
 import net.imglib2.Cursor;
@@ -22,21 +24,23 @@ import net.imglib2.algorithm.OutputAlgorithm;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.Views;
 import peakFitter.GaussianMaskFitMSER.EndfitMSER;
+import peakFitter.SubpixelVelocityPCLine.StartorEnd;
 import preProcessing.GetLocalmaxmin;
 import util.Boundingboxes;
 
 public class SubpixelVelocityCline extends BenchmarkAlgorithm
-implements OutputAlgorithm<ArrayList<double[]>> {
+implements OutputAlgorithm<ArrayList<Indexedlength>> {
 
 	private static final String BASE_ERROR_MSG = "[SubpixelVelocity] ";
 	private final RandomAccessibleInterval<FloatType> source;
 	private final ArrayList<CommonOutputHF> imgs;
-	private final ArrayList<double[]> PrevFrameparam;
+	private final ArrayList<Indexedlength> PrevFrameparam;
 	private final int ndims;
 	private final int framenumber;
-	private ArrayList<double[]> final_paramlist;
+	private ArrayList<Indexedlength> final_paramlist;
 	private ArrayList<Staticproperties> startandendinframe;
 	private final double[] psf;
+	private final UserChoiceModel model;
 	
 	// LM solver iteration params
 	public int maxiter = 500;
@@ -92,13 +96,15 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 	
 	public  SubpixelVelocityCline(final RandomAccessibleInterval<FloatType> source, 
 			                      final LinefinderHF finder,
-			                       final ArrayList<double[]> PrevFrameparam,
+			                       final ArrayList<Indexedlength> PrevFrameparam,
 			                       final double[] psf,
+			                       final UserChoiceModel model,
 			                       final int framenumber) {
 		finder.checkInput();
 		finder.process();
 		imgs = finder.getResult();
 		this.source = source;
+		this.model = model;
 		this.PrevFrameparam = PrevFrameparam;
 		this.psf = psf;
 		this.framenumber = framenumber;
@@ -119,14 +125,14 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 	@Override
 	public boolean process() {
 		
-		final_paramlist = new ArrayList<double[]>();
+		final_paramlist = new ArrayList<Indexedlength>();
 		startandendinframe = new ArrayList<Staticproperties>();
 		
 		for (int index = 0; index < PrevFrameparam.size(); ++index) {
 
 			Point linepoint = new Point(ndims);
 			linepoint.setPosition(
-					new long[] { (long) PrevFrameparam.get(index)[0], (long) PrevFrameparam.get(index)[1] });
+					new long[] { (long) PrevFrameparam.get(index).currentpos[0], (long) PrevFrameparam.get(index).currentpos[1] });
 			
 			
 			
@@ -136,7 +142,7 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 			
 			 Point secondlinepoint = new Point(ndims);
 				secondlinepoint.setPosition(
-						new long[] { (long) PrevFrameparam.get(index)[2], (long) PrevFrameparam.get(index)[3] });
+						new long[] { (long) PrevFrameparam.get(index).fixedpos[0], (long) PrevFrameparam.get(index).fixedpos[1] });
 				
 				
 				 
@@ -165,29 +171,29 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 				 
 				 if (currentlabel != Integer.MIN_VALUE){
 					 System.out.println(currentlabel);
-			 double[] paramnextframe =Getfinaltrackparam(PrevFrameparam.get(index),
+			 Indexedlength paramnextframe =Getfinaltrackparam(PrevFrameparam.get(index),
 							currentlabel, psf, framenumber);
 
-			 final double[] oldstartpoint = {PrevFrameparam.get(index)[0], PrevFrameparam.get(index)[1]};
+			 final double[] oldstartpoint = PrevFrameparam.get(index).currentpos;
 			 
-			 final double[] oldendpoint = {PrevFrameparam.get(index)[2], PrevFrameparam.get(index)[3]};
+			 final double[] oldendpoint = PrevFrameparam.get(index).fixedpos;
 			
 			 
 			 if (paramnextframe==null)
 				 paramnextframe = PrevFrameparam.get(index);
 			     final_paramlist.add(paramnextframe);
 			 
-                  final double[] newstartpoint = {paramnextframe[0], paramnextframe[1]};
+                  final double[] newstartpoint = paramnextframe.currentpos;
 			 
-			 final double[] newendpoint = {paramnextframe[2], paramnextframe[3]};
+			 final double[] newendpoint = paramnextframe.fixedpos;
 			 
 			 final double[] directionstart = {newstartpoint[0] - oldstartpoint[0] , newstartpoint[1] - oldstartpoint[1] };
 			 
 			 final double[] directionend = {newendpoint[0] - oldendpoint[0] , newendpoint[1] - oldendpoint[1] };
 			 
-			System.out.println("Frame:" + framenumber + " " +  "Fits :" + currentlabel + " "+ "StartX:" + paramnextframe[0] 
-					+ " StartY:" + paramnextframe[1] + " " + "EndX:"
-					+ paramnextframe[2] + "EndY: " + paramnextframe[3]);
+			System.out.println("Frame:" + framenumber + " " +  "Fits :" + currentlabel + " "+ "StartX:" + paramnextframe.currentpos[0] 
+					+ " StartY:" + paramnextframe.currentpos[1]+ " " + "EndX:"
+					+ paramnextframe.fixedpos[0] + "EndY: " + paramnextframe.fixedpos[1]);
 			 
 		
 			final Staticproperties edge = 
@@ -205,7 +211,7 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 	}
 
 	@Override
-	public ArrayList<double[]> getResult() {
+	public ArrayList<Indexedlength> getResult() {
 		return final_paramlist;
 	} 
 	
@@ -213,7 +219,7 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 		return startandendinframe;
 	} 
 	
-	private final double[] MakerepeatedLineguess(double[] iniparam, int label)  {
+	private final double[] MakerepeatedLineguess(Indexedlength iniparam, int label)  {
 		long[] newposition = new long[ndims];
 		double[] minVal = { Double.MAX_VALUE, Double.MAX_VALUE };
 		double[] maxVal = { -Double.MIN_VALUE, -Double.MIN_VALUE };
@@ -223,12 +229,9 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 		FinalInterval interval = imgs.get(label).interval;
 		
 		currentimg = Views.interval(currentimg, interval);
-		final double[] cordone = { iniparam[0], iniparam[1] };
-		final double[] cordtwo = { iniparam[2], iniparam[3] };
-
-		double slope = (cordone[1] - cordtwo[1]) / (cordone[0] - cordtwo[0]);
-		double intercept = cordone[1] - slope * cordone[0];
-		double newintercept = intercept;
+		double slope = iniparam.originalslope;
+		double intercept = iniparam.originalintercept;
+		
 
 
 		final Cursor<FloatType> outcursor = Views.iterable(currentimg).localizingCursor();
@@ -242,7 +245,7 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 				
 				outcursor.localize(newposition);
 
-				long pointonline = (long) (outcursor.getLongPosition(1) - slope * outcursor.getLongPosition(0) - newintercept);
+				long pointonline = (long) (outcursor.getLongPosition(1) - slope * outcursor.getLongPosition(0) - intercept);
 				
 				// To get the min and max co-rodinates along the line so we
 				// have starting points to
@@ -280,9 +283,9 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 
 		}
 
-		MinandMax[2 * ndims] = iniparam[2 * ndims];
-		MinandMax[2 * ndims + 1] = iniparam[2 * ndims + 1];
-		MinandMax[2 * ndims + 2] = iniparam[2 * ndims + 2];
+		MinandMax[2 * ndims] = 0.5 * Math.min(psf[0], psf[1]);
+		MinandMax[2 * ndims + 1] = iniparam.lineintensity;
+		MinandMax[2 * ndims + 2] = iniparam.background;
 		
 		System.out.println("Label: " + label + " " + "Initial guess: " + " StartX: " + MinandMax[0] + " StartY: "
 				+ MinandMax[1] + " EndX: " + MinandMax[2] + " EndY: " + MinandMax[3]);
@@ -304,7 +307,7 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 		return MinandMax;
 
 	}
-	public double[] Getfinaltrackparam(final double[] iniparam, final int label, final double[] psf, final int rate)  {
+	public Indexedlength Getfinaltrackparam(final Indexedlength iniparam, final int label, final double[] psf, final int rate)  {
 
 		if (iniparam == null || label == Integer.MIN_VALUE)
 			return null;
@@ -350,9 +353,10 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 				final double[] iniendpos = { finalparamstart[2], finalparamstart[3] };
 
 				double inicutoffdistance = Distance(inistartpos, iniendpos);
-
+				final long radius = (long) ( Math.min(psf[0], psf[1]));
 				// LM solver part
-				if (inicutoffdistance >  2 * iniparam[ndims]) {
+				final double[] safeparam = finalparamstart.clone();
+				if (inicutoffdistance >  radius) {
 					try {
 						LevenbergMarquardtSolverLine.solve(X, finalparamstart, fixed_param, I, new GaussianLineds(), lambda,
 								termepsilon, maxiter);
@@ -367,7 +371,7 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 					// NaN
 					for (int j = 0; j < finalparamstart.length; j++) {
 						if (Double.isNaN(finalparamstart[j]))
-							finalparamstart[j] = iniparam[j];
+							finalparamstart[j] = safeparam[j];
 					}
 
 					final double LMdist = sqDistance(startpos, endpos);
@@ -411,8 +415,8 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 
 
 					for (int d = 0; d < ndims; ++d) {
-						returnparam[d] = startfit[d];
-						returnparam[ndims + d] = endfit[d];
+						finalparamstart[d]= startfit[d];
+						finalparamstart[ndims + d] = endfit[d];
 					}
 
 					
@@ -422,8 +426,8 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 							System.out.println("Mask fits fail, returning LM solver results!");
 						
 							for (int d = 0; d < ndims; ++d) {
-							returnparam[d] = startpos[d];
-							returnparam[ndims + d] = endpos[d];
+								finalparamstart[d] = startpos[d];
+								finalparamstart[ndims + d] = endpos[d];
 						}
 						}
 					
@@ -431,8 +435,8 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 								|| Math.abs(endpos[0] - endfit[0]) >= cutoffdistance  || Math.abs(endpos[1] - endfit[1]) >= cutoffdistance  ){
 							System.out.println("Mask fits fail, returning LM solver results!");
 							for (int d = 0; d < ndims; ++d) {
-								returnparam[d] = startpos[d];
-								returnparam[ndims + d] = endpos[d];
+								finalparamstart[d] = startpos[d];
+								finalparamstart[ndims + d] = endpos[d];
 							}
 							
 						}
@@ -445,23 +449,32 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 					for (int d = 0; d < ndims; ++d) {
 						if (Double.isNaN(startfit[d]) || Double.isNaN(endfit[d])) {
 							System.out.println("Mask fits fail, returning LM solver results!");
-							returnparam[d] = startpos[d];
-							returnparam[ndims + d] = endpos[d];
+							finalparamstart[d] = startpos[d];
+							finalparamstart[ndims + d] = endpos[d];
 
 						}
 
 					}
 
-				
+					final int seedLabel = iniparam.seedLabel;
 
-					returnparam[2 * ndims] = finalparamstart[4];
-					returnparam[2 * ndims + 1] = finalparamstart[5];
-					returnparam[2 * ndims + 2] = finalparamstart[6];
-					returnparam[2 * ndims + 3] = iniparam[7];
-					returnparam[2 * ndims + 4] = framenumber;
+					final double[] finalstartpoint = { finalparamstart[0], finalparamstart[1] };
+					final double[] finalendpoint = { finalparamstart[2], finalparamstart[3] };
 					
-					return returnparam;
-				} else
+						final double currentslope = (finalstartpoint[1] - finalendpoint[1]) / (finalstartpoint[0] - finalendpoint[0]);
+						final double currentintercept = finalstartpoint[1] - currentslope * finalstartpoint[0];
+						
+						Indexedlength PointofInterest = new Indexedlength(label, seedLabel, framenumber, 
+								finalparamstart[2 * ndims],finalparamstart[2 * ndims + 1], 
+								finalparamstart[2 * ndims + 2], finalstartpoint, finalendpoint, currentslope, currentintercept,
+								iniparam.originalslope, iniparam.originalintercept);
+					System.out.println("New X: " + finalstartpoint[0] + " New Y: " + finalstartpoint[1]);
+						return PointofInterest;
+
+				
+					
+				} 
+				else
 					return null;
 			}
 

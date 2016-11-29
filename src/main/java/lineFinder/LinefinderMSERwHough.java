@@ -252,8 +252,8 @@ public class LinefinderMSERwHough  implements Linefinder{
 
 				}
 				
-				double[] slopeandintercept = new double[ndims + 1];
-				double[] slopeandinterceptCI = new double[ndims + 3];
+				double[] slopeandintercept = new double[ndims];
+				double[] slopeandinterceptCI = new double[2*ndims];
 				
 				
 				HoughTransformandMser viaHough = new HoughTransformandMser(Roiindex, Roiimg);
@@ -272,7 +272,6 @@ public class LinefinderMSERwHough  implements Linefinder{
 				CommonOutput currentOutput = new CommonOutput(framenumber, Roiindex, slopeandinterceptCI, Roiimg, ActualRoiimg, interval);
 				
 				
-				if(slopeandintercept!=null  )
 				output.add(currentOutput);
 				
 				}

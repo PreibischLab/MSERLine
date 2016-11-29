@@ -6,8 +6,10 @@ import java.util.ArrayList;
 import com.sun.tools.javac.util.Pair;
 
 import LineModels.GaussianLineds;
+import LineModels.UseLineModel.UserChoiceModel;
 import ij.gui.EllipseRoi;
 import labeledObjects.CommonOutput;
+import labeledObjects.Indexedlength;
 import labeledObjects.LabelledImg;
 import labeledObjects.Simpleobject;
 import lineFinder.Linefinder;
@@ -25,13 +27,13 @@ import preProcessing.GetLocalmaxmin;
 import util.Boundingboxes;
 
 public class SubpixelLengthCline extends BenchmarkAlgorithm
-implements OutputAlgorithm<ArrayList<double[]>> {
+implements OutputAlgorithm<ArrayList<Indexedlength>> {
 	
 	private static final String BASE_ERROR_MSG = "[SubpixelLineMSER] ";
 	private final RandomAccessibleInterval<FloatType> source;
 	private final ArrayList<CommonOutput> imgs;
 	private final int ndims;
-	private ArrayList<double[]> paramlist;
+	private ArrayList<Indexedlength> paramlist;
 	
 	private final double[] psf;
 	private final int minlength;
@@ -45,7 +47,7 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 	public double cutoffdistance = 20;
 	public boolean halfgaussian = false;
     public double Intensityratio = 0.5;
-    
+    private final UserChoiceModel model;
     
     /**
      * 
@@ -152,11 +154,13 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 			             final Linefinder finder,
 			             final double[] psf,
 			             final int minlength,
+			             final UserChoiceModel model,
 			             final int framenumber){
 		finder.checkInput();
 		finder.process();
 		this.source = source;
 		imgs = finder.getResult();
+		this.model = model;
 		this.psf = psf;
 		this.minlength = minlength;
 		this.framenumber = framenumber;
@@ -178,16 +182,17 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 	public boolean process() {
 		
 		
-		paramlist = new ArrayList<double[]>();
+		paramlist = new ArrayList<Indexedlength>();
 		
 		for (int index = 0; index < imgs.size() ; ++index) {
 			
 			final int Label = imgs.get(index).roilabel;
 			final double slope = imgs.get(index).lineparam[0];
 			final double intercept = imgs.get(index).lineparam[1];
-			final double ifprep = imgs.get(index).lineparam[2];
+			final double Curvature = imgs.get(index).lineparam[2];
+			final double Inflection = imgs.get(index).lineparam[3];
 			if ( slope!= Double.MAX_VALUE && intercept!= Double.MAX_VALUE){
-			final double[] returnparam = Getfinallineparam(Label, slope, intercept, psf, minlength);
+			final Indexedlength returnparam = Getfinallineparam(Label, slope, intercept,Curvature, Inflection, psf, minlength);
 			if (returnparam!= null )
 			paramlist.add(returnparam);
 			}
@@ -199,14 +204,14 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 	}
 
 	@Override
-	public ArrayList<double[]> getResult() {
+	public ArrayList<Indexedlength> getResult() {
 		
 		
 		return paramlist;
 	}
 
 	
-	private final double[] MakeimprovedLineguess(double slope, double intercept, double[] psf, int label)  {
+	private final double[] MakeimprovedLineguess(double slope, double intercept, double Curvature, double Inflection, double[] psf, int label)  {
 		long[] newposition = new long[ndims];
 		double[] minVal = { Double.MAX_VALUE, Double.MAX_VALUE };
 		double[] maxVal = { -Double.MIN_VALUE, -Double.MIN_VALUE };
@@ -221,36 +226,40 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 
 		final double maxintensityline = GetLocalmaxmin.computeMaxIntensity(currentimg);
 
-           while(inputcursor.hasNext()){
-			
-			inputcursor.fwd();
-			
-			if (inputcursor.get().get()/maxintensityline > Intensityratio){
-			
-				inputcursor.localize(newposition);
-				long pointonline = (long) (newposition[1] - slope * newposition[0] - intercept);
+           
 
-				// To get the min and max co-rodinates along the line so we have
-				// starting points to
-				// move on the line smoothly
-				
-				if (pointonline == 0) {
+           
+           if (model ==  UserChoiceModel.Line){
+        	   
+        	   while(inputcursor.hasNext()){
+       			
+       			inputcursor.fwd();
+       			
+       			if (inputcursor.get().get()/maxintensityline > Intensityratio){
+       			
+       				inputcursor.localize(newposition);
+       				long pointonline = (long) (newposition[1] - slope * newposition[0] - intercept);
 
-					for (int d = 0; d < ndims; ++d) {
-						if (inputcursor.getDoublePosition(d) <= minVal[d])
-							minVal[d] = inputcursor.getDoublePosition(d);
+       				// To get the min and max co-rodinates along the line so we have
+       				// starting points to
+       				// move on the line smoothly
+       				
+       				if (pointonline == 0) {
 
-						if (inputcursor.getDoublePosition(d) >= maxVal[d])
-							maxVal[d] = inputcursor.getDoublePosition(d);
+       					for (int d = 0; d < ndims; ++d) {
+       						if (inputcursor.getDoublePosition(d) <= minVal[d])
+       							minVal[d] = inputcursor.getDoublePosition(d);
 
-					}
+       						if (inputcursor.getDoublePosition(d) >= maxVal[d])
+       							maxVal[d] = inputcursor.getDoublePosition(d);
 
-				}
+       					}
 
-			
-			}
-           }
+       				}
 
+       			
+       			}
+                  }
 		final double[] MinandMax = new double[2 * ndims + 3];
 
 		if (slope >= 0) {
@@ -272,13 +281,13 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 		}
 
 		// This parameter is guess estimate for spacing between the Gaussians
-		MinandMax[2 * ndims] = 0.5 *Math.min(psf[0], psf[1]);
+		MinandMax[2 * ndims] =  0.5 * Math.min(psf[0], psf[1]);
 		MinandMax[2 * ndims + 1] = maxintensityline; 
 		// This parameter guess estimates the background noise level
 		MinandMax[2 * ndims + 2] = 0; 
 		
 		
-		System.out.println("Label: " + label + " " + "MSER Detection: " + " StartX: " + MinandMax[0] + " StartY: "
+		System.out.println("Label: " + label + " " + "Detection: " + " StartX: " + MinandMax[0] + " StartY: "
 				+ MinandMax[1] + " EndX: " + MinandMax[2] + " EndY: " + MinandMax[3]);
 
 		
@@ -295,18 +304,93 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 			}
 		
 
-		
-		
-
-		
-
 		return MinandMax;
+           }
+           
+           else {
+        	   while(inputcursor.hasNext()){
+       			
+       			inputcursor.fwd();
+       			
+       			if (inputcursor.get().get()/maxintensityline > Intensityratio){
+       			
+       				inputcursor.localize(newposition);
+       				long pointoncurve = (long) (newposition[1] - slope * newposition[0] 
+       						- Curvature * newposition[0]  * newposition[0]  - Inflection *newposition[0] *newposition[0] *newposition[0]   - intercept);
+
+       				// To get the min and max co-rodinates along the line so we have
+       				// starting points to
+       				// move on the line smoothly
+       				
+       				if (pointoncurve == 0) {
+
+       					for (int d = 0; d < ndims; ++d) {
+       						if (inputcursor.getDoublePosition(d) <= minVal[d])
+       							minVal[d] = inputcursor.getDoublePosition(d);
+
+       						if (inputcursor.getDoublePosition(d) >= maxVal[d])
+       							maxVal[d] = inputcursor.getDoublePosition(d);
+
+       					}
+
+       				}
+
+       			
+       			}
+                  }
+   			final double[] MinandMax = new double[2 * ndims + 6];
+   			if (slope >= 0) {
+   				for (int d = 0; d < ndims; ++d) {
+
+   					MinandMax[d] = minVal[d];
+   					MinandMax[d + ndims] = maxVal[d];
+   				}
+
+   			}
+
+   			if (slope < 0) {
+
+   				MinandMax[0] = minVal[0];
+   				MinandMax[1] = maxVal[1];
+   				MinandMax[2] = maxVal[0];
+   				MinandMax[3] = minVal[1];
+
+   			}
+
+   			// This parameter is guess estimate for spacing between the Gaussians
+   			MinandMax[2 * ndims] =  0.5 * Math.min(psf[0], psf[1]);
+   			MinandMax[2 * ndims + 1] = maxintensityline; 
+   			// This parameter guess estimates the background noise level
+   			MinandMax[2 * ndims + 2] = 0; 
+   			
+   			MinandMax[2 * ndims + 3] = slope; 
+   			MinandMax[2 * ndims + 4] = 0; 
+   			MinandMax[2 * ndims + 5] = 0; 
+   			System.out.println("Label: " + label + " " + "Detection: " + " StartX: " + MinandMax[0] + " StartY: "
+   					+ MinandMax[1] + " EndX: " + MinandMax[2] + " EndY: " + MinandMax[3]);
+
+   			
+   			
+   				for (int d = 0; d < ndims; ++d) {
+
+   					if (MinandMax[d] == Double.MAX_VALUE || MinandMax[d + ndims] == -Double.MIN_VALUE)
+   						return null;
+   					if (MinandMax[d] >= source.dimension(d) || MinandMax[d + ndims] >= source.dimension(d))
+   						return null;
+   					if (MinandMax[d] <= 0 || MinandMax[d + ndims] <= 0)
+   						return null;
+
+   				}
+   			
+
+   			return MinandMax;
+   	           }
 
 	}
 	
 	// Get line parameters for fitting line to a line in a label
 
-		public double[] Getfinallineparam(final int label, final double slope, final double intercept, final double[] psf,
+		public Indexedlength Getfinallineparam(final int label, final double slope, final double intercept, final double Curvature, final double Inflection, final double[] psf,
 				final double minlength)  {
 
 			PointSampleList<FloatType> datalist = gatherfullData(label);
@@ -327,7 +411,7 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 				index++;
 			}
 
-			final double[] start_param = MakeimprovedLineguess(slope, intercept, psf, label);
+			final double[] start_param = MakeimprovedLineguess(slope, intercept, Curvature, Inflection, psf, label);
 			if (start_param == null)
 				return null;
 
@@ -416,13 +500,15 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 					 * dimensions of returnparam =  2 * ndims + 3 for the free parameters
 					 * + 4 for the label and the frame number information.
 					 */
-					double[] returnparam = new double[2 * ndims + 7];
-					
+					double[] returnparam = new double[2 * ndims];
+					double[] startparam = new double[ ndims];
+					double[] endparam = new double[ ndims];
 					
 					for (int d = 0; d < ndims; ++d) {
 						returnparam[d] = startfit[d];
 						returnparam[ndims + d] = endfit[d];
-						
+						startparam[d] = startfit[d];
+						endparam[d] = endfit[d];
 					}
 					
 					
@@ -434,7 +520,8 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 						for (int d = 0; d < ndims; ++d) {
 							returnparam[d] = startpos[d];
 							returnparam[ndims + d] = endpos[d];
-						
+							startparam[d] = startpos[d];
+							endparam[d] = endpos[d];
 						}
 						}
 					if (Math.abs(startpos[0] - startfit[0]) >= cutoffdistance || Math.abs(startpos[1] - startfit[1]) >= cutoffdistance 
@@ -443,7 +530,8 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 						for (int d = 0; d < ndims; ++d) {
 							returnparam[d] = startpos[d];
 							returnparam[ndims + d] = endpos[d];
-							
+							startparam[d] = startpos[d];
+							endparam[d] = endpos[d];
 						}
 						
 					}
@@ -458,11 +546,23 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 							System.out.println("Mask fits fail, returning LM solver results!");
 							returnparam[d] = startpos[d];
 							returnparam[ndims + d] = endpos[d];
-							
+							startparam[d] = startpos[d];
+							endparam[d] = endpos[d];
 
 						}
 					}
 					
+					final double currentslope = (returnparam[3] - returnparam[1]) / (returnparam[2] - returnparam[0]);
+					final double currentintercept = returnparam[3] - currentslope * returnparam[2];
+
+					System.out.println("Fits :" + "StartX:" + returnparam[0] + " StartY:" + returnparam[1] + " " + "EndX:"
+							+ returnparam[2] + "EndY: " + returnparam[3] + " " + "ds: " + finalparamstart[4] );
+
+					System.out.println("Length: " + Distance(new double[]{returnparam[0],  returnparam[1]},new double[]{returnparam[2],  returnparam[3]} ));
+
+					final Indexedlength BothPart = new Indexedlength(label, label, framenumber, finalparamstart[4],
+							finalparamstart[5], finalparamstart[6], startparam,
+							endparam , currentslope, currentintercept , currentslope, currentintercept);
 
 					System.out.println("Fits :" + "StartX:" + returnparam[0] + " StartY:" + returnparam[1] + " " + "EndX:"
 							+ returnparam[2] + "EndY: " + returnparam[3] + " " + "ds: " + finalparamstart[4] );
@@ -470,21 +570,11 @@ implements OutputAlgorithm<ArrayList<double[]>> {
 					System.out.println("Length: " + Distance(new double[]{returnparam[0],  returnparam[1]},new double[]{returnparam[2],  returnparam[3]} ));
 					
 					
-					returnparam[2 * ndims] = finalparamstart[4];
-					returnparam[2 * ndims + 1] = finalparamstart[5];
-					returnparam[2 * ndims + 2] = finalparamstart[6];
-					
-					final double currentslope = (returnparam[3] - returnparam[1]) / (returnparam[2] - returnparam[0]);
-					final double currentintercept = returnparam[3] - currentslope * returnparam[2];
-					returnparam[2 * ndims + 3] = currentslope;
-					returnparam[2 * ndims + 4] = currentintercept;
-					
-					returnparam[2 * ndims + 5] = label;
-					returnparam[2 * ndims + 6] = framenumber;
 					
 					
 					
-					return returnparam;
+					
+					return BothPart;
 
 				}
 
