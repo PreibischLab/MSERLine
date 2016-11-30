@@ -1,13 +1,13 @@
 package LineModels;
 
-public class GaussianSplinefixedslopesecorder implements MTFitFunction {
+public class GaussianSplinesecorder implements MTFitFunction {
 
 	@Override
 	public double val(double[] x, double[] a, double[] b) {
 		final int ndims = x.length;
 		
 		
-		return  a[2 * ndims + 4] * Etotal(x, a, b) + a[2 * ndims + 5] ;
+		return  a[2 * ndims + 2] * Etotal(x, a, b) + a[2 * ndims + 3] ;
 		
 	}
 
@@ -17,38 +17,35 @@ public class GaussianSplinefixedslopesecorder implements MTFitFunction {
 
 		if (k < ndims) {
 
-			return 2 * b[k] * (x[k] - a[k])  * a[2 * ndims + 4] * Estart(x, a, b);
+			return 2 * b[k] * (x[k] - a[k])  * a[2 * ndims + 2] * Estart(x, a, b);
 
 		}
 
 		else if (k >= ndims && k <= ndims + 1) {
 			int dim = k - ndims;
-			return 2 * b[dim] * (x[dim] - a[k])  * a[2 * ndims + 4] * Eend(x, a, b);
+			return 2 * b[dim] * (x[dim] - a[k])  * a[2 * ndims + 2] * Eend(x, a, b);
 
 		}
 
 		
 		
+		
 		else if (k == 2 * ndims )
 
-			return a[2 * ndims + 4] *EsumS(x, a, b);
+			return a[2 * ndims + 2] *EsumC(x, a, b);
+		
+		
 		
 		else if (k == 2 * ndims + 1)
-
-			return a[2 * ndims + 4] *EsumC(x, a, b);
+			
+			return  a[2 * ndims + 2] *Estartds(x, a, b);
 		
 		else if (k == 2 * ndims + 2)
-
-			return a[2 * ndims + 4] *EsumI(x, a, b);
-		
-		else if (k == 2 * ndims + 3)
-			return  a[2 * ndims + 4] *Estartds(x, a, b);
-		
-		else if (k == 2 * ndims + 4)
+			
 			return Etotal(x, a, b);
 		
 		
-		else if (k == 2 * ndims + 5)
+		else if (k == 2 * ndims + 3)
 			return 1.0;
 		
 		else
@@ -91,9 +88,9 @@ public class GaussianSplinefixedslopesecorder implements MTFitFunction {
 			minVal[i] = a[i];
 			maxVal[i] = a[ndims + i];
 		}
-		double slope = a[2 * ndims];
+		double slope = b[x.length];
 		double curvature = a[2 * ndims + 1];
-		double ds = Math.abs(a[2 * ndims + 3]);
+		double ds = Math.abs(a[2 * ndims]);
 
 		
 
@@ -169,10 +166,10 @@ public class GaussianSplinefixedslopesecorder implements MTFitFunction {
 		double sum = 0;
 		double sumofgaussians = 0;
 		double di;
-		double slope = a[2 * ndims ];
+		double slope = b[x.length];
 		double curvature = a[2 * ndims + 1];
 		
-		double ds = Math.abs(a[2 * ndims + 3]);
+		double ds = Math.abs(a[2 * ndims]);
 		
 		while (true) {
 			
@@ -217,7 +214,7 @@ public class GaussianSplinefixedslopesecorder implements MTFitFunction {
 		double slope = a[2 * ndims ];
 		double curvature = a[2 * ndims + 1];
 		
-		double ds = Math.abs(a[2 * ndims + 3]);
+		double ds = Math.abs(a[2 * ndims]);
 		for (int i = 0; i < x.length; i++) {
 			minVal[i] = a[i];
 			maxVal[i] = a[ndims + i];
@@ -256,105 +253,8 @@ public class GaussianSplinefixedslopesecorder implements MTFitFunction {
 		return sumofgaussians;
 	}
 	
-	private static final double EsumS(final double[] x, final double[] a, final double[] b) {
-
-		final int ndims = x.length;
-		double[] minVal = new double[ndims];
-		double[] maxVal = new double[ndims];
-
-		for (int i = 0; i < x.length; i++) {
-			minVal[i] = a[i];
-			maxVal[i] = a[ndims + i];
-		}
-		double sum = 0;
-		double sumofgaussians = 0;
-		double di;
-		double slope = a[2 * ndims ];
-		double curvature = a[2 * ndims + 1];
-		
-		double ds = Math.abs(a[2 * ndims + 3]);
-		
-         while (true) {
-				
-				sum = 0;
-				
-				double  dx =  ds / Math.sqrt( 1 + (slope + 2 * curvature *minVal[0]  ) *(slope+ 2 * curvature *minVal[0] ));
-				 double dy = (slope + 2 * curvature *minVal[0]  ) * dx;
-				 double[] dxvector = { dx, dy };
-				
-				 
-				for (int i = 0; i < x.length; i++) {
-					
-					
-					minVal[i] += dxvector[i];
-					di = x[i] - minVal[i];
-					sum += b[i] * di * di;
-				}
-				sumofgaussians += 2 * ( x[1] - minVal[1]) * b[1] *minVal[0]  * Math.exp(-sum);
-
-				
-				if (minVal[0] >= maxVal[0] || minVal[1] >= maxVal[1] && slope > 0)
-					break;
-				if (minVal[0] >= maxVal[0] || minVal[1] <= maxVal[1] && slope < 0)
-					break;
-
-			}
-			 
-		
-
-		return sumofgaussians;
-	}
 	
-	private static final double EsumI(final double[] x, final double[] a, final double[] b) {
-
-		final int ndims = x.length;
-		double[] minVal = new double[ndims];
-		double[] maxVal = new double[ndims];
-
-		for (int i = 0; i < x.length; i++) {
-			minVal[i] = a[i];
-			maxVal[i] = a[ndims + i];
-		}
-		double sum = 0;
-		double sumofgaussians = 0;
-		double di;
-		double slope = a[2 * ndims ];
-		double curvature = a[2 * ndims + 1];
-		
-		double ds = Math.abs(a[2 * ndims + 3]);
-		
-		
-		
-            while (true) {
-				
-				sum = 0;
-				
-				double  dx =  ds / Math.sqrt( 1 + (slope + 2 * curvature *minVal[0]  ) *(slope+ 2 * curvature *minVal[0] ));
-				 double dy = (slope + 2 * curvature *minVal[0]  ) * dx;
-				 double[] dxvector = { dx, dy };
-				
-				 
-				for (int i = 0; i < x.length; i++) {
-					
-					
-					minVal[i] += dxvector[i];
-					di = x[i] - minVal[i];
-					sum += b[i] * di * di;
-				}
-				sumofgaussians += 2 * ( x[1] - minVal[1]) * b[1]  * Math.exp(-sum);
-
-				
-				if (minVal[0] >= maxVal[0] || minVal[1] >= maxVal[1] && slope > 0)
-					break;
-				if (minVal[0] >= maxVal[0] || minVal[1] <= maxVal[1] && slope < 0)
-					break;
-
-			}
-			 
-		
-
-		return sumofgaussians;
-	}
+	
 	
 	
 	public static double Distance(final double[] cordone, final double[] cordtwo) {

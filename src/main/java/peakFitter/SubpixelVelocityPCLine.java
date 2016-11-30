@@ -5,7 +5,7 @@ import com.sun.tools.javac.util.Pair;
 
 import LineModels.GaussianLineds;
 import LineModels.GaussianLinedsHF;
-import LineModels.GaussianSplinefixedslopesecorder;
+import LineModels.GaussianSplinesecorder;
 import LineModels.MTFitFunction;
 import LineModels.UseLineModel.UserChoiceModel;
 import graphconstructs.Trackproperties;
@@ -276,10 +276,9 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 		final double maxintensityline = GetLocalmaxmin.computeMaxIntensity(currentimg);
 		
 		
-		if (model ==  UserChoiceModel.Line || model == UserChoiceModel.LineHF){
+		if (model ==  UserChoiceModel.Line ){
 			
-			double slope = iniparam.originalslope;
-			double intercept = iniparam.originalintercept;
+			double slope = iniparam.slope;
 			while (outcursor.hasNext()) {
 
 				outcursor.fwd();
@@ -288,14 +287,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 					outcursor.localize(newposition);
 
-					long pointonline = (long) (outcursor.getLongPosition(1) - slope * outcursor.getLongPosition(0)
-							- intercept);
-
-					// To get the min and max co-rodinates along the line so we
-					// have starting points to
-					// move on the line smoothly
-
-					if (pointonline == 0) {
+					
 						for (int d = 0; d < ndims; ++d) {
 							if (outcursor.getDoublePosition(d) <= minVal[d])
 								minVal[d] = outcursor.getDoublePosition(d);
@@ -304,7 +296,64 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 								maxVal[d] = outcursor.getDoublePosition(d);
 
 						}
-					}
+					
+				}
+			}
+		final double[] MinandMax = new double[2 * ndims + 3];
+
+		if (slope >= 0) {
+			for (int d = 0; d < ndims; ++d) {
+
+				MinandMax[d] = minVal[d];
+				MinandMax[d + ndims] = maxVal[d];
+			}
+
+		}
+
+		if (slope < 0) {
+
+			MinandMax[0] = minVal[0];
+			MinandMax[1] = maxVal[1];
+			MinandMax[2] = maxVal[0];
+			MinandMax[3] = minVal[1];
+
+		}
+		MinandMax[2 * ndims] = 0.5 * Math.min(psf[0], psf[1]);
+		MinandMax[2 * ndims + 1] = iniparam.lineintensity;
+		MinandMax[2 * ndims + 2] = iniparam.background;
+		for (int d = 0; d < ndims; ++d) {
+
+			if (MinandMax[d] == Double.MAX_VALUE || MinandMax[d + ndims] == -Double.MIN_VALUE)
+				return null;
+			if (MinandMax[d] >= source.dimension(d) || MinandMax[d + ndims] >= source.dimension(d))
+				return null;
+			if (MinandMax[d] <= 0 || MinandMax[d + ndims] <= 0)
+				return null;
+
+		}
+		return MinandMax;
+		}
+           if (model == UserChoiceModel.LineHF){
+			
+			double slope = iniparam.originalslope;
+			while (outcursor.hasNext()) {
+
+				outcursor.fwd();
+
+				if (outcursor.get().get() / maxintensityline > Intensityratio) {
+
+					outcursor.localize(newposition);
+
+					
+						for (int d = 0; d < ndims; ++d) {
+							if (outcursor.getDoublePosition(d) <= minVal[d])
+								minVal[d] = outcursor.getDoublePosition(d);
+
+							if (outcursor.getDoublePosition(d) >= maxVal[d])
+								maxVal[d] = outcursor.getDoublePosition(d);
+
+						}
+					
 				}
 			}
 		final double[] MinandMax = new double[2 * ndims + 3];
@@ -344,8 +393,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 		
 		
 		if (model ==  UserChoiceModel.Splineordersec ) {
-			double slope = iniparam.slope;
-			double intercept = iniparam.intercept;
+			double slope = iniparam.originalslope;
 			double Curvature = iniparam.Curvature;
 			
 			while (outcursor.hasNext()) {
@@ -355,13 +403,8 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 				if (outcursor.get().get() / maxintensityline > Intensityratio) {
 
 					outcursor.localize(newposition);
+					
 
-					long pointoncurve = (long) (outcursor.getLongPosition(1) - slope * outcursor.getLongPosition(0)
-							- Curvature* outcursor.getLongPosition(0) *outcursor.getLongPosition(0) - intercept);
-					// To get the min and max co-rodinates along the line so we
-					// have starting points to
-					// move on the line smoothly
-					if (Math.abs(pointoncurve) <= 20) {
 						for (int d = 0; d < ndims; ++d) {
 							if (outcursor.getDoublePosition(d) <= minVal[d])
 								minVal[d] = outcursor.getDoublePosition(d);
@@ -370,11 +413,11 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 								maxVal[d] = outcursor.getDoublePosition(d);
 
 						}
-					}
+					
 				}
 			}
 			
-			final double[] MinandMax = new double[2 * ndims + 6];
+			final double[] MinandMax = new double[2 * ndims + 4];
 
 			if (slope >= 0) {
 				for (int d = 0; d < ndims; ++d) {
@@ -393,12 +436,10 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 				MinandMax[3] = minVal[1];
 
 			}
-			MinandMax[2 * ndims + 3] = 0.5 * Math.min(psf[0], psf[1]);
-			MinandMax[2 * ndims + 4] = iniparam.lineintensity;
-			MinandMax[2 * ndims + 5] = iniparam.background;
-			MinandMax[2 * ndims] = slope;
+			MinandMax[2 * ndims] = 0.5 * Math.min(psf[0], psf[1]);
+			MinandMax[2 * ndims + 2] = iniparam.lineintensity;
+			MinandMax[2 * ndims + 3] = iniparam.background;
 			MinandMax[2 * ndims + 1] = Curvature;
-			MinandMax[2 * ndims + 2] = intercept;
 			for (int d = 0; d < ndims; ++d) {
 
 				if (MinandMax[d] == Double.MAX_VALUE || MinandMax[d + ndims] == -Double.MIN_VALUE)
@@ -487,7 +528,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 				}
                 if (model == UserChoiceModel.Splineordersec){
 					
-					UserChoiceFunction = new GaussianSplinefixedslopesecorder();
+					UserChoiceFunction = new GaussianSplinesecorder();
 				}
                 
 				
@@ -526,7 +567,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					System.out.println("Frame: " + framenumber);
 
 					// If mask fits fail, return LM solver results
-					if (model == UserChoiceModel.Line || model == UserChoiceModel.LineHF){
+					if (model == UserChoiceModel.LineHF){
 						double ds = LMparam[2 * ndims];
 						
 						double dx = ds/ Math.sqrt(1 + newslope * newslope);
@@ -551,7 +592,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					}
 					for (int d = 0; d < ndims; ++d) {
 						LMparam[d] = startfit[d];
-						LMparam[d + ndims] = endpos[d];
+						LMparam[d + ndims] = endfit[d];
 
 					}
 					final double LMdist = sqDistance(startpos, endpos);
@@ -637,7 +678,6 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					else if (model == UserChoiceModel.LineHF) {
 						if (startorend== StartorEnd.Start){
 							final double currentslope = fixed_param[ndims];
-							
 							final double currentintercept = fixed_param[ndims + 1];
 							final double ds = LMparam[2 * ndims];
 							final double lineIntensity = LMparam[2 * ndims + 1];
@@ -650,8 +690,6 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 							return PointofInterest;
 						}
 						else{
-							
-
 							final double currentslope = fixed_param[ndims];
 							final double currentintercept  = fixed_param[ndims + 1];
 							final double ds = LMparam[2 * ndims];
@@ -671,37 +709,35 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					
 					else if (model == UserChoiceModel.Splineordersec) {
 						if (startorend== StartorEnd.Start){
-							final double currentslope = LMparam[2 * ndims];
+							final double currentslope = iniparam.originalslope;
 							final double Curvature = LMparam[2 * ndims + 1];
-							final double currentintercept  = LMparam[2 * ndims + 2];
-							final double ds = LMparam[2 * ndims + 3];
-							final double lineIntensity = LMparam[2 * ndims + 4];
-							final double background = LMparam[2 * ndims + 5];
+							final double currentintercept  = iniparam.originalintercept;
+							final double ds = LMparam[2 * ndims];
+							final double lineIntensity = LMparam[2 * ndims + 2];
+							final double background = LMparam[2 * ndims + 3];
 							System.out.println("Curvature: " + Curvature );
 							Indexedlength PointofInterest = new Indexedlength(label, seedLabel, framenumber, 
 									ds, lineIntensity, 
 									background, finalstartpoint, iniparam.fixedpos, currentslope, currentintercept,
 									iniparam.originalslope, iniparam.originalintercept, Curvature, 0);
-						System.out.println("New X: " + finalstartpoint[0] + " New Y: " + finalstartpoint[1] + " slope: " + LMparam[2* ndims ] + " original slope: " + iniparam.originalslope
-								+ " intercept: " + LMparam[2* ndims + 2] + " original intercept: " + iniparam.originalintercept);
+						System.out.println("New X: " + finalstartpoint[0] + " New Y: " + finalstartpoint[1] );
 							return PointofInterest;
 						}
 						else{
 							
 
-							final double currentslope = LMparam[2 * ndims];
+							final double currentslope = iniparam.originalslope;
 							final double Curvature = LMparam[2 * ndims + 1];
-							final double currentintercept  = LMparam[2 * ndims + 2];
-							final double ds = LMparam[2 * ndims + 3];
-							final double lineIntensity = LMparam[2 * ndims + 4];
-							final double background = LMparam[2 * ndims + 5];
+							final double currentintercept  = iniparam.originalintercept;
+							final double ds = LMparam[2 * ndims];
+							final double lineIntensity = LMparam[2 * ndims + 2];
+							final double background = LMparam[2 * ndims + 3];
 							System.out.println("Curvature: " + Curvature );
 							Indexedlength PointofInterest = new Indexedlength(label, seedLabel, framenumber, 
 									ds, lineIntensity, 
 									background, finalendpoint, iniparam.fixedpos, currentslope, currentintercept,
 									iniparam.originalslope, iniparam.originalintercept, Curvature, 0);
-							System.out.println("New X: " + finalendpoint[0] + " New Y: " + finalendpoint[1]+  " slope: " + LMparam[2* ndims] + " original slope: " + iniparam.originalslope
-									+ " intercept: " + LMparam[2* ndims + 2] + " original intercept: " + iniparam.originalintercept);
+							System.out.println("New X: " + finalstartpoint[0] + " New Y: " + finalstartpoint[1] );
 								
 							return PointofInterest;
 							

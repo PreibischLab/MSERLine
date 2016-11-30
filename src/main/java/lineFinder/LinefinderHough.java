@@ -85,6 +85,7 @@ public class LinefinderHough implements Linefinder {
 		WaterafterDisttransform.checkInput();
 		WaterafterDisttransform.process();
 	    intimg = WaterafterDisttransform.getResult();
+	    ImageJFunctions.show(intimg);
 		Maxlabel = WaterafterDisttransform.GetMaxlabelsseeded(intimg);
 		final double[] sizes = new double[ndims];
 

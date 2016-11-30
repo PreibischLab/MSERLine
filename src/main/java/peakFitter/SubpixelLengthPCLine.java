@@ -7,7 +7,7 @@ import com.sun.tools.javac.util.Pair;
 
 import LineModels.GaussianLineds;
 import LineModels.GaussianLinedsHF;
-import LineModels.GaussianSplinefixedslopesecorder;
+import LineModels.GaussianSplinesecorder;
 import LineModels.MTFitFunction;
 import LineModels.UseLineModel;
 import LineModels.UseLineModel.UserChoiceModel;

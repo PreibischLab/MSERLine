@@ -49,9 +49,9 @@ public class Velocitydetector {
 		new ImageJ();
 
 		// Load the stack of images
-		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("../res/test_bent.tif"), new ArrayImgFactory<FloatType>());
+		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("../res/super_bent_mid.tif"), new ArrayImgFactory<FloatType>());
 		
-		RandomAccessibleInterval<FloatType> preprocessedimg = util.ImgLib2Util.openAs32Bit( new File("../res/test_bent.tif"), new ArrayImgFactory<FloatType>());
+		RandomAccessibleInterval<FloatType> preprocessedimg = util.ImgLib2Util.openAs32Bit( new File("../res/super_bent_mid.tif"), new ArrayImgFactory<FloatType>());
 		int ndims = img.numDimensions();
 		 
 		 
@@ -184,7 +184,6 @@ public class Velocitydetector {
 				RandomAccessibleInterval<FloatType> newgaussimg = new ArrayImgFactory<FloatType>().create(groundframe,
 						new FloatType());
 				PushCurves.DrawstartLine(newgaussimg, NewFrameparam.fst,NewFrameparam.snd, psf);
-				ImageJFunctions.show(newgaussimg).setTitle("Exact-line-start");
 
 			}
 
