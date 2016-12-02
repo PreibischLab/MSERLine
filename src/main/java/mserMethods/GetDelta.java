@@ -20,6 +20,23 @@ import net.imglib2.type.numeric.real.FloatType;
 
 public class GetDelta {
 
+	/**
+	 * Determines the best delta parameter for the image with known objects to be found,
+	 * User must input the maximum number of objects to be detected, a rough number close to the
+	 * exact number would do.
+	 * 
+	 * @param newimg
+	 * @param delta
+	 * @param minSize
+	 * @param maxSize
+	 * @param maxVar
+	 * @param minDiversity
+	 * @param minlength
+	 * @param maxlines
+	 * @param maxdelta
+	 * @param darktoBright
+	 * @return
+	 */
 	
 	public static double Bestdeltaparam(final Img<UnsignedByteType> newimg,final double delta, final long minSize, 
 			final long maxSize, final double maxVar, final double minDiversity, final int minlength, final int maxlines, final int maxdelta,  final boolean darktoBright){

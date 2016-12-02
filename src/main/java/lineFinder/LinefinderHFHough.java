@@ -88,7 +88,6 @@ public class LinefinderHFHough implements LinefinderHF {
 	    intimg = WaterafterDisttransform.getResult();
 		Maxlabel = WaterafterDisttransform.GetMaxlabelsseeded(intimg);
 
-
 		for (int label = 1; label < Maxlabel - 1; label++) {
 
            
@@ -101,7 +100,7 @@ public class LinefinderHFHough implements LinefinderHF {
 			
 				
 			 Roiindex = label;
-			CommonOutputHF currentOutput = new CommonOutputHF(framenumber, Roiindex - 1, roiimg, ActualRoiimg, Realinterval);
+			CommonOutputHF currentOutput = new CommonOutputHF(framenumber, Roiindex - 1 , roiimg, ActualRoiimg, Realinterval);
 			
 			
 			output.add(currentOutput);

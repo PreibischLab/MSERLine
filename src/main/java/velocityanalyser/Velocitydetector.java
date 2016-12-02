@@ -49,9 +49,9 @@ public class Velocitydetector {
 		new ImageJ();
 
 		// Load the stack of images
-		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("../res/super_bent_mid.tif"), new ArrayImgFactory<FloatType>());
+		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("../res/super_bent.tif"), new ArrayImgFactory<FloatType>());
 		
-		RandomAccessibleInterval<FloatType> preprocessedimg = util.ImgLib2Util.openAs32Bit( new File("../res/super_bent_mid.tif"), new ArrayImgFactory<FloatType>());
+		RandomAccessibleInterval<FloatType> preprocessedimg = util.ImgLib2Util.openAs32Bit( new File("../res/super_bent.tif"), new ArrayImgFactory<FloatType>());
 		int ndims = img.numDimensions();
 		 
 		 
@@ -109,12 +109,12 @@ public class Velocitydetector {
 
 			RandomAccessibleInterval<FloatType> groundframe = Views.hyperSlice(img, ndims - 1, 0);
 			RandomAccessibleInterval<FloatType> groundframepre = Views.hyperSlice(preprocessedimg, ndims - 1, 0);
-
+			Normalize.normalize(Views.iterable(groundframe), minval, maxval);
+			Normalize.normalize(Views.iterable(groundframepre), minval, maxval);
 			
 			final MedianFilter2D<FloatType> medfilter = new MedianFilter2D<FloatType>(groundframepre, 1);
 			medfilter.process();
 			RandomAccessibleInterval<FloatType> inputimg = medfilter.getResult();
-			Normalize.normalize(Views.iterable(inputimg), minval, maxval);
 			ImageJFunctions.show(groundframe);
 			
 			/**
@@ -123,6 +123,7 @@ public class Velocitydetector {
 			 * 
 			 */
 			 LinefindingMethod findLinesVia =  LinefindingMethod.MSER;
+			
 			    Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, inputimg, minlength, 0, psf, findLinesVia, UserChoiceModel.Line);
 				
 	            ImageJFunctions.show(inputimg).setTitle("Preprocessed extended image");
@@ -135,9 +136,7 @@ public class Velocitydetector {
 			PushCurves.DrawstartLine(gaussimg, PrevFrameparam.fst,PrevFrameparam.snd, psf);
 			ImageJFunctions.show(gaussimg).setTitle("Exact-line-start");
 			
-			
-
-			
+		
 			// Now start tracking the moving ends of the Microtubule and make
 			// seperate graph for both ends
 			
@@ -148,11 +147,11 @@ public class Velocitydetector {
 
 				IntervalView<FloatType> currentframe = Views.hyperSlice(img, ndims - 1, frame);
 				IntervalView<FloatType> currentframepre = Views.hyperSlice(preprocessedimg, ndims - 1, frame);
-
+				Normalize.normalize(Views.iterable(currentframe), minval, maxval);
+				Normalize.normalize(Views.iterable(currentframepre), minval, maxval);
 				final MedianFilter2D<FloatType> medfiltercurr = new MedianFilter2D<FloatType>(currentframepre, 1);
 				medfiltercurr.process();
 				RandomAccessibleInterval<FloatType> inputimgpre = medfiltercurr.getResult();
-				Normalize.normalize(Views.iterable(inputimgpre), minval, maxval);
 
 				ImageJFunctions.show(currentframe);
 

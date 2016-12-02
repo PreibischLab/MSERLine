@@ -88,10 +88,10 @@ public class GaussianSplinesecorder implements MTFitFunction {
 			minVal[i] = a[i];
 			maxVal[i] = a[ndims + i];
 		}
-		double slope = b[x.length];
+		
 		double curvature = a[2 * ndims + 1];
 		double ds = Math.abs(a[2 * ndims]);
-
+		double slope = b[ndims];
 		
 
 		double dx =  ds / Math.sqrt( 1 + (slope + 2 * curvature *minVal[0]  ) *(slope+ 2 * curvature *minVal[0]  ));
@@ -166,8 +166,9 @@ public class GaussianSplinesecorder implements MTFitFunction {
 		double sum = 0;
 		double sumofgaussians = 0;
 		double di;
-		double slope = b[x.length];
 		double curvature = a[2 * ndims + 1];
+		double slope = b[ndims];
+		
 		
 		double ds = Math.abs(a[2 * ndims]);
 		
@@ -208,44 +209,36 @@ public class GaussianSplinesecorder implements MTFitFunction {
 		final int ndims = x.length;
 		double[] minVal = new double[ndims];
 		double[] maxVal = new double[ndims];
-		double sum = 0;
+		double sum = 0, dsum = 0;
 		double sumofgaussians = 0;
-		double di;
-		double slope = a[2 * ndims ];
-		double curvature = a[2 * ndims + 1];
-		
-		double ds = Math.abs(a[2 * ndims]);
+		double di, de;
+	
 		for (int i = 0; i < x.length; i++) {
 			minVal[i] = a[i];
 			maxVal[i] = a[ndims + i];
 		}
 	
 	
-			while (true) {
+			
 				
-				sum = 0;
-				
-				double  dx =  ds / Math.sqrt( 1 + (slope + 2 * curvature *minVal[0]  ) *(slope+ 2 * curvature *minVal[0] ));
-				 double dy = (slope + 2 * curvature *minVal[0]  ) * dx;
-				 double[] dxvector = { dx, dy };
+			
 				
 				 
 				for (int i = 0; i < x.length; i++) {
 					
 					
-					minVal[i] += dxvector[i];
 					di = x[i] - minVal[i];
 					sum += b[i] * di * di;
+					
+					de = x[i] - maxVal[i];
+					dsum += b[i] * de * de;
+					
 				}
-				sumofgaussians += 2 * ( x[1] - minVal[1]) * b[1] *minVal[0] * minVal[0] * Math.exp(-sum);
+				sumofgaussians = 2 * ( x[1] - minVal[1]) * b[1] *minVal[0] * minVal[0] * Math.exp(-sum) 
+						+ 2 * ( x[1] - maxVal[1]) * b[1] *maxVal[0] * maxVal[0] * Math.exp(-dsum) ;
 
 				
-				if (minVal[0] >= maxVal[0] || minVal[1] >= maxVal[1] && slope > 0)
-					break;
-				if (minVal[0] >= maxVal[0] || minVal[1] <= maxVal[1] && slope < 0)
-					break;
-
-			}
+			
 			
 			 
 		

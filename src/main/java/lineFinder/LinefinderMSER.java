@@ -45,12 +45,12 @@ public class LinefinderMSER  implements Linefinder{
 	private final int minlength;
 	private ArrayList<CommonOutput> output;
 	public  double delta = 10;
-	public final long minSize = 1;
+	public final long minSize = 0;
 	public final long maxSize = Long.MAX_VALUE;
 	public  double maxVar = 0.8;
-	public double minDiversity = 0;
+	public double minDiversity = 0.8;
 	public int maxlines = 100;
-	public final int maxdelta = 10;
+	public final int maxdelta = 20;
 	private Overlay ov;
 	public boolean darktoBright = false;
 	private int Roiindex;

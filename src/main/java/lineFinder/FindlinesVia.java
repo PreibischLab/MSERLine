@@ -14,6 +14,7 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.real.FloatType;
 import peakFitter.SubpixelLengthPCLine;
 import peakFitter.SubpixelVelocityPCLine;
+import preProcessing.Kernels;
 
 public  class FindlinesVia {
 
@@ -35,8 +36,9 @@ public  class FindlinesVia {
 		case MSER:
 		{
 			LinefinderMSER newlineMser = new LinefinderMSER(source, Preprocessedsource, minlength, framenumber);
-			newlineMser.setMaxlines(40);
+			newlineMser.setMaxlines(6);
 
+			
 			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(source, newlineMser, psf, minlength, model, 0);
 			MTline.checkInput();
 			MTline.process();
@@ -51,7 +53,8 @@ public  class FindlinesVia {
 			
 		case Hough:
 		{
-			LinefinderHough newlineHough = new LinefinderHough(source, Preprocessedsource, minlength, framenumber);
+			RandomAccessibleInterval<FloatType> inputimg = Kernels.CannyEdge(Preprocessedsource);
+			LinefinderHough newlineHough = new LinefinderHough(source, inputimg, minlength, framenumber);
 
 			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(source, newlineHough, psf, minlength, model, 0);
 			MTline.checkInput();
@@ -115,7 +118,7 @@ public  class FindlinesVia {
 		case MSER:
 		{
 			LinefinderHFMSER newlinenextMser = new LinefinderHFMSER(source, Preprocessedsource, minlength, framenumber);
-			newlinenextMser.setMaxlines(40);
+			newlinenextMser.setMaxlines(11);
 
 			final SubpixelVelocityPCLine growthtracker = new SubpixelVelocityPCLine(source, newlinenextMser,
 					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber, model);
@@ -140,7 +143,9 @@ public  class FindlinesVia {
 			
 		case Hough:
 		{
-			LinefinderHFHough newlineHough = new LinefinderHFHough(source, Preprocessedsource, minlength, framenumber);
+			
+			RandomAccessibleInterval<FloatType> inputimg = Kernels.CannyEdge(Preprocessedsource);
+			LinefinderHFHough newlineHough = new LinefinderHFHough(source, inputimg, minlength, framenumber);
 			final SubpixelVelocityPCLine growthtracker = new SubpixelVelocityPCLine(source, newlineHough,
 					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber, model);
 			growthtracker.checkInput();

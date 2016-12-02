@@ -259,45 +259,31 @@ public ArrayList<Indexedlength> getEndPoints(){
        				inputcursor.localize(newposition);
        				long pointonline = (long) (newposition[1] - slope * newposition[0] - intercept);
 
-       				// To get the min and max co-rodinates along the line so we have
-       				// starting points to
-       				// move on the line smoothly
-       				
-       				if (pointonline == 0) {
+       				if (inputcursor.getDoublePosition(0) <= minVal[0]
+    						&& inputcursor.get().get() / maxintensityline > Intensityratio) {
+    					minVal[0] = inputcursor.getDoublePosition(0);
+    					minVal[1] = inputcursor.getDoublePosition(1);
+    				}
 
-       					for (int d = 0; d < ndims; ++d) {
-       						if (inputcursor.getDoublePosition(d) <= minVal[d])
-       							minVal[d] = inputcursor.getDoublePosition(d);
-
-       						if (inputcursor.getDoublePosition(d) >= maxVal[d])
-       							maxVal[d] = inputcursor.getDoublePosition(d);
-
-       					}
-
-       				}
+    				if (inputcursor.getDoublePosition(0) >= maxVal[0]
+    						&& inputcursor.get().get() / maxintensityline > Intensityratio) {
+    					maxVal[0] = inputcursor.getDoublePosition(0);
+    					maxVal[1] = inputcursor.getDoublePosition(1);
+    				}
 
        			
        			}
                   }
 		final double[] MinandMax = new double[2 * ndims + 3];
 
-		if (slope >= 0) {
+		
 			for (int d = 0; d < ndims; ++d) {
 
 				MinandMax[d] = minVal[d];
 				MinandMax[d + ndims] = maxVal[d];
 			}
 
-		}
-
-		if (slope < 0) {
-
-			MinandMax[0] = minVal[0];
-			MinandMax[1] = maxVal[1];
-			MinandMax[2] = maxVal[0];
-			MinandMax[3] = minVal[1];
-
-		}
+		
 
 		// This parameter is guess estimate for spacing between the Gaussians
 		MinandMax[2 * ndims] =  0.5 * Math.min(psf[0], psf[1]);
@@ -343,40 +329,31 @@ public ArrayList<Indexedlength> getEndPoints(){
        				// starting points to
        				// move on the line smoothly
        				
-       				if (pointoncurve == 0) {
 
-       					for (int d = 0; d < ndims; ++d) {
-       						if (inputcursor.getDoublePosition(d) <= minVal[d])
-       							minVal[d] = inputcursor.getDoublePosition(d);
+       				if (inputcursor.getDoublePosition(0) <= minVal[0]
+    						&& inputcursor.get().get() / maxintensityline > Intensityratio) {
+    					minVal[0] = inputcursor.getDoublePosition(0);
+    					minVal[1] = inputcursor.getDoublePosition(1);
+    				}
 
-       						if (inputcursor.getDoublePosition(d) >= maxVal[d])
-       							maxVal[d] = inputcursor.getDoublePosition(d);
-
-       					}
-
-       				}
+    				if (inputcursor.getDoublePosition(0) >= maxVal[0]
+    						&& inputcursor.get().get() / maxintensityline > Intensityratio) {
+    					maxVal[0] = inputcursor.getDoublePosition(0);
+    					maxVal[1] = inputcursor.getDoublePosition(1);
+    				}
 
        			
        			}
                   }
    			final double[] MinandMax = new double[2 * ndims + 6];
-   			if (slope >= 0) {
+   			
    				for (int d = 0; d < ndims; ++d) {
 
    					MinandMax[d] = minVal[d];
    					MinandMax[d + ndims] = maxVal[d];
    				}
 
-   			}
-
-   			if (slope < 0) {
-
-   				MinandMax[0] = minVal[0];
-   				MinandMax[1] = maxVal[1];
-   				MinandMax[2] = maxVal[0];
-   				MinandMax[3] = minVal[1];
-
-   			}
+   			
 
    			// This parameter is guess estimate for spacing between the Gaussians
    			MinandMax[2 * ndims] =  0.5 * Math.min(psf[0], psf[1]);

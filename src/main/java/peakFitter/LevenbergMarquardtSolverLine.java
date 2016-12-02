@@ -108,7 +108,7 @@ public class LevenbergMarquardtSolverLine {
 				}
 				else {
 					term++;
-					if (term == 4) {
+					if (term == 2) {
 						done = true;
 					}
 				}

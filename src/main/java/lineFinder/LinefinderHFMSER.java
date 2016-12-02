@@ -48,10 +48,10 @@ public class LinefinderHFMSER implements LinefinderHF{
 	public  double delta = 10;
 	public final long minSize = 1;
 	public final long maxSize = Long.MAX_VALUE;
-	public  double maxVar = 0.5;
+	public  double maxVar = 0.8;
 	public double minDiversity = 0.8;
 	public int maxlines = 100;
-	public final int maxdelta = 10;
+	public final int maxdelta = 20;
 	private Overlay ov;
 	public boolean darktoBright = false;
 	private int Roiindex;
