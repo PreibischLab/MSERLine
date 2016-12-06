@@ -257,7 +257,6 @@ public ArrayList<Indexedlength> getEndPoints(){
        			if (inputcursor.get().get()/maxintensityline > Intensityratio){
        			
        				inputcursor.localize(newposition);
-       				long pointonline = (long) (newposition[1] - slope * newposition[0] - intercept);
 
        				if (inputcursor.getDoublePosition(0) <= minVal[0]
     						&& inputcursor.get().get() / maxintensityline > Intensityratio) {

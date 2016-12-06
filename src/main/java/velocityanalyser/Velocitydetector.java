@@ -1,6 +1,7 @@
 package velocityanalyser;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.util.ArrayList;
 
 import org.jgrapht.graph.DefaultWeightedEdge;
@@ -222,7 +223,71 @@ public class Velocitydetector {
 			displaygraphtrackend.getImp();
 			impendsec.draw();
 			
-
+			ArrayList<Pair<Integer, Double>> lengthliststart = new ArrayList<Pair<Integer, Double>>();
+			for (int index = 0; index < Allstart.size(); ++index){
+				
+				final int framenumber = index + 1;
+				final ArrayList<Trackproperties> currentframe = Allstart.get(index);
+				
+				
+				for (int frameindex = 0; frameindex < currentframe.size(); ++frameindex){
+					
+					final double[] newpoint = currentframe.get(frameindex).newpoint;
+					final double[] oldpoint = currentframe.get(frameindex).oldpoint;
+					final double length = util.Boundingboxes.Distance(newpoint, oldpoint);
+					Pair<Integer, Double> lengthpair = new Pair<Integer, Double>(framenumber, length);
+					
+					lengthliststart.add(lengthpair);
+					
+				}
+				
+				
+			}
+			
+			FileWriter writer = new FileWriter("../res/length-movingstart.txt", true);
+			
+			for (int index = 0; index < lengthliststart.size(); ++index){
+				
+				writer.write(lengthliststart.get(index).fst + " " + lengthliststart.get(index).snd);
+				writer.write("\r\n");
+			}
+			
+			writer.close();
+			
+			
+			ArrayList<Pair<Integer, Double>> lengthlistend = new ArrayList<Pair<Integer, Double>>();
+			for (int index = 0; index < Allend.size(); ++index){
+				
+				final int framenumber = index + 1;
+				final ArrayList<Trackproperties> currentframe = Allend.get(index);
+				
+				
+				for (int frameindex = 0; frameindex < currentframe.size(); ++frameindex){
+					
+					final double[] newpoint = currentframe.get(frameindex).newpoint;
+					final double[] oldpoint = currentframe.get(frameindex).oldpoint;
+					final double length = util.Boundingboxes.Distance(newpoint, oldpoint);
+					Pair<Integer, Double> lengthpair = new Pair<Integer, Double>(framenumber, length);
+					
+					lengthlistend.add(lengthpair);
+					
+				}
+				
+				
+			}
+			
+			FileWriter writerend = new FileWriter("../res/length-movingend.txt", true);
+			
+			for (int index = 0; index < lengthlistend.size(); ++index){
+				
+				writerend.write(lengthlistend.get(index).fst + " " + lengthlistend.get(index).snd);
+				writerend.write("\r\n");
+			}
+			
+			writerend.close();
+			
+			
+			
 		}
 		
 	}

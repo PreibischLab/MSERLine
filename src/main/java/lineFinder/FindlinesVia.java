@@ -68,7 +68,7 @@ public  class FindlinesVia {
 		{
 
 			LinefinderMSERwHough newlineMserwHough = new LinefinderMSERwHough(source, Preprocessedsource, minlength, framenumber);
-			newlineMserwHough.setMaxlines(40);
+			newlineMserwHough.setMaxlines(6);
 
 			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(source, newlineMserwHough, psf, minlength, model, 0);
 			MTline.checkInput();
@@ -118,7 +118,7 @@ public  class FindlinesVia {
 		case MSER:
 		{
 			LinefinderHFMSER newlinenextMser = new LinefinderHFMSER(source, Preprocessedsource, minlength, framenumber);
-			newlinenextMser.setMaxlines(11);
+			newlinenextMser.setMaxlines(12);
 
 			final SubpixelVelocityPCLine growthtracker = new SubpixelVelocityPCLine(source, newlinenextMser,
 					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber, model);
@@ -166,7 +166,7 @@ public  class FindlinesVia {
 		{
 
 			LinefinderHFMSERwHough newlinenextMser = new LinefinderHFMSERwHough(source, Preprocessedsource, minlength, framenumber);
-			newlinenextMser.setMaxlines(40);
+			newlinenextMser.setMaxlines(10);
 
 			final SubpixelVelocityPCLine growthtracker = new SubpixelVelocityPCLine(source, newlinenextMser,
 					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber, model);
@@ -192,7 +192,7 @@ public  class FindlinesVia {
 		default:
 		{
 			LinefinderHFMSER newlinenextMser = new LinefinderHFMSER(source, Preprocessedsource, minlength, framenumber);
-			newlinenextMser.setMaxlines(40);
+			newlinenextMser.setMaxlines(12);
 
 			final SubpixelVelocityPCLine growthtracker = new SubpixelVelocityPCLine(source, newlinenextMser,
 					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber, model);

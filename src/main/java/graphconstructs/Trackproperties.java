@@ -4,6 +4,7 @@ public class Trackproperties {
 
 	
 	public final int Label;
+	public final int frame;
 	public final double[] oldpoint;
 	public final double[] newpoint;
 	public final double newslope;
@@ -15,9 +16,10 @@ public class Trackproperties {
 	
 	
 	
-	public Trackproperties(final int Label,
+	public Trackproperties(final int Label, final int frame,
 			final double[] oldpoint, final double[] newpoint, final double newslope, final double newintercept, final double originalslope, final double originalintercept, final int seedlabel, final double[] originalpoint ) {
 		this.Label = Label;
+		this.frame = frame;
 		this.oldpoint = oldpoint;
 		this.newpoint = newpoint;
 		this.newslope = newslope;
