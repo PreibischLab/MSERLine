@@ -191,8 +191,7 @@ public class Dummylines {
 				
 				final double[] en = {endpos[0], endpos[1], slope, intercept};
 				
-				Dummyprops newend = new Dummyprops(frame, oldpos, endpos, slope, intercept);
-				newendlist.add(newend);
+				
 				final double stepsize =  1 ;
 				double steppos[] = {startpos[0], startpos[1]};
 				double dx = stepsize / Math.sqrt(1 + slope * slope);
@@ -214,7 +213,8 @@ public class Dummylines {
 					
 						
 				}
-			 
+				Dummyprops newend = new Dummyprops(frame, oldpos, steppos, slope, intercept);
+				newendlist.add(newend);
 			 
 		 }
 	

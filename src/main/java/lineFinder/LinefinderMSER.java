@@ -202,7 +202,7 @@ public class LinefinderMSER  implements Linefinder{
 				
 	    		final double perimeter = ellipseroi.getLength();
 	    		final double smalleigenvalue = SmallerEigenvalue(mean, covar);
-	    		if (perimeter > 2 * Math.PI * minlength && smalleigenvalue < 30){
+	    		if (perimeter > 2 * Math.PI * minlength ){
 	    			
 	    			Roiindex = count;
 	    			count++;

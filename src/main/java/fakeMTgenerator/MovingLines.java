@@ -38,8 +38,8 @@ public class MovingLines {
 		for (int d = 0; d < ndims; ++d)
 			Ci[d] = 1.0 / Math.pow(sigma[d],2);
 		
-		final int numframes = 20;
-		final int numlines = 5;
+		final int numframes = 50;
+		final int numlines = 4;
 
 		
 		
@@ -59,7 +59,7 @@ public class MovingLines {
 		FloatType maxval = new FloatType(1);
 		Normalize.normalize(Views.iterable(lineimage), minval, maxval);
 		Kernels.addBackground(Views.iterable(lineimage), 0.2);
-		noisylines = Poissonprocess.poissonProcess(lineimage, 20);
+		noisylines = Poissonprocess.poissonProcess(lineimage, 5);
 		ImageJFunctions.show(noisylines);
 		ArrayList<double[]> startseedscopy =  new ArrayList<double[]>();
 		ArrayList<double[]> endseedscopy = new ArrayList<double[]>();
@@ -80,7 +80,8 @@ public class MovingLines {
 			RandomAccessibleInterval<FloatType> noisylinesframe = new ArrayImgFactory<FloatType>().create(range, new FloatType());
 			RandomAccessibleInterval<FloatType> lineimageframe = new ArrayImgFactory<FloatType>().create(range, new FloatType());
 			
-			Pair<Pair<ArrayList<Dummyprops>, ArrayList<Dummyprops>>, Pair<ArrayList<double[]>, ArrayList<double[]>>>  pair	 = Dummylines.Growseeds(lineimageframe, startseeds, endseeds, frame, sigma);
+			Pair<Pair<ArrayList<Dummyprops>, ArrayList<Dummyprops>>, Pair<ArrayList<double[]>, ArrayList<double[]>>>  pair	 = 
+					Dummylines.Growseeds(lineimageframe, startseeds, endseeds, frame, sigma);
 		
 			
 			
@@ -128,7 +129,7 @@ public class MovingLines {
 		
 		Normalize.normalize(Views.iterable(lineimageframe), minval, maxval);
 		Kernels.addBackground(Views.iterable(lineimageframe), 0.2);
-		noisylinesframe = Poissonprocess.poissonProcess(lineimageframe, 20);
+		noisylinesframe = Poissonprocess.poissonProcess(lineimageframe, 5);
 		
 	
 		ImageJFunctions.show(noisylinesframe);
@@ -142,32 +143,34 @@ public class MovingLines {
 		
 	
 		}
-		 FileWriter writerend = new FileWriter("../res/Actuallength-movingend.txt", true);
-		for (int i = 0; i < lineendlist.size() - 1; ++i){
-			for (int j = 0; j < lineendlist.size() - 1; ++j){
+		 FileWriter writerend = new FileWriter("../res/HNActuallength-movingend.txt", true);
+		for (int i = 0; i < lineendlist.size() ; ++i){
+			for (int j = 0; j < lineendlist.size() ; ++j){
 			
-			
+				
 			
 			
 			if (lineendlist.get(i).index == lineendlist.get(j).index && lineendlist.get(i).frame - lineendlist.get(j).frame == 1){
 				double length = Distance(lineendlist.get(i).position, lineendlist.get(j).position);
-				writerend.write( lineendlist.get(i).frame + " " + length );
+				writerend.write( lineendlist.get(i).frame + " " + lineendlist.get(j).position[0] + " " + lineendlist.get(j).position[1]
+						+ " " + lineendlist.get(i).position[0] + " " + lineendlist.get(i).position[1] + " " +  length );
 				writerend.write("\r\n");
 				
 			}
 		}
 		}
 		
-		 FileWriter writerstart = new FileWriter("../res/Actuallength-movingstart.txt", true);
-			for (int i = 0; i < linestlist.size() - 1; ++i){
-				for (int j = 0; j < linestlist.size() - 1; ++j){
+		 FileWriter writerstart = new FileWriter("../res/HNActuallength-movingstartHN.txt", true);
+			for (int i = 0; i < linestlist.size() ; ++i){
+				for (int j = 0; j < linestlist.size() ; ++j){
 				
 				
 				
 				
 				if (linestlist.get(i).index == linestlist.get(j).index && linestlist.get(i).frame - linestlist.get(j).frame == 1){
 					double length = Distance(linestlist.get(i).position, linestlist.get(j).position);
-					writerstart.write( linestlist.get(i).frame + " " + length );
+					writerstart.write( linestlist.get(i).frame + " " + linestlist.get(j).position[0] + " " + linestlist.get(j).position[1]
+							+ " " + linestlist.get(i).position[0] + " " + linestlist.get(i).position[1] + " " + length );
 					writerstart.write("\r\n");
 					
 				}

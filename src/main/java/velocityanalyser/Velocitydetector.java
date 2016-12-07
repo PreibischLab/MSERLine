@@ -16,12 +16,20 @@ import drawandOverlay.DisplaysubGraphend;
 import drawandOverlay.DisplaysubGraphstart;
 import drawandOverlay.PushCurves;
 import graphconstructs.Trackproperties;
+import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
+import ij.gui.Overlay;
 import labeledObjects.Indexedlength;
 import labeledObjects.Subgraphs;
 import lineFinder.FindlinesVia;
+import lineFinder.LinefinderHough;
+import lineFinder.LinefinderMSER;
+import lineFinder.LinefinderMSERwHough;
 import lineFinder.FindlinesVia.LinefindingMethod;
+import lineFinder.LinefinderHFHough;
+import lineFinder.LinefinderHFMSER;
+import lineFinder.LinefinderHFMSERwHough;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.stats.Normalize;
 import net.imglib2.img.array.ArrayImgFactory;
@@ -92,8 +100,31 @@ public class Velocitydetector {
 			ImageJFunctions.show(img);
 			
 		    LinefindingMethod findLinesVia =  LinefindingMethod.MSER;
-		
-		    Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = FindlinesVia.LinefindingMethod(img, inputimg, minlength, 0, psf, findLinesVia, UserChoiceModel.Line);
+		    Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = null;
+		    if (findLinesVia == LinefindingMethod.MSER){
+		    	
+		    	LinefinderMSER newlineMser = new LinefinderMSER(img, inputimg, minlength, 0);
+				newlineMser.setMaxlines(4);
+				 Overlay overlay = newlineMser.getOverlay();
+				 ImagePlus impcurr = IJ.getImage();
+				 impcurr.setOverlay(overlay);
+				PrevFrameparam = FindlinesVia.LinefindingMethod(img, inputimg, minlength, 0, psf, newlineMser, UserChoiceModel.Line);
+		    }
+		    
+		    if (findLinesVia == LinefindingMethod.Hough){
+		    LinefinderHough newlineHough = new LinefinderHough(img, inputimg, minlength, 0);
+		    
+		    PrevFrameparam = FindlinesVia.LinefindingMethod(img, inputimg, minlength, 0, psf, newlineHough, UserChoiceModel.Line);
+		    }
+		    if (findLinesVia == LinefindingMethod.MSERwHough){
+		    	
+		    	LinefinderMSERwHough newlineMserwHough = new LinefinderMSERwHough(img, inputimg, minlength, 0);
+				newlineMserwHough.setMaxlines(4);
+				 Overlay overlay = newlineMserwHough.getOverlay();
+				 ImagePlus impcurr = IJ.getImage();
+				 impcurr.setOverlay(overlay);
+				PrevFrameparam = FindlinesVia.LinefindingMethod(img, inputimg, minlength, 0, psf, newlineMserwHough, UserChoiceModel.Line);
+		    }
 			
 
 			// Draw the detected lines
@@ -124,9 +155,35 @@ public class Velocitydetector {
 			 * 
 			 */
 			 LinefindingMethod findLinesVia =  LinefindingMethod.MSER;
-			
-			    Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, inputimg, minlength, 0, psf, findLinesVia, UserChoiceModel.Line);
+			 Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam = null;
 				
+			    
+			    if (findLinesVia == LinefindingMethod.MSER){
+			    	
+			    	LinefinderMSER newlineMser = new LinefinderMSER(groundframe, inputimg, minlength, 0);
+					newlineMser.setMaxlines(4);
+					PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, inputimg, minlength, 0, psf, newlineMser, UserChoiceModel.Line);
+					
+					 Overlay overlay = newlineMser.getOverlay();
+					 ImagePlus impcurr = IJ.getImage();
+					 impcurr.setOverlay(overlay);
+			    }
+			    
+			    if (findLinesVia == LinefindingMethod.Hough){
+			    LinefinderHough newlineHough = new LinefinderHough(groundframe, inputimg, minlength, 0);
+			    
+			    PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, inputimg, minlength, 0, psf, newlineHough, UserChoiceModel.Line);
+			    }
+			    
+			    if (findLinesVia == LinefindingMethod.MSERwHough){
+			    	LinefinderMSERwHough newlineMserwHough = new LinefinderMSERwHough(groundframe, inputimg, minlength, 0);
+					newlineMserwHough.setMaxlines(4);
+					PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe,inputimg , minlength, 0, psf, newlineMserwHough, UserChoiceModel.Line);
+					
+					 Overlay overlay = newlineMserwHough.getOverlay();
+					 ImagePlus impcurr = IJ.getImage();
+					 impcurr.setOverlay(overlay);
+			    }
 	            ImageJFunctions.show(inputimg).setTitle("Preprocessed extended image");
 			
 
@@ -164,8 +221,37 @@ public class Velocitydetector {
 				 */
 				 LinefindingMethod findLinesViaHF =  LinefindingMethod.MSER;
 				 UserChoiceModel userChoiceModelHF = UserChoiceModel.Splineordersec;
-				 Pair<Pair<ArrayList<Trackproperties>, ArrayList<Trackproperties>>,Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>>> returnVector =
-						 FindlinesVia.LinefindingMethodHF(currentframe, inputimgpre, PrevFrameparam, minlength, frame, psf, findLinesViaHF, userChoiceModelHF);
+				 Pair<Pair<ArrayList<Trackproperties>, ArrayList<Trackproperties>>,Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>>> returnVector = null;
+				 
+				 if (findLinesViaHF == LinefindingMethod.MSER){
+				    	
+				    	LinefinderHFMSER newlineMser = new LinefinderHFMSER(currentframe, inputimgpre, minlength, frame);
+						newlineMser.setMaxlines(8);
+						returnVector= FindlinesVia.LinefindingMethodHF(currentframe, inputimgpre, PrevFrameparam, minlength, frame, psf, newlineMser, userChoiceModelHF);
+						 Overlay overlay = newlineMser.getOverlay();
+						 ImagePlus impcurr = IJ.getImage();
+						 impcurr.setOverlay(overlay);
+				    }
+				    
+				    if (findLinesViaHF == LinefindingMethod.Hough){
+				    LinefinderHFHough newlineHough = new LinefinderHFHough(currentframe, inputimgpre, minlength, frame);
+				    
+				    returnVector= FindlinesVia.LinefindingMethodHF(currentframe, inputimgpre, PrevFrameparam, minlength, frame, psf, newlineHough, userChoiceModelHF);
+				    }
+				    
+				    if (findLinesViaHF == LinefindingMethod.MSERwHough){
+				    	
+				    	LinefinderHFMSERwHough newlineMserwHough = new LinefinderHFMSERwHough(currentframe, inputimgpre, minlength, frame);
+						newlineMserwHough.setMaxlines(8);
+						 returnVector= FindlinesVia.LinefindingMethodHF(currentframe, inputimgpre, PrevFrameparam, minlength, frame, psf, newlineMserwHough, userChoiceModelHF);
+						 Overlay overlay = newlineMserwHough.getOverlay();
+						 ImagePlus impcurr = IJ.getImage();
+						 impcurr.setOverlay(overlay);
+				    }
+				 
+				 
+				 
+				 
 				 
 				 Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> NewFrameparam = returnVector.snd;
 				 
@@ -223,8 +309,8 @@ public class Velocitydetector {
 			displaygraphtrackend.getImp();
 			impendsec.draw();
 			
-			ArrayList<Pair<Integer, Double>> lengthliststart = new ArrayList<Pair<Integer, Double>>();
-			for (int index = 0; index < Allstart.size(); ++index){
+			ArrayList<Pair<Integer, double[]>> lengthliststart = new ArrayList<Pair<Integer, double[]>>();
+			for (int index = 1; index < Allstart.size(); ++index){
 				
 				final int framenumber = index + 1;
 				final ArrayList<Trackproperties> currentframe = Allstart.get(index);
@@ -235,7 +321,8 @@ public class Velocitydetector {
 					final double[] newpoint = currentframe.get(frameindex).newpoint;
 					final double[] oldpoint = currentframe.get(frameindex).oldpoint;
 					final double length = util.Boundingboxes.Distance(newpoint, oldpoint);
-					Pair<Integer, Double> lengthpair = new Pair<Integer, Double>(framenumber, length);
+					final double[] startinfo = {oldpoint[0], oldpoint[1], newpoint[0], newpoint[1], length};
+					Pair<Integer, double[]> lengthpair = new Pair<Integer, double[]>(framenumber, startinfo);
 					
 					lengthliststart.add(lengthpair);
 					
@@ -244,19 +331,20 @@ public class Velocitydetector {
 				
 			}
 			
-			FileWriter writer = new FileWriter("../res/length-movingstart.txt", true);
+			FileWriter writer = new FileWriter("../res/HNlength-movingstart.txt", true);
 			
 			for (int index = 0; index < lengthliststart.size(); ++index){
 				
-				writer.write(lengthliststart.get(index).fst + " " + lengthliststart.get(index).snd);
+				writer.write(lengthliststart.get(index).fst + " " + lengthliststart.get(index).snd[0] + " " +lengthliststart.get(index).snd[1] + " "
+						+lengthliststart.get(index).snd[2]+" " + lengthliststart.get(index).snd[3] + " " + lengthliststart.get(index).snd[4]);
 				writer.write("\r\n");
 			}
 			
 			writer.close();
 			
 			
-			ArrayList<Pair<Integer, Double>> lengthlistend = new ArrayList<Pair<Integer, Double>>();
-			for (int index = 0; index < Allend.size(); ++index){
+			ArrayList<Pair<Integer, double[]>> lengthlistend = new ArrayList<Pair<Integer, double[]>>();
+			for (int index = 1; index < Allend.size(); ++index){
 				
 				final int framenumber = index + 1;
 				final ArrayList<Trackproperties> currentframe = Allend.get(index);
@@ -267,7 +355,8 @@ public class Velocitydetector {
 					final double[] newpoint = currentframe.get(frameindex).newpoint;
 					final double[] oldpoint = currentframe.get(frameindex).oldpoint;
 					final double length = util.Boundingboxes.Distance(newpoint, oldpoint);
-					Pair<Integer, Double> lengthpair = new Pair<Integer, Double>(framenumber, length);
+					final double[] endinfo = {oldpoint[0], oldpoint[1], newpoint[0], newpoint[1], length};
+					Pair<Integer, double[]> lengthpair = new Pair<Integer, double[]>(framenumber, endinfo);
 					
 					lengthlistend.add(lengthpair);
 					
@@ -276,11 +365,12 @@ public class Velocitydetector {
 				
 			}
 			
-			FileWriter writerend = new FileWriter("../res/length-movingend.txt", true);
+			FileWriter writerend = new FileWriter("../res/HNlength-movingend.txt", true);
 			
 			for (int index = 0; index < lengthlistend.size(); ++index){
 				
-				writerend.write(lengthlistend.get(index).fst + " " + lengthlistend.get(index).snd);
+				writerend.write(lengthlistend.get(index).fst + " " + lengthlistend.get(index).snd[0] + " " + lengthlistend.get(index).snd[1]
+						+ " " + lengthlistend.get(index).snd[2]+ " " + lengthlistend.get(index).snd[3]+ " " + lengthlistend.get(index).snd[4]);
 				writerend.write("\r\n");
 			}
 			
