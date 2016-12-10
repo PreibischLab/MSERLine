@@ -59,7 +59,7 @@ public class MovingLines {
 		FloatType maxval = new FloatType(1);
 		Normalize.normalize(Views.iterable(lineimage), minval, maxval);
 		Kernels.addBackground(Views.iterable(lineimage), 0.2);
-		noisylines = Poissonprocess.poissonProcess(lineimage, 5);
+		noisylines = Poissonprocess.poissonProcess(lineimage, 10);
 		ImageJFunctions.show(noisylines);
 		ArrayList<double[]> startseedscopy =  new ArrayList<double[]>();
 		ArrayList<double[]> endseedscopy = new ArrayList<double[]>();
@@ -129,7 +129,7 @@ public class MovingLines {
 		
 		Normalize.normalize(Views.iterable(lineimageframe), minval, maxval);
 		Kernels.addBackground(Views.iterable(lineimageframe), 0.2);
-		noisylinesframe = Poissonprocess.poissonProcess(lineimageframe, 5);
+		noisylinesframe = Poissonprocess.poissonProcess(lineimageframe, 10);
 		
 	
 		ImageJFunctions.show(noisylinesframe);
@@ -143,7 +143,7 @@ public class MovingLines {
 		
 	
 		}
-		 FileWriter writerend = new FileWriter("../res/HNActuallength-movingend.txt", true);
+		 FileWriter writerend = new FileWriter("../res/HHNActuallength-movingend.txt", true);
 		for (int i = 0; i < lineendlist.size() ; ++i){
 			for (int j = 0; j < lineendlist.size() ; ++j){
 			
@@ -160,7 +160,7 @@ public class MovingLines {
 		}
 		}
 		
-		 FileWriter writerstart = new FileWriter("../res/HNActuallength-movingstartHN.txt", true);
+		 FileWriter writerstart = new FileWriter("../res/HHNActuallength-movingstartHN.txt", true);
 			for (int i = 0; i < linestlist.size() ; ++i){
 				for (int j = 0; j < linestlist.size() ; ++j){
 				

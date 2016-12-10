@@ -37,6 +37,7 @@ import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
+import preProcessing.Kernels;
 import preProcessing.MedianFilter2D;
 
 public class Velocitydetector {
@@ -54,13 +55,12 @@ public class Velocitydetector {
 		 * microscope to be computed and analysed and takes the determined
 		 * Sigmas as the input. @ Varun Kapoor
 		 */
-
 		new ImageJ();
 
 		// Load the stack of images
-		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("../res/super_bent.tif"), new ArrayImgFactory<FloatType>());
+		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("../res/super_bentHHN.tif"), new ArrayImgFactory<FloatType>());
 		
-		RandomAccessibleInterval<FloatType> preprocessedimg = util.ImgLib2Util.openAs32Bit( new File("../res/super_bent.tif"), new ArrayImgFactory<FloatType>());
+		RandomAccessibleInterval<FloatType> preprocessedimg = util.ImgLib2Util.openAs32Bit( new File("../res/super_bentHHN.tif"), new ArrayImgFactory<FloatType>());
 		int ndims = img.numDimensions();
 		 
 		 
@@ -81,7 +81,7 @@ public class Velocitydetector {
 		
 		ArrayList<ArrayList<Trackproperties>> Allstart = new ArrayList<ArrayList<Trackproperties>>();
 		ArrayList<ArrayList<Trackproperties>> Allend = new ArrayList<ArrayList<Trackproperties>>();
-		final long radius =  (long) Math.ceil(Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1]));
+		final long radius =  (long) ( Math.ceil(Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1])));
 
 		// minimum length of the lines to be detected, the smallest possible
 		// number is 2.
@@ -146,7 +146,8 @@ public class Velocitydetector {
 			
 			final MedianFilter2D<FloatType> medfilter = new MedianFilter2D<FloatType>(groundframepre, 1);
 			medfilter.process();
-			RandomAccessibleInterval<FloatType> inputimg = medfilter.getResult();
+			RandomAccessibleInterval<FloatType> preinputimg = medfilter.getResult();
+			RandomAccessibleInterval<FloatType> inputimg = Kernels.Supressthresh(preinputimg);
 			ImageJFunctions.show(groundframe);
 			
 			/**
@@ -161,7 +162,7 @@ public class Velocitydetector {
 			    if (findLinesVia == LinefindingMethod.MSER){
 			    	
 			    	LinefinderMSER newlineMser = new LinefinderMSER(groundframe, inputimg, minlength, 0);
-					newlineMser.setMaxlines(4);
+					newlineMser.setMaxlines(5);
 					PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, inputimg, minlength, 0, psf, newlineMser, UserChoiceModel.Line);
 					
 					 Overlay overlay = newlineMser.getOverlay();
@@ -177,14 +178,13 @@ public class Velocitydetector {
 			    
 			    if (findLinesVia == LinefindingMethod.MSERwHough){
 			    	LinefinderMSERwHough newlineMserwHough = new LinefinderMSERwHough(groundframe, inputimg, minlength, 0);
-					newlineMserwHough.setMaxlines(4);
+					newlineMserwHough.setMaxlines(5);
 					PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe,inputimg , minlength, 0, psf, newlineMserwHough, UserChoiceModel.Line);
 					
 					 Overlay overlay = newlineMserwHough.getOverlay();
 					 ImagePlus impcurr = IJ.getImage();
 					 impcurr.setOverlay(overlay);
 			    }
-	            ImageJFunctions.show(inputimg).setTitle("Preprocessed extended image");
 			
 
 	    
@@ -209,8 +209,8 @@ public class Velocitydetector {
 				Normalize.normalize(Views.iterable(currentframepre), minval, maxval);
 				final MedianFilter2D<FloatType> medfiltercurr = new MedianFilter2D<FloatType>(currentframepre, 1);
 				medfiltercurr.process();
-				RandomAccessibleInterval<FloatType> inputimgpre = medfiltercurr.getResult();
-
+				RandomAccessibleInterval<FloatType> preinputimgpre = medfiltercurr.getResult();
+				RandomAccessibleInterval<FloatType> inputimgpre = Kernels.Supressthresh(preinputimgpre);
 				ImageJFunctions.show(currentframe);
 
 				
@@ -222,11 +222,11 @@ public class Velocitydetector {
 				 LinefindingMethod findLinesViaHF =  LinefindingMethod.MSER;
 				 UserChoiceModel userChoiceModelHF = UserChoiceModel.Splineordersec;
 				 Pair<Pair<ArrayList<Trackproperties>, ArrayList<Trackproperties>>,Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>>> returnVector = null;
-				 
+				
 				 if (findLinesViaHF == LinefindingMethod.MSER){
 				    	
 				    	LinefinderHFMSER newlineMser = new LinefinderHFMSER(currentframe, inputimgpre, minlength, frame);
-						newlineMser.setMaxlines(8);
+						newlineMser.setMaxlines(10);
 						returnVector= FindlinesVia.LinefindingMethodHF(currentframe, inputimgpre, PrevFrameparam, minlength, frame, psf, newlineMser, userChoiceModelHF);
 						 Overlay overlay = newlineMser.getOverlay();
 						 ImagePlus impcurr = IJ.getImage();
@@ -242,7 +242,7 @@ public class Velocitydetector {
 				    if (findLinesViaHF == LinefindingMethod.MSERwHough){
 				    	
 				    	LinefinderHFMSERwHough newlineMserwHough = new LinefinderHFMSERwHough(currentframe, inputimgpre, minlength, frame);
-						newlineMserwHough.setMaxlines(8);
+						newlineMserwHough.setMaxlines(10);
 						 returnVector= FindlinesVia.LinefindingMethodHF(currentframe, inputimgpre, PrevFrameparam, minlength, frame, psf, newlineMserwHough, userChoiceModelHF);
 						 Overlay overlay = newlineMserwHough.getOverlay();
 						 ImagePlus impcurr = IJ.getImage();
@@ -259,7 +259,6 @@ public class Velocitydetector {
 					ArrayList<Trackproperties> startStateVectors = returnVector.fst.fst;
 					ArrayList<Trackproperties> endStateVectors = returnVector.fst.snd;
 
-		            ImageJFunctions.show(inputimgpre).setTitle("Preprocessed extended image");
 				
 
 				PrevFrameparam = NewFrameparam;
@@ -331,7 +330,7 @@ public class Velocitydetector {
 				
 			}
 			
-			FileWriter writer = new FileWriter("../res/HNlength-movingstart.txt", true);
+			FileWriter writer = new FileWriter("../res/HHNlength-movingstart.txt", true);
 			
 			for (int index = 0; index < lengthliststart.size(); ++index){
 				
@@ -365,7 +364,7 @@ public class Velocitydetector {
 				
 			}
 			
-			FileWriter writerend = new FileWriter("../res/HNlength-movingend.txt", true);
+			FileWriter writerend = new FileWriter("../res/HHNlength-movingend.txt", true);
 			
 			for (int index = 0; index < lengthlistend.size(); ++index){
 				

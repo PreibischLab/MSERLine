@@ -535,10 +535,17 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					double dx = ds / Math.sqrt(1 + newslope * newslope);
 					double dy = newslope * dx;
 					double[] dxvector = { dx, dy };
-
+					double sigmas = 0;
+					 
+					for (int d  = 0; d < ndims; ++d){
+						
+						sigmas+=dxvector[d] * dxvector[d];
+					}
+				sigmas = Math.sqrt(sigmas);
+				final int numgaussians = (int) Math.round(ds / sigmas);
 					double[] startfit = new double[ndims];
 					try {
-						startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf,
+						startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
 								iterations, dxvector, newslope, newintercept, maxintensityline, halfgaussian,
 								EndfitMSER.StartfitMSER, label);
 					} catch (Exception e) {
@@ -578,10 +585,17 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					double dx = ds / Math.sqrt(1 + newslope * newslope);
 					double dy = newslope * dx;
 					double[] dxvector = { dx, dy };
-
+					double sigmas = 0;
+					 
+					for (int d  = 0; d < ndims; ++d){
+						
+						sigmas+=dxvector[d] * dxvector[d];
+					}
+				sigmas = Math.sqrt(sigmas);
+				final int numgaussians = (int) Math.round(ds / sigmas);
 					double[] endfit = new double[ndims];
 					try {
-						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, iterations,
+						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
 								dxvector, newslope, newintercept, maxintensityline, halfgaussian, EndfitMSER.EndfitMSER,
 								label);
 					} catch (Exception e) {
@@ -630,8 +644,16 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					double dy = newslope * dx;
 					double[] dxvector = { dx, dy };
 					double[] startfit = new double[ndims];
+					double sigmas = 0;
+					 
+					for (int d  = 0; d < ndims; ++d){
+						
+						sigmas+=dxvector[d] * dxvector[d];
+					}
+				sigmas = Math.sqrt(sigmas);
+				final int numgaussians = (int) Math.round(ds / sigmas);
 					try {
-						startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf,
+						startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
 								iterations, dxvector, newslope, newintercept, maxintensityline, halfgaussian,
 								EndfitMSER.StartfitMSER, label);
 					} catch (Exception e) {
@@ -673,10 +695,17 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					double dx = ds / Math.sqrt(1 + newslope * newslope);
 					double dy = newslope * dx;
 					double[] dxvector = { dx, dy };
-
+					double sigmas = 0;
+					 
+					for (int d  = 0; d < ndims; ++d){
+						
+						sigmas+=dxvector[d] * dxvector[d];
+					}
+				sigmas = Math.sqrt(sigmas);
+				final int numgaussians = (int) Math.round(ds / sigmas);
 					double[] endfit = new double[ndims];
 					try {
-						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, iterations,
+						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
 								dxvector, newslope, newintercept, maxintensityline, halfgaussian, EndfitMSER.EndfitMSER,
 								label);
 					} catch (Exception e) {
@@ -730,9 +759,17 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					double dx = ds / Math.sqrt(1 + (currentslope )* (currentslope ));
 					double dy = (currentslope ) * dx;
 					double[] dxvector = { dx, dy };
+					double sigmas = 0;
+					 
+					for (int d  = 0; d < ndims; ++d){
+						
+						sigmas+=dxvector[d] * dxvector[d];
+					}
+				sigmas = Math.sqrt(sigmas);
+				final int numgaussians = (int) Math.round(ds / sigmas);
 
 					try {
-						startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf,
+						startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
 								iterations, dxvector, currentslope, currentintercept, maxintensityline, halfgaussian,
 								EndfitMSER.StartfitMSER, label);
 					} catch (Exception e) {
@@ -762,7 +799,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					System.out.println("Curvature: " + Curvature);
 
 					Indexedlength PointofInterest = new Indexedlength(label, seedLabel, framenumber, ds, lineIntensity,
-							background, startfit, iniparam.fixedpos, currentslope, currentintercept,
+							background, startpos, iniparam.fixedpos, currentslope, currentintercept,
 							iniparam.originalslope, iniparam.originalintercept, Curvature, 0);
 					System.out.println("New X: " + startfit[0] + " New Y: " + startfit[1]);
 					
@@ -781,9 +818,17 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					double dx = ds / Math.sqrt(1+ (currentslope ) * (currentslope ));
 					double dy = (currentslope ) * dx;
 					double[] dxvector = { dx, dy };
-
+					double sigmas = 0;
+ 
+					for (int d  = 0; d < ndims; ++d){
+						
+						sigmas+=dxvector[d] * dxvector[d];
+					}
+				sigmas = Math.sqrt(sigmas);
+				final int numgaussians = (int) Math.round(ds / sigmas);
+				
 					try {
-						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, iterations,
+						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
 								dxvector, currentslope, currentintercept, maxintensityline, halfgaussian,
 								EndfitMSER.EndfitMSER, label);
 					} catch (Exception e) {
@@ -812,7 +857,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					}
 
 					Indexedlength PointofInterest = new Indexedlength(label, seedLabel, framenumber, ds, lineIntensity,
-							background, endfit, iniparam.fixedpos, currentslope, currentintercept,
+							background, endpos, iniparam.fixedpos, currentslope, currentintercept,
 							iniparam.originalslope, iniparam.originalintercept, Curvature, 0);
 					System.out.println("New X: " + endfit[0] + " New Y: " + endfit[1] + "New Xlm: " + endpos[0]
 							+ " New Ylm: " + endpos[1]);

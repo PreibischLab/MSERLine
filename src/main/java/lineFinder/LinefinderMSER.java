@@ -45,10 +45,10 @@ public class LinefinderMSER  implements Linefinder{
 	private final int minlength;
 	private ArrayList<CommonOutput> output;
 	public  double delta = 10;
-	public final long minSize = 0;
+	public final long minSize = 5;
 	public final long maxSize = Long.MAX_VALUE;
-	public  double maxVar = 0.8;
-	public double minDiversity = 0.8;
+	public  double maxVar = 1;
+	public double minDiversity = 1;
 	public int maxlines = 100;
 	public final int maxdelta = 20;
 	private Overlay ov;
@@ -73,8 +73,7 @@ public class LinefinderMSER  implements Linefinder{
 		this.darktoBright = darktoBright;
 	}
 	
-
-	
+  
 	public void setMaxlines(int maxlines) {
 		this.maxlines = maxlines;
 	}
@@ -130,7 +129,7 @@ public class LinefinderMSER  implements Linefinder{
 
 		output = new ArrayList<CommonOutput>();
 		
-        final FloatType type = source.randomAccess().get().createVariable();
+        final FloatType type = Preprocessedsource.randomAccess().get().createVariable();
 		
 
 		ov = new Overlay();
@@ -141,6 +140,7 @@ public class LinefinderMSER  implements Linefinder{
 		try
 		{
 		ImageJFunctions.wrap(Preprocessedsource, "curr");
+		ImageJFunctions.show(Preprocessedsource).setTitle("Preprocessed extended image");
 		final ImagePlus currentimp = IJ.getImage();
 		IJ.run("8-bit");
 

@@ -46,10 +46,10 @@ public class LinefinderHFMSER implements LinefinderHF{
 	private final int minlength;
 	private ArrayList<CommonOutputHF> output;
 	public  double delta = 10;
-	public final long minSize = 1;
+	public final long minSize = 5;
 	public final long maxSize = Long.MAX_VALUE;
-	public  double maxVar = 0.8;
-	public double minDiversity = 0.8;
+	public  double maxVar = 1;
+	public double minDiversity = 1;
 	public int maxlines = 100;
 	public final int maxdelta = 20;
 	private Overlay ov;
@@ -142,6 +142,7 @@ public class LinefinderHFMSER implements LinefinderHF{
 		try
 		{
 		ImageJFunctions.wrap(Preprocessedsource, "curr");
+		ImageJFunctions.show(Preprocessedsource).setTitle("Preprocessed extended image");
 		final ImagePlus currentimp = IJ.getImage();
 		IJ.run("8-bit");
 

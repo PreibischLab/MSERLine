@@ -93,7 +93,7 @@ public class GetDelta {
 			
     		final double perimeter = ellipseroi.getLength();
     		
-    		if (perimeter > Math.PI * minlength ){
+    		if (perimeter > Math.PI * minSize ){
     			
     			ellipsecount++;
     		}
@@ -131,7 +131,6 @@ public class GetDelta {
 		
 		
 		}
-		
 		
 	
 	

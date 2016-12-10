@@ -384,6 +384,7 @@ implements OutputAlgorithm<ArrayList<Indexedlength>> {
 
 					double newslope = (endpos[1] - startpos[1]) / (endpos[0] - startpos[0]);
 					double newintercept = (endpos[1] - newslope * endpos[0]);
+					double ds = finalparamstart[4];
 					double dx = finalparamstart[4] / Math.sqrt(1 + newslope * newslope);
 					double dy = newslope * dx;
 					double[] dxvector = { dx,  dy };
@@ -391,19 +392,26 @@ implements OutputAlgorithm<ArrayList<Indexedlength>> {
 					double[] startfit = new double[ndims];
 					double[] endfit = new double[ndims];
 
-					
+					double sigmas = 0;
+					 
+					for (int d  = 0; d < ndims; ++d){
+						
+						sigmas+=dxvector[d] * dxvector[d];
+					}
+				sigmas = Math.sqrt(sigmas);
+				final int numgaussians = (int) Math.round(ds / sigmas);
 					
 
 					try {
 						startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg,  startpos.clone(),
-								psf, iterations, dxvector, newslope, newintercept, maxintensityline,  halfgaussian,
+								psf, numgaussians, iterations, dxvector, newslope, newintercept, maxintensityline,  halfgaussian,
 								EndfitMSER.StartfitMSER, label);
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
 
 					try {
-						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg,  endpos.clone(), psf,
+						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg,  endpos.clone(), psf, numgaussians,
 								iterations, dxvector, newslope, newintercept, maxintensityline,  halfgaussian,
 								EndfitMSER.EndfitMSER, label);
 					} catch (Exception e) {

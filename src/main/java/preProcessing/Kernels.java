@@ -681,7 +681,30 @@ public static void addBackground(final IterableInterval<FloatType> iterable, fin
 				
 	}
 	
-
+	
+	public static RandomAccessibleInterval<FloatType> SupressLowthresh(RandomAccessibleInterval<FloatType> inputimg){
+		RandomAccessibleInterval<FloatType> Threshimg = new ArrayImgFactory<FloatType>().create(inputimg,
+				new FloatType());
+		//Supress values below the low threshold
+		int n = inputimg.numDimensions();
+		double[] position = new double[n];
+				final Float Lowthreshold = GlobalThresholding.AutomaticThresholdingSec(inputimg);
+				 Float threshold = Lowthreshold;
+				Cursor<FloatType> inputcursor = Views.iterable(inputimg).localizingCursor();
+				RandomAccess<FloatType> outputran = Threshimg.randomAccess();
+				while(inputcursor.hasNext()){
+					inputcursor.fwd();
+					inputcursor.localize(position);
+					outputran.setPosition(inputcursor);
+					if (inputcursor.get().get()<= 0.8 * threshold)
+						outputran.get().setZero();
+					else
+						outputran.get().set(inputcursor.get());
+				}
+			return Threshimg;	
+				
+				
+	}
 	
 	public static RandomAccessibleInterval<FloatType> SupressHeavythresh(RandomAccessibleInterval<FloatType> inputimg){
 		RandomAccessibleInterval<FloatType> Threshimg = new ArrayImgFactory<FloatType>().create(inputimg,
