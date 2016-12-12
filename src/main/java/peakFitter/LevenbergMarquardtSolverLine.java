@@ -135,7 +135,7 @@ public class LevenbergMarquardtSolverLine {
 					}
 				}
 				for( int i = 0; i < nparm; i++ ) {
-					if (Math.abs(a[i] - na[i]) < 1.0E-10)
+					if (Math.abs(a[i] - na[i]) < 1.0E-8)
 						done = true;
 				}
 				

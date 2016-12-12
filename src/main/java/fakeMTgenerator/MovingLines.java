@@ -160,7 +160,7 @@ public class MovingLines {
 		}
 		}
 		
-		 FileWriter writerstart = new FileWriter("../res/HHNActuallength-movingstartHN.txt", true);
+		 FileWriter writerstart = new FileWriter("../res/HHNActuallength-movingstart.txt", true);
 			for (int i = 0; i < linestlist.size() ; ++i){
 				for (int j = 0; j < linestlist.size() ; ++j){
 				

@@ -49,6 +49,7 @@ public class GaussianMaskFitMSER {
 		int i = 0;
 		do {
 
+		
 			switch (startorend) {
 
 			case StartfitMSER:
@@ -109,10 +110,10 @@ public class GaussianMaskFitMSER {
 
 		case StartfitMSER:
 			for (int d = 0; d < n; ++d)
-			location[d] += -numgaussians*dxvector[d];
+			location[d] += -(numgaussians - 1)*dxvector[d];
 		case EndfitMSER:
 			for (int d = 0; d < n; ++d)
-			location[d] +=  numgaussians*dxvector[d];
+			location[d] +=  (numgaussians - 1)*dxvector[d];
 		}
 	
 		
@@ -158,24 +159,24 @@ public class GaussianMaskFitMSER {
 
 			
 			double value = 1.0;
-
-			for (int n = 1; n <= numgaussians; ++n){
-				for (int d = 0; d < ndims; ++d) {
-					
-				
-				final double x = cursor.getDoublePosition(d) - location[d] + n * dxvector[d];
-				value *=  Math.exp(-(x * x) / sq_sigma[d]) ;
-				
-				}
-			}
+			for (int d = 0; d < ndims; ++d) {
+				sumofgaussians = 0;
+				for (int n = 1; n <= numgaussians; ++n){	
 			
+					
+			final double x = cursor.getDoublePosition(d) - location[d] + (n-1) * dxvector[d];
+			sumofgaussians+= Math.exp(-(x * x) / sq_sigma[d]) ;
+			
+			}
+				value *=  sumofgaussians;
+		}
 			/*
 			for (int d = 0; d < ndims; ++d) {
 				final double x = cursor.getDoublePosition(d) - location[d] ;
 				final double y = cursor.getDoublePosition(d) - location[d] + dxvector[d];
 				final double z = cursor.getDoublePosition(d) - location[d] + 2 *dxvector[d];
 
-				value *=  Math.exp(-(x * x) / sq_sigma[d]) + 0*Math.exp(-(y * y) / sq_sigma[d])+ 0*Math.exp(-(z * z) / sq_sigma[d]) ;
+				value *=  Math.exp(-(x * x) / sq_sigma[d]) + Math.exp(-(y * y) / sq_sigma[d])+ 0*Math.exp(-(z * z) / sq_sigma[d]) ;
 				
 
 			}
@@ -206,21 +207,24 @@ public class GaussianMaskFitMSER {
 			double value = 1.0;
 
 			
-			for (int n = 1; n <= numgaussians; ++n){
+			
 				for (int d = 0; d < ndims; ++d) {
-					
+					sumofgaussians = 0;
+					for (int n = 1; n <= numgaussians; ++n){	
 				
-				final double x = cursor.getDoublePosition(d) - location[d] - n * dxvector[d];
-				value *=  Math.exp(-(x * x) / sq_sigma[d]) ;
+						
+				final double x = cursor.getDoublePosition(d) - location[d] - (n-1) * dxvector[d];
+				sumofgaussians+= Math.exp(-(x * x) / sq_sigma[d]) ;
 				
 				}
+					value *=  sumofgaussians;
 			}
 			/*
 			for (int d = 0; d < ndims; ++d) {
 				final double x = cursor.getDoublePosition(d) - location[d] ;
 				final double y = cursor.getDoublePosition(d) - location[d] - dxvector[d];
 				final double z = cursor.getDoublePosition(d) - location[d] - 2 *dxvector[d];
-				sumofgaussians = Math.exp(-(x * x) / sq_sigma[d]) + 0*Math.exp(-(y * y) / sq_sigma[d]) + 0*Math.exp(-(z * z) / sq_sigma[d]) ;
+				sumofgaussians = Math.exp(-(x * x) / sq_sigma[d]) + Math.exp(-(y * y) / sq_sigma[d]) + 0*Math.exp(-(z * z) / sq_sigma[d]) ;
 				
 				value *= sumofgaussians;			
 

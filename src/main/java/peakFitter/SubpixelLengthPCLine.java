@@ -7,7 +7,9 @@ import com.sun.tools.javac.util.Pair;
 
 import LineModels.GaussianLineds;
 import LineModels.GaussianLinedsHF;
+import LineModels.GaussianLinefixedds;
 import LineModels.GaussianSplinesecorder;
+import LineModels.Gaussiansplinesecfixedds;
 import LineModels.MTFitFunction;
 import LineModels.UseLineModel;
 import LineModels.UseLineModel.UserChoiceModel;
@@ -310,10 +312,8 @@ public ArrayList<Indexedlength> getEndPoints(){
 
 		return MinandMax;
            }
-           
-          
-
-           if (model ==  UserChoiceModel.Splineordersec ) {
+ if (model ==  UserChoiceModel.Linefixedds){
+        	   
         	   while(inputcursor.hasNext()){
        			
        			inputcursor.fwd();
@@ -321,9 +321,67 @@ public ArrayList<Indexedlength> getEndPoints(){
        			if (inputcursor.get().get()/maxintensityline > Intensityratio){
        			
        				inputcursor.localize(newposition);
-       				long pointoncurve = (long) (newposition[1] - slope * newposition[0] 
-       						    - intercept);
 
+       				if (inputcursor.getDoublePosition(0) <= minVal[0]
+    						&& inputcursor.get().get() / maxintensityline > Intensityratio) {
+    					minVal[0] = inputcursor.getDoublePosition(0);
+    					minVal[1] = inputcursor.getDoublePosition(1);
+    				}
+
+    				if (inputcursor.getDoublePosition(0) >= maxVal[0]
+    						&& inputcursor.get().get() / maxintensityline > Intensityratio) {
+    					maxVal[0] = inputcursor.getDoublePosition(0);
+    					maxVal[1] = inputcursor.getDoublePosition(1);
+    				}
+
+       			
+       			}
+                  }
+		final double[] MinandMax = new double[2 * ndims + 2];
+
+		
+			for (int d = 0; d < ndims; ++d) {
+
+				MinandMax[d] = minVal[d];
+				MinandMax[d + ndims] = maxVal[d];
+			}
+
+		
+
+		// This parameter is guess estimate for spacing between the Gaussians
+		MinandMax[2 * ndims] = maxintensityline; 
+		// This parameter guess estimates the background noise level
+		MinandMax[2 * ndims + 1] = 0.5; 
+		
+		
+		System.out.println("Label: " + label + " " + "Detection: " + " StartX: " + MinandMax[0] + " StartY: "
+				+ MinandMax[1] + " EndX: " + MinandMax[2] + " EndY: " + MinandMax[3]);
+
+		
+		
+			for (int d = 0; d < ndims; ++d) {
+
+				if (MinandMax[d] == Double.MAX_VALUE || MinandMax[d + ndims] == -Double.MIN_VALUE)
+					return null;
+				if (MinandMax[d] >= source.dimension(d) || MinandMax[d + ndims] >= source.dimension(d))
+					return null;
+				if (MinandMax[d] <= 0 || MinandMax[d + ndims] <= 0)
+					return null;
+
+			}
+		
+
+		return MinandMax;
+           }
+           
+          
+           if (model ==  UserChoiceModel.Splineordersec ) {
+        	   while(inputcursor.hasNext()){
+       			
+       			inputcursor.fwd();
+       			
+       			if (inputcursor.get().get()/maxintensityline > Intensityratio){
+       			
        				// To get the min and max co-rodinates along the line so we have
        				// starting points to
        				// move on the line smoothly
@@ -426,7 +484,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 				
 				currentimg = Views.interval(currentimg, interval);
 
-				final double[] fixed_param = new double[ndims + 2];
+				final double[] fixed_param = new double[ndims + 3];
 
 				for (int d = 0; d < ndims; ++d) {
 
@@ -434,6 +492,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 				}
 				fixed_param[ndims] = slope;
 				fixed_param[ndims + 1] = intercept;
+				fixed_param[ndims + 2] = 0.4 * Math.min(psf[0], psf[1]);
 			
 				double inicutoffdistance = 0;
 				final double[] inistartpos = { start_param[0], start_param[1] };
@@ -443,11 +502,23 @@ public ArrayList<Indexedlength> getEndPoints(){
 				
 				MTFitFunction UserChoiceFunction = null;
 				
+				if (model == UserChoiceModel.Line) {
+					
 					UserChoiceFunction = new GaussianLineds();
-				
-				
+
+				}
+					if (model == UserChoiceModel.Linefixedds) {
+						
+						UserChoiceFunction = new GaussianLinefixedds();
+
+					}
+
+					if (model == UserChoiceModel.LineHF) {
+
+						UserChoiceFunction = new GaussianLinedsHF();
+					}
 				 
-				
+					
 				
 				if (inicutoffdistance > minlength) {
 					try {
@@ -466,7 +537,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 							finalparamstart[j] = start_param[j];
 					}
 
-
+					if (model == UserChoiceModel.Line) {
 					double newslope = (endpos[1] - startpos[1]) / (endpos[0] - startpos[0]);
 					double newintercept = (endpos[1] - newslope * endpos[0]);
 					double ds = finalparamstart[4];
@@ -588,7 +659,249 @@ public ArrayList<Indexedlength> getEndPoints(){
 					final Pair<Indexedlength, Indexedlength> pair = new Pair<Indexedlength, Indexedlength> ( startPart, endPart);
 					return pair;
 					
+					}
 					
+					if (model == UserChoiceModel.Linefixedds) {
+						double newslope = (endpos[1] - startpos[1]) / (endpos[0] - startpos[0]);
+						double newintercept = (endpos[1] - newslope * endpos[0]);
+						double ds = fixed_param[ndims + 2];
+						double dx = ds/ Math.sqrt(1 + newslope * newslope);
+						double dy = newslope * dx;
+						final double LMdist = sqDistance(startpos, endpos);
+						double[] dxvector = { dx, dy };
+
+						double[] startfit = new double[ndims];
+						double[] endfit = new double[ndims];
+						final double maxintensityline = GetLocalmaxmin.computeMaxIntensity(currentimg);
+						double[] startparam = new double[ndims ];
+						double[] endparam = new double[ndims];
+						for (int d = 0; d < ndims; ++d) {
+							
+							startparam[d] = startpos[d];
+							endparam[d] = endpos[d];
+						}
+						
+					final int numgaussians = (int) Math.min(3, Math.round(  Math.min(psf[0], psf[1]) /  ds));
+						System.out.println("Doing Mask Fits: ");
+						try {
+									
+								startfit =	peakFitter.GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
+									iterations, dxvector, newslope, newintercept, maxintensityline, halfgaussian, EndfitMSER.StartfitMSER,
+									label);
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+
+						try {
+							endfit = peakFitter.GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians,
+									iterations, dxvector, newslope, newintercept, maxintensityline,  halfgaussian, EndfitMSER.EndfitMSER,
+									label);
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+
+						final double Maskdist = sqDistance(startfit, endfit);
+						// If mask fits fail, return LM solver results, very crucial for
+						// noisy data
+
+						
+						/**
+						 * dimensions of returnparam =  2 * ndims + 3 for the free parameters
+						 * + 4 for the label and the frame number information.
+						 */
+						
+						
+						for (int d = 0; d < ndims; ++d) {
+							
+							startparam[d] = startfit[d];
+							endparam[d] = endfit[d];
+						}
+						
+						
+						if (Math.abs(Math.sqrt(Maskdist)) - Math.sqrt(LMdist) >= cutoffdistance){
+						if (Math.abs(startpos[0] - startfit[0]) >= cutoffdistance / 2 && Math.abs(startpos[1] - startfit[1]) >= cutoffdistance / 2
+								|| Math.abs(endpos[0] - endfit[0]) >= cutoffdistance / 2 && Math.abs(endpos[1] - endfit[1]) >= cutoffdistance / 2 ){
+							System.out.println("Mask fits fail, both cords move far, returning LM solver results!");
+
+							for (int d = 0; d < ndims; ++d) {
+								
+								startparam[d] = startpos[d];
+								endparam[d] = endpos[d];
+							}
+							}
+						if (Math.abs(startpos[0] - startfit[0]) >= cutoffdistance || Math.abs(startpos[1] - startfit[1]) >= cutoffdistance 
+								|| Math.abs(endpos[0] - endfit[0]) >= cutoffdistance  || Math.abs(endpos[1] - endfit[1]) >= cutoffdistance  ){
+							System.out.println("Mask fits fail, one cord moves too much, returning LM solver results!");
+							for (int d = 0; d < ndims; ++d) {
+								
+								startparam[d] = startpos[d];
+								endparam[d] = endpos[d];
+							}
+							
+						}
+						
+						
+						
+						
+						}
+
+						for (int d = 0; d < ndims; ++d) {
+							if (Double.isNaN(startfit[d]) || Double.isNaN(endfit[d])) {
+								System.out.println("Mask fits fail, returning LM solver results!");
+								
+								startparam[d] = startpos[d];
+								endparam[d] = endpos[d];
+
+							}
+						}
+						
+						
+						final double currentslope = (endparam[1] - startparam[1]) / (endparam[0] - startparam[0]);
+						final double currentintercept = endparam[1] - currentslope * endparam[0];
+
+						System.out.println("Fits :" + "StartX:" + startparam[0] + " StartY:" + startparam[1] + " " + "EndX:"
+								+ endparam[0] + "EndY: " + endparam[1] + " " + "ds: " + ds );
+
+						System.out.println("Length: " + Distance(new double[]{startparam[0],  startparam[1]},new double[]{endparam[0],  endparam[1]} ));
+
+						final Indexedlength startPart = new Indexedlength(label, label, framenumber, ds,
+								finalparamstart[4], finalparamstart[5], startparam,
+								startparam , currentslope, currentintercept , currentslope, currentintercept);
+						
+						final Indexedlength endPart = new Indexedlength(label, label, framenumber, ds,
+								finalparamstart[4], finalparamstart[5], endparam,
+								endparam, currentslope, currentintercept, currentslope, currentintercept);
+						
+						
+						
+						final Pair<Indexedlength, Indexedlength> pair = new Pair<Indexedlength, Indexedlength> ( startPart, endPart);
+						return pair;
+						
+						}
+						
+					// default
+					else {
+						double newslope = (endpos[1] - startpos[1]) / (endpos[0] - startpos[0]);
+					double newintercept = (endpos[1] - newslope * endpos[0]);
+					double ds = finalparamstart[4];
+					double dx = finalparamstart[4]/ Math.sqrt(1 + newslope * newslope);
+					double dy = newslope * dx;
+					final double LMdist = sqDistance(startpos, endpos);
+					double[] dxvector = { dx, dy };
+
+					double[] startfit = new double[ndims];
+					double[] endfit = new double[ndims];
+					final double maxintensityline = GetLocalmaxmin.computeMaxIntensity(currentimg);
+					double[] startparam = new double[ndims ];
+					double[] endparam = new double[ndims];
+					for (int d = 0; d < ndims; ++d) {
+						
+						startparam[d] = startpos[d];
+						endparam[d] = endpos[d];
+					}
+					double sigmas = 0;
+					 
+					for (int d  = 0; d < ndims; ++d){
+						
+						sigmas+=dxvector[d] * dxvector[d];
+					}
+				sigmas = Math.sqrt(sigmas);
+				final int numgaussians =  (int) Math.min(3, Math.round(  Math.min(psf[0], psf[1]) /  ds));
+					System.out.println("Doing Mask Fits: ");
+					try {
+								
+							startfit =	peakFitter.GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
+								iterations, dxvector, newslope, newintercept, maxintensityline, halfgaussian, EndfitMSER.StartfitMSER,
+								label);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+
+					try {
+						endfit = peakFitter.GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians,
+								iterations, dxvector, newslope, newintercept, maxintensityline,  halfgaussian, EndfitMSER.EndfitMSER,
+								label);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+
+					final double Maskdist = sqDistance(startfit, endfit);
+					// If mask fits fail, return LM solver results, very crucial for
+					// noisy data
+
+					
+					/**
+					 * dimensions of returnparam =  2 * ndims + 3 for the free parameters
+					 * + 4 for the label and the frame number information.
+					 */
+					
+					
+					for (int d = 0; d < ndims; ++d) {
+						
+						startparam[d] = startfit[d];
+						endparam[d] = endfit[d];
+					}
+					
+					
+					if (Math.abs(Math.sqrt(Maskdist)) - Math.sqrt(LMdist) >= cutoffdistance){
+					if (Math.abs(startpos[0] - startfit[0]) >= cutoffdistance / 2 && Math.abs(startpos[1] - startfit[1]) >= cutoffdistance / 2
+							|| Math.abs(endpos[0] - endfit[0]) >= cutoffdistance / 2 && Math.abs(endpos[1] - endfit[1]) >= cutoffdistance / 2 ){
+						System.out.println("Mask fits fail, both cords move far, returning LM solver results!");
+
+						for (int d = 0; d < ndims; ++d) {
+							
+							startparam[d] = startpos[d];
+							endparam[d] = endpos[d];
+						}
+						}
+					if (Math.abs(startpos[0] - startfit[0]) >= cutoffdistance || Math.abs(startpos[1] - startfit[1]) >= cutoffdistance 
+							|| Math.abs(endpos[0] - endfit[0]) >= cutoffdistance  || Math.abs(endpos[1] - endfit[1]) >= cutoffdistance  ){
+						System.out.println("Mask fits fail, one cord moves too much, returning LM solver results!");
+						for (int d = 0; d < ndims; ++d) {
+							
+							startparam[d] = startpos[d];
+							endparam[d] = endpos[d];
+						}
+						
+					}
+					
+					
+					
+					
+					}
+
+					for (int d = 0; d < ndims; ++d) {
+						if (Double.isNaN(startfit[d]) || Double.isNaN(endfit[d])) {
+							System.out.println("Mask fits fail, returning LM solver results!");
+							
+							startparam[d] = startpos[d];
+							endparam[d] = endpos[d];
+
+						}
+					}
+					
+					
+					final double currentslope = (endparam[1] - startparam[1]) / (endparam[0] - startparam[0]);
+					final double currentintercept = endparam[1] - currentslope * endparam[0];
+
+					System.out.println("Fits :" + "StartX:" + startparam[0] + " StartY:" + startparam[1] + " " + "EndX:"
+							+ endparam[0] + "EndY: " + endparam[1] + " " + "ds: " + finalparamstart[4] );
+
+					System.out.println("Length: " + Distance(new double[]{startparam[0],  startparam[1]},new double[]{endparam[0],  endparam[1]} ));
+
+					final Indexedlength startPart = new Indexedlength(label, label, framenumber, finalparamstart[4],
+							finalparamstart[5], finalparamstart[6], startparam,
+							startparam , currentslope, currentintercept , currentslope, currentintercept);
+					
+					final Indexedlength endPart = new Indexedlength(label, label, framenumber, finalparamstart[4],
+							finalparamstart[5], finalparamstart[6], endparam,
+							endparam, currentslope, currentintercept, currentslope, currentintercept);
+					
+					
+					
+					final Pair<Indexedlength, Indexedlength> pair = new Pair<Indexedlength, Indexedlength> ( startPart, endPart);
+					return pair;
+					}
 
 				}
 

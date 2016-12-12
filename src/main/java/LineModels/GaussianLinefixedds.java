@@ -1,13 +1,13 @@
 package LineModels;
 
-public class GaussianLineds implements MTFitFunction {
+public class GaussianLinefixedds implements MTFitFunction {
 
 	@Override
 	public double val(double[] x, double[] a, double[] b) {
 		final int ndims = x.length;
 		
 		
-		return  a[2 * ndims + 1] * Etotal(x, a, b) + a[2 * ndims + 2] ;
+		return  a[2 * ndims] * Etotal(x, a, b) + a[2 * ndims + 1] ;
 		
 	}
 
@@ -17,25 +17,21 @@ public class GaussianLineds implements MTFitFunction {
 
 		if (k < ndims) {
 
-			return 2 * b[k] * (x[k] - a[k])  * a[2 * ndims + 1] * Estart(x, a, b);
+			return 2 * b[k] * (x[k] - a[k])  * a[2 * ndims] * Estart(x, a, b);
 
 		}
 
 		else if (k >= ndims && k <= ndims + 1) {
 			int dim = k - ndims;
-			return 2 * b[dim] * (x[dim] - a[k])  * a[2 * ndims + 1] * Eend(x, a, b);
+			return 2 * b[dim] * (x[dim] - a[k])  * a[2 * ndims] * Eend(x, a, b);
 
 		}
 
-		else if (k == 2 * ndims)
-			return  a[2 * ndims + 1] *Estartds(x, a, b);
-		
-		
-		else if (k == 2 * ndims + 1)
+		else if (k == 2 * ndims )
 			return Etotal(x, a, b);
 		
 		
-		else if (k == 2 * ndims + 2)
+		else if (k == 2 * ndims + 1)
 			return 1.0;
 
 		
@@ -67,52 +63,7 @@ public class GaussianLineds implements MTFitFunction {
 
 	}
 
-	private static final double Estartds(final double[] x, final double[] a, final double[] b) {
-
-		
-		double di;
-		final int ndims = x.length;
-		double[] minVal = new double[ndims];
-		double[] maxVal = new double[ndims];
-
-		for (int i = 0; i < x.length; i++) {
-			minVal[i] = a[i];
-			maxVal[i] = a[ndims + i];
-		}
-		double slope = (maxVal[1] - minVal[1]) / (maxVal[0] - minVal[0]);
-		
-		
-		double ds = Math.abs(a[2 * ndims]);
-
-		double[] dxvector = { ds / Math.sqrt( 1 + slope * slope) , slope * ds/ Math.sqrt( 1 + slope * slope)  };
-		double[] dxvectorderiv = { 1/ Math.sqrt( 1 + slope * slope) , slope/ Math.sqrt( 1 + slope * slope)  };
-
-		
-		
-		double dsum = 0;
-		double sum = 0;
-		for (int i = 0; i < x.length; i++) {
-			minVal[i] += dxvector[i];
-			di = x[i] - minVal[i];
-			sum += b[i] * di * di;
-			dsum += 2 * b[i] * di * dxvectorderiv[i];
-		}
-		double sumofgaussians = dsum * Math.exp(-sum);
-		
-		double dsumend = 0;
-		double sumend = 0;
-		for (int i = 0; i < x.length; i++) {
-			maxVal[i] -= dxvector[i];
-			di = x[i] - maxVal[i];
-			sumend += b[i] * di * di;
-			dsumend += -2 * b[i] * di * dxvectorderiv[i];
-		}
-		sumofgaussians+= dsumend * Math.exp(-sumend);
-		
-		
-		return   sumofgaussians ;
-
-	}
+	
 
 	
 	private static final double Eend(final double[] x, final double[] a, final double[] b) {
@@ -151,7 +102,7 @@ public class GaussianLineds implements MTFitFunction {
 		double di;
 		
 		
-		double ds = Math.abs(a[2 * ndims]);
+		double ds = b[ndims + 2];
 
 		double[] dxvector = { ds/ Math.sqrt( 1 + slope * slope) , slope * ds/ Math.sqrt( 1 + slope * slope)  };
 
