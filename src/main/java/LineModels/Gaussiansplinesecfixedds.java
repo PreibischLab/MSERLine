@@ -134,7 +134,7 @@ public class Gaussiansplinesecfixedds implements MTFitFunction {
 			minVal[i] = a[i];
 			maxVal[i] = a[ndims + i];
 		}
-		double curvature = a[2 * ndims + 1];
+		double curvature = a[2 * ndims];
 		double ds = b[ndims + 2];
 
 		double dx = ds / Math.sqrt(1 + (slope + 2 * curvature * minVal[0]) * (slope + 2 * curvature * minVal[0]));
@@ -161,11 +161,11 @@ public class Gaussiansplinesecfixedds implements MTFitFunction {
 			minVal[i] = a[i];
 			maxVal[i] = a[ndims + i];
 		}
-		double curvature = a[2 * ndims + 1];
+		double curvature = a[2 * ndims];
 		double ds = b[ndims + 2];
 
-		double dx = ds / Math.sqrt(1 + (slope + 2 * curvature * minVal[0]) * (slope + 2 * curvature * minVal[0]));
-		double dy = (slope + 2 * curvature * minVal[0]) * dx;
+		double dx = ds / Math.sqrt(1 + (slope + 2 * curvature * maxVal[0]) * (slope + 2 * curvature * maxVal[0]));
+		double dy = (slope + 2 * curvature * maxVal[0]) * dx;
 		double[] dxvector = { dx, dy };
 
 		for (int i = 0; i < x.length; i++) {
@@ -326,4 +326,3 @@ public class Gaussiansplinesecfixedds implements MTFitFunction {
 	}
 
 }
-

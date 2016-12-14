@@ -208,8 +208,8 @@ public class GaussianSplinesecorder implements MTFitFunction {
 		double curvature = a[2 * ndims + 1];
 		double ds = Math.abs(a[2 * ndims]);
 
-		double dx = ds / Math.sqrt(1 + (slope + 2 * curvature * minVal[0]) * (slope + 2 * curvature * minVal[0]));
-		double dy = (slope + 2 * curvature * minVal[0]) * dx;
+		double dx = ds / Math.sqrt(1 + (slope + 2 * curvature * maxVal[0]) * (slope + 2 * curvature * maxVal[0]));
+		double dy = (slope + 2 * curvature * maxVal[0]) * dx;
 		double[] dxvector = { dx, dy };
 
 		for (int i = 0; i < x.length; i++) {

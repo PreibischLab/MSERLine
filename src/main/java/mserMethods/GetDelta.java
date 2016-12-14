@@ -60,6 +60,7 @@ public class GetDelta {
 				
 			int ellipsecount = 0;
 			
+			
 			ArrayList<double[]> ellipselist = new ArrayList<double[]>();
 			
 
@@ -93,7 +94,7 @@ public class GetDelta {
 			
     		final double perimeter = ellipseroi.getLength();
     		
-    		if (perimeter > Math.PI * minSize ){
+    		if (perimeter > Math.PI * minlength ){
     			
     			ellipsecount++;
     		}
@@ -131,6 +132,7 @@ public class GetDelta {
 		
 		
 		}
+		
 		
 	
 	

@@ -384,8 +384,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 				outcursor.fwd();
 
 				outcursor.localize(newposition);
-				long pointonline = (long) (outcursor.getLongPosition(1) - slope * outcursor.getLongPosition(0)
-						- intercept);
+				
 
 				// To get the min and max co-rodinates along the line so we
 				// have starting points to
@@ -427,9 +426,8 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 		}
 
 		if (model == UserChoiceModel.Splineordersecfixedds) {
-			double slope = iniparam.originalslope;
-			double intercept = iniparam.originalintercept;
-			double Curvature = iniparam.Curvature;
+		
+
 
 			while (outcursor.hasNext()) {
 
