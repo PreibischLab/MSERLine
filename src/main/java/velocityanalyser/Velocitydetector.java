@@ -203,7 +203,7 @@ public class Velocitydetector {
 				 * 
 				 */
 				LinefindingMethod findLinesViaHF = LinefindingMethod.MSER;
-				UserChoiceModel userChoiceModelHF = UserChoiceModel.Splineordersec;
+				UserChoiceModel userChoiceModelHF = UserChoiceModel.Splineordersecfixedds;
 				Pair<Pair<ArrayList<Trackproperties>, ArrayList<Trackproperties>>, Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>>> returnVector = null;
 
 				if (findLinesViaHF == LinefindingMethod.MSER) {
