@@ -160,7 +160,7 @@ public class LinefinderHough implements Linefinder {
 			 * 
 			 */
 			 Roiindex = label;
-			CommonOutput currentOutput = new CommonOutput(framenumber, Roiindex - 1, slopeandinterceptCI, roiimg, ActualRoiimg, Realinterval);
+			CommonOutput currentOutput = new CommonOutput(framenumber, Roiindex - 1, slopeandinterceptCI, roiimg, ActualRoiimg,intimg, Realinterval);
 			
 			
 			output.add(currentOutput);

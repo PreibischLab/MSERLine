@@ -88,10 +88,10 @@ public class LinefinderHFHough implements LinefinderHF {
 	    intimg = WaterafterDisttransform.getResult();
 		Maxlabel = WaterafterDisttransform.GetMaxlabelsseeded(intimg);
 
-		for (int label = 1; label < Maxlabel - 1; label++) {
+		for (int label = 1; label < Maxlabel ; label++) {
 
-           
-			Pair<RandomAccessibleInterval<FloatType>, FinalInterval> pair =  Boundingboxes.CurrentLabeloffsetImagepair(intimg, Preprocessedsource, label);
+           // Do not offset here
+			Pair<RandomAccessibleInterval<FloatType>, FinalInterval> pair =  Boundingboxes.CurrentLabelImagepair(intimg, Preprocessedsource, label);
 			RandomAccessibleInterval<FloatType> ActualRoiimg = Boundingboxes.CurrentLabelImage(intimg, source, label);
 			RandomAccessibleInterval<FloatType> roiimg = pair.fst;
 			
@@ -100,7 +100,7 @@ public class LinefinderHFHough implements LinefinderHF {
 			
 				
 			 Roiindex = label;
-			CommonOutputHF currentOutput = new CommonOutputHF(framenumber, Roiindex - 1 , roiimg, ActualRoiimg, Realinterval);
+			CommonOutputHF currentOutput = new CommonOutputHF(framenumber, Roiindex - 1 , roiimg, ActualRoiimg, intimg, Realinterval);
 			
 			
 			output.add(currentOutput);

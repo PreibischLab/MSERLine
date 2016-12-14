@@ -199,7 +199,6 @@ public class LinefinderMSER  implements Linefinder{
 				final double[] covar = { ellipselist.get(index)[2], ellipselist.get(index)[3],
 						ellipselist.get(index)[4] };
 				ellipseroi = GetDelta.createEllipse(mean, covar, 3);
-				
 	    		final double perimeter = ellipseroi.getLength();
 	    		final double smalleigenvalue = SmallerEigenvalue(mean, covar);
 	    		if (perimeter > 2 * Math.PI * minlength ){

@@ -79,7 +79,7 @@ public class Velocitydetector {
 
 		// minimum length of the lines to be detected, the smallest possible
 		// number is 2.
-		final int minlength = (int) radius;
+		final int minlength = (int) (0.5 * radius);
 
 		if (ndims == 2) {
 
@@ -92,7 +92,7 @@ public class Velocitydetector {
 
 			ImageJFunctions.show(img);
 
-			LinefindingMethod findLinesVia = LinefindingMethod.MSER;
+			LinefindingMethod findLinesVia = LinefindingMethod.Hough;
 			Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> PrevFrameparam = null;
 			if (findLinesVia == LinefindingMethod.MSER) {
 
@@ -141,13 +141,13 @@ public class Velocitydetector {
 			final MedianFilter2D<FloatType> medfilter = new MedianFilter2D<FloatType>(groundframepre, 1);
 			medfilter.process();
 			RandomAccessibleInterval<FloatType> preinputimg = medfilter.getResult();
-			RandomAccessibleInterval<FloatType> inputimg = Kernels.CannyEdgeandMean(preinputimg, radius);
+			RandomAccessibleInterval<FloatType> inputimg = Kernels.Supressthresh(preinputimg);
 			/**
 			 * 
 			 * Line finder using MSER or Hough or a combination
 			 * 
 			 */
-			LinefindingMethod findLinesVia = LinefindingMethod.MSER;
+			LinefindingMethod findLinesVia = LinefindingMethod.Hough;
 			Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> PrevFrameparam = null;
 
 			if (findLinesVia == LinefindingMethod.MSER) {
@@ -194,14 +194,14 @@ public class Velocitydetector {
 				final MedianFilter2D<FloatType> medfiltercurr = new MedianFilter2D<FloatType>(currentframepre, 1);
 				medfiltercurr.process();
 				RandomAccessibleInterval<FloatType> preinputimgpre = medfiltercurr.getResult();
-				RandomAccessibleInterval<FloatType> inputimgpre = Kernels.CannyEdgeandMean(preinputimgpre, radius);
+				RandomAccessibleInterval<FloatType> inputimgpre = Kernels.Supressthresh(preinputimgpre);
 
 				/**
 				 * 
 				 * Getting tracks for both the ends
 				 * 
 				 */
-				LinefindingMethod findLinesViaHF = LinefindingMethod.MSER;
+				LinefindingMethod findLinesViaHF = LinefindingMethod.Hough;
 				UserChoiceModel userChoiceModelHF = UserChoiceModel.Splineordersecfixedds;
 				Pair<Pair<ArrayList<Trackproperties>, ArrayList<Trackproperties>>, Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>>> returnVector = null;
 
@@ -218,7 +218,8 @@ public class Velocitydetector {
 
 				if (findLinesViaHF == LinefindingMethod.Hough) {
 					LinefinderHFHough newlineHough = new LinefinderHFHough(currentframe, inputimgpre, minlength, frame);
-
+ 
+					ImageJFunctions.show(currentframe);
 					returnVector = FindlinesVia.LinefindingMethodHF(currentframe, inputimgpre, PrevFrameparam,
 							minlength, frame, psf, newlineHough, userChoiceModelHF);
 				}
@@ -306,7 +307,7 @@ public class Velocitydetector {
 
 			}
 
-			FileWriter writer = new FileWriter("../res/HNlength-movingstart.txt", true);
+			FileWriter writer = new FileWriter("../res/length-movingstartSNR15.txt", true);
 
 			for (int index = 0; index < lengthliststart.size(); ++index) {
 
@@ -338,7 +339,7 @@ public class Velocitydetector {
 
 			}
 
-			FileWriter writerend = new FileWriter("../res/HNlength-movingend.txt", true);
+			FileWriter writerend = new FileWriter("../res/length-movingendSNR15.txt", true);
 
 			for (int index = 0; index < lengthlistend.size(); ++index) {
 

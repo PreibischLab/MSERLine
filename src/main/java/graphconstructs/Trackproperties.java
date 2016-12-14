@@ -13,11 +13,13 @@ public class Trackproperties {
 	public final double originalintercept;
 	public final int seedlabel;
 	public final double[] originalpoint;
+	public final double[] originalds;
 	
 	
 	
 	public Trackproperties(final int Label, final int frame,
-			final double[] oldpoint, final double[] newpoint, final double newslope, final double newintercept, final double originalslope, final double originalintercept, final int seedlabel, final double[] originalpoint ) {
+			final double[] oldpoint, final double[] newpoint, final double newslope, final double newintercept,
+			final double originalslope, final double originalintercept, final int seedlabel, final double[] originalpoint, final double[] originalds ) {
 		this.Label = Label;
 		this.frame = frame;
 		this.oldpoint = oldpoint;
@@ -28,6 +30,7 @@ public class Trackproperties {
 		this.originalintercept = originalintercept;
 		this.seedlabel = seedlabel;
 		this.originalpoint = originalpoint;
+		this.originalds = originalds;
 		
 
 	}

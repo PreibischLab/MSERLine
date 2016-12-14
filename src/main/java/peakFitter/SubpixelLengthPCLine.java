@@ -23,10 +23,12 @@ import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.Point;
 import net.imglib2.PointSampleList;
+import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.BenchmarkAlgorithm;
 import net.imglib2.algorithm.OutputAlgorithm;
 import net.imglib2.img.display.imagej.ImageJFunctions;
+import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.Views;
 import peakFitter.GaussianMaskFitMSER.EndfitMSER;
@@ -492,7 +494,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 				}
 				fixed_param[ndims] = slope;
 				fixed_param[ndims + 1] = intercept;
-				fixed_param[ndims + 2] = 0.4 * Math.min(psf[0], psf[1]);
+				fixed_param[ndims + 2] = 0.5 * Math.min(psf[0], psf[1]);
 			
 				double inicutoffdistance = 0;
 				final double[] inistartpos = { start_param[0], start_param[1] };
@@ -537,7 +539,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 							finalparamstart[j] = start_param[j];
 					}
 
-					if (model == UserChoiceModel.Line) {
+					if (model == UserChoiceModel.Line || model == UserChoiceModel.LineHF) {
 					double newslope = (endpos[1] - startpos[1]) / (endpos[0] - startpos[0]);
 					double newintercept = (endpos[1] - newslope * endpos[0]);
 					double ds = finalparamstart[4];
@@ -563,7 +565,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 						sigmas+=dxvector[d] * dxvector[d];
 					}
 				sigmas = Math.sqrt(sigmas);
-				final int numgaussians = (int) Math.round(ds / sigmas);
+				final int numgaussians = (int) Math.max(2, Math.ceil(sigmas /  ds));
 					System.out.println("Doing Mask Fits: ");
 					try {
 								
@@ -648,11 +650,11 @@ public ArrayList<Indexedlength> getEndPoints(){
 
 					final Indexedlength startPart = new Indexedlength(label, label, framenumber, finalparamstart[4],
 							finalparamstart[5], finalparamstart[6], startparam,
-							startparam , currentslope, currentintercept , currentslope, currentintercept);
+							startparam , currentslope, currentintercept , currentslope, currentintercept, 0, 0, new double[]{dx, dy});
 					
 					final Indexedlength endPart = new Indexedlength(label, label, framenumber, finalparamstart[4],
 							finalparamstart[5], finalparamstart[6], endparam,
-							endparam, currentslope, currentintercept, currentslope, currentintercept);
+							endparam, currentslope, currentintercept, currentslope, currentintercept, 0, 0,  new double[]{dx, dy});
 					
 					
 					
@@ -680,8 +682,14 @@ public ArrayList<Indexedlength> getEndPoints(){
 							startparam[d] = startpos[d];
 							endparam[d] = endpos[d];
 						}
-						
-					final int numgaussians = (int) Math.min(3, Math.round(  Math.min(psf[0], psf[1]) /  ds));
+						double sigmas = 0;
+						 
+						for (int d  = 0; d < ndims; ++d){
+							
+							sigmas+=dxvector[d] * dxvector[d];
+						}
+					sigmas = Math.sqrt(sigmas);
+					final int numgaussians = (int) Math.max(2, Math.ceil(sigmas /  ds));
 						System.out.println("Doing Mask Fits: ");
 						try {
 									
@@ -766,11 +774,11 @@ public ArrayList<Indexedlength> getEndPoints(){
 
 						final Indexedlength startPart = new Indexedlength(label, label, framenumber, ds,
 								finalparamstart[4], finalparamstart[5], startparam,
-								startparam , currentslope, currentintercept , currentslope, currentintercept);
+								startparam , currentslope, currentintercept , currentslope, currentintercept, 0, 0, new double[]{dx, dy});
 						
 						final Indexedlength endPart = new Indexedlength(label, label, framenumber, ds,
 								finalparamstart[4], finalparamstart[5], endparam,
-								endparam, currentslope, currentintercept, currentslope, currentintercept);
+								endparam, currentslope, currentintercept, currentslope, currentintercept, 0 , 0 , new double[]{dx, dy});
 						
 						
 						
@@ -806,7 +814,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 						sigmas+=dxvector[d] * dxvector[d];
 					}
 				sigmas = Math.sqrt(sigmas);
-				final int numgaussians =  (int) Math.min(3, Math.round(  Math.min(psf[0], psf[1]) /  ds));
+				final int numgaussians =   (int) Math.max(2, Math.ceil(sigmas /  ds));
 					System.out.println("Doing Mask Fits: ");
 					try {
 								
@@ -891,11 +899,11 @@ public ArrayList<Indexedlength> getEndPoints(){
 
 					final Indexedlength startPart = new Indexedlength(label, label, framenumber, finalparamstart[4],
 							finalparamstart[5], finalparamstart[6], startparam,
-							startparam , currentslope, currentintercept , currentslope, currentintercept);
+							startparam , currentslope, currentintercept , currentslope, currentintercept, 0 , 0 , new double[]{dx, dy});
 					
 					final Indexedlength endPart = new Indexedlength(label, label, framenumber, finalparamstart[4],
 							finalparamstart[5], finalparamstart[6], endparam,
-							endparam, currentslope, currentintercept, currentslope, currentintercept);
+							endparam, currentslope, currentintercept, currentslope, currentintercept, 0 , 0, new double[]{dx, dy});
 					
 					
 					
@@ -919,6 +927,18 @@ public ArrayList<Indexedlength> getEndPoints(){
 			
 			int currentlabel = Integer.MIN_VALUE;
 			for (int index = 0; index < imgs.size(); ++index){
+				
+				
+				if (imgs.get(index).intimg!= null){
+					
+					RandomAccess<IntType> intranac = imgs.get(index).intimg.randomAccess();
+
+					intranac.setPosition(linepoint);
+					currentlabel = intranac.get().get();
+
+					return currentlabel;
+					
+				}
 				
 				RandomAccessibleInterval<FloatType> currentimg = imgs.get(index).Actualroi;
 				FinalInterval interval = imgs.get(index).interval;

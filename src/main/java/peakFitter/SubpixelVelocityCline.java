@@ -475,7 +475,7 @@ implements OutputAlgorithm<ArrayList<Indexedlength>> {
 						Indexedlength PointofInterest = new Indexedlength(label, seedLabel, framenumber, 
 								finalparamstart[2 * ndims],finalparamstart[2 * ndims + 1], 
 								finalparamstart[2 * ndims + 2], finalstartpoint, finalendpoint, currentslope, currentintercept,
-								iniparam.originalslope, iniparam.originalintercept);
+								iniparam.originalslope, iniparam.originalintercept, iniparam.originalds);
 					System.out.println("New X: " + finalstartpoint[0] + " New Y: " + finalstartpoint[1]);
 						return PointofInterest;
 
