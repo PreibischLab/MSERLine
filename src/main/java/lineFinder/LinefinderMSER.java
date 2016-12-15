@@ -48,7 +48,7 @@ public class LinefinderMSER  implements Linefinder{
 	public final long minSize = 1;
 	public final long maxSize = Long.MAX_VALUE;
 	public  double maxVar = 0.5;
-	public double minDiversity = 0.5;
+	public double minDiversity = 0;
 	public int maxlines = 100;
 	public final int maxdelta = 20;
 	private Overlay ov;

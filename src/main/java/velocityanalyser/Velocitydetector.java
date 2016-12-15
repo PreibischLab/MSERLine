@@ -154,7 +154,7 @@ public class Velocitydetector {
 			if (findLinesVia == LinefindingMethod.MSER) {
 
 				LinefinderMSER newlineMser = new LinefinderMSER(groundframe, inputimg, minlength, 0);
-				newlineMser.setMaxlines(5);
+				newlineMser.setMaxlines(4);
 				PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, inputimg, minlength, 0, psf, newlineMser,
 						UserChoiceModel.Line);
 
@@ -195,7 +195,7 @@ public class Velocitydetector {
 				final MedianFilter2D<FloatType> medfiltercurr = new MedianFilter2D<FloatType>(currentframepre, 1);
 				medfiltercurr.process();
 				RandomAccessibleInterval<FloatType> inputimgpre = medfiltercurr.getResult();
-			//	RandomAccessibleInterval<FloatType> inputimgpre = Kernels.SupressLowthresh(preinputimgpre);
+				//RandomAccessibleInterval<FloatType> inputimgpre = Kernels.SupressLowthresh(preinputimgpre);
 				Normalize.normalize(Views.iterable(inputimgpre), minval, maxval);
 				/**
 				 * 
@@ -209,7 +209,7 @@ public class Velocitydetector {
 				if (findLinesViaHF == LinefindingMethod.MSER) {
 
 					LinefinderHFMSER newlineMser = new LinefinderHFMSER(currentframe, inputimgpre, minlength, frame);
-					newlineMser.setMaxlines(10);
+					newlineMser.setMaxlines(8);
 					ImageJFunctions.show(inputimgpre).setTitle("Preprocessed extended image");
 					returnVector = FindlinesVia.LinefindingMethodHF(currentframe, inputimgpre, PrevFrameparam,
 							minlength, frame, psf, newlineMser, userChoiceModelHF);
@@ -310,7 +310,7 @@ public class Velocitydetector {
 
 			}
 
-			FileWriter writer = new FileWriter("../res/length-movingstartSNR15.txt", true);
+			FileWriter writer = new FileWriter("../res/length-movingstartSNR30.txt", true);
 
 			for (int index = 0; index < lengthliststart.size(); ++index) {
 
@@ -342,7 +342,7 @@ public class Velocitydetector {
 
 			}
 
-			FileWriter writerend = new FileWriter("../res/length-movingendSNR15.txt", true);
+			FileWriter writerend = new FileWriter("../res/length-movingendSNR30.txt", true);
 
 			for (int index = 0; index < lengthlistend.size(); ++index) {
 

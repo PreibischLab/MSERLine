@@ -29,6 +29,8 @@ public class GaussianSplinesecorder implements MTFitFunction {
 			double mplus2bx = 0;
 			double[] dxvector = new double[ndims];
 
+			double[] xs = new double[ndims];
+			double[] xe = new double[ndims];
 			double start = 0, end = 0;
 			for (int i = 0; i < ndims; ++i) {
 
@@ -41,8 +43,9 @@ public class GaussianSplinesecorder implements MTFitFunction {
 
 					dxvector[i] = mplus2bx / Math.sqrt(1 + mplus2bx * mplus2bx);
 				
+				xs[i] = a[i] + dxvector[i];
 				
-				start += 2 * b[i] * (x[i] - (a[i] + a[2 * ndims]* dxvector[i])) * a[2 * ndims + 2] * dxvector[i] * Estartds(x, a, b);
+				start += 2 * b[i] * (x[i] - xs[i]) *  dxvector[i];
 
 			}
 
@@ -57,11 +60,12 @@ public class GaussianSplinesecorder implements MTFitFunction {
 
 					dxvector[dim] = mplus2bx / Math.sqrt(1 + mplus2bx * mplus2bx);
 
-				end += 2 * b[dim] * (x[dim] - (a[i] - a[2 * ndims]* dxvector[dim])) * a[2 * ndims + 2] * dxvector[dim] * Eendds(x, a, b);
+				xe[dim] = a[i] - dxvector[dim];
+				end += 2 * b[dim] * (x[dim] - xe[dim])  * dxvector[dim] ;
 
 			}
 
-			return start - end;
+			return a[2 * ndims + 1] * (start * Estartds(x, a, b) - end * Eendds(x, a, b));
 		}
 
 		else if (k == 2 * ndims + 1) {
@@ -70,6 +74,8 @@ public class GaussianSplinesecorder implements MTFitFunction {
 			double dxbydb = 0;
 			double[] dxvector = new double[ndims];
 			double[] dxvectords = new double[ndims];
+			double[] xs = new double[ndims];
+			double[] xe = new double[ndims];
 			double start = 0, end = 0;
 			for (int i = 0; i < ndims; ++i) {
 
@@ -86,8 +92,10 @@ public class GaussianSplinesecorder implements MTFitFunction {
 					dxvectords[i] = mplus2bx / Math.sqrt(1 + mplus2bx * mplus2bx);
 					
 				}
-				start += 2 * b[i] * (x[i] - (a[i] + a[2 *ndims]* dxvectords[i])) * a[2 * ndims + 2] * dxvector[i] * Estartds(x, a, b);
-
+                xs[i] = a[i] + dxvectords[i];
+				
+				
+				start += 2 * b[i] * (x[i] - xs[i]) *  dxvector[i] ;
 			}
 
 			for (int i = ndims; i < 2 * ndims; ++i) {
@@ -107,11 +115,11 @@ public class GaussianSplinesecorder implements MTFitFunction {
 					dxvector[dim] = mplus2bx * dxbydb;
 					dxvectords[dim] = mplus2bx / Math.sqrt(1 + mplus2bx * mplus2bx);
 				}
-				end += 2 * b[dim] * (x[dim] - (a[i] - a[2 * ndims]* dxvectords[dim])) * a[2 * ndims + 2] * dxvector[dim] * Eendds(x, a, b);
-
+				xe[dim] = a[i] - dxvectords[dim];
+				end += 2 * b[dim] * (x[dim] - xe[dim])  * dxvector[dim] ;
 			}
 
-			return start - end;
+			return a[2 * ndims + 1] * (start * Estartds(x, a, b) - end * Eendds(x, a, b));
 
 		}
 
