@@ -54,7 +54,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 	public double termepsilon = 1e-1;
 	// Mask fits iteration param
 	public int iterations = 300;
-	public double cutoffdistance = 50;
+	public double cutoffdistance = 30;
 	public boolean halfgaussian = false;
 	public double Intensityratio = 0.5;
 	private final UserChoiceModel model;
@@ -310,8 +310,8 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			}
 
 			MinandMax[2 * ndims] = 0.5 * Math.min(psf[0], psf[1]);
-			MinandMax[2 * ndims + 1] = iniparam.lineintensity;
-			MinandMax[2 * ndims + 2] = iniparam.background;
+			MinandMax[2 * ndims + 1] = maxintensityline;
+			MinandMax[2 * ndims + 2] = 0;
 			for (int d = 0; d < ndims; ++d) {
 
 				if (MinandMax[d] == Double.MAX_VALUE || MinandMax[d + ndims] == -Double.MIN_VALUE)
@@ -328,8 +328,6 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 		if (model == UserChoiceModel.Linefixedds) {
 
-			double slope = iniparam.originalslope;
-			double intercept = iniparam.originalintercept;
 			while (outcursor.hasNext()) {
 
 				outcursor.fwd();
@@ -361,8 +359,8 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 				MinandMax[d + ndims] = maxVal[d];
 			}
 
-			MinandMax[2 * ndims] = iniparam.lineintensity;
-			MinandMax[2 * ndims + 1] = iniparam.background;
+			MinandMax[2 * ndims] =maxintensityline;
+			MinandMax[2 * ndims + 1] = 0;
 			for (int d = 0; d < ndims; ++d) {
 
 				if (MinandMax[d] == Double.MAX_VALUE || MinandMax[d + ndims] == -Double.MIN_VALUE)
@@ -377,8 +375,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 		}
 		if (model == UserChoiceModel.LineHF) {
 
-			double slope = iniparam.originalslope;
-			double intercept = iniparam.originalintercept;
+			
 			while (outcursor.hasNext()) {
 
 				outcursor.fwd();
@@ -410,8 +407,8 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			}
 
 			MinandMax[2 * ndims] = 0.5 * Math.min(psf[0], psf[1]);
-			MinandMax[2 * ndims + 1] = iniparam.lineintensity;
-			MinandMax[2 * ndims + 2] = iniparam.background;
+			MinandMax[2 * ndims + 1] = maxintensityline;
+			MinandMax[2 * ndims + 2] = 0;
 			for (int d = 0; d < ndims; ++d) {
 
 				if (MinandMax[d] == Double.MAX_VALUE || MinandMax[d + ndims] == -Double.MIN_VALUE)
@@ -460,8 +457,8 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 				MinandMax[d + ndims] = maxVal[d];
 			}
 
-			MinandMax[2 * ndims + 1] = iniparam.lineintensity;
-			MinandMax[2 * ndims + 2] = iniparam.background;
+			MinandMax[2 * ndims + 1] = maxintensityline;
+			MinandMax[2 * ndims + 2] = 0;
 			MinandMax[2 * ndims] = 0;
 			for (int d = 0; d < ndims; ++d) {
 
@@ -510,11 +507,10 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 				MinandMax[d + ndims] = maxVal[d];
 			}
 
-			MinandMax[2 * ndims + 2] = iniparam.lineintensity;
-			MinandMax[2 * ndims + 3] = iniparam.background;
+			MinandMax[2 * ndims + 2] = maxintensityline;
+			MinandMax[2 * ndims + 3] = 0;
 			MinandMax[2 * ndims + 1] = 0;
-			MinandMax[2 * ndims] = Math.sqrt(iniparam.originalds[0] * iniparam.originalds[0] + 
-					               iniparam.originalds[1] * iniparam.originalds[1]);
+			MinandMax[2 * ndims] = 0.5 * Math.min(psf[0], psf[1]);
 			
 			for (int d = 0; d < ndims; ++d) {
 
@@ -564,8 +560,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			}
 			fixed_param[ndims] = iniparam.originalslope;
 			fixed_param[ndims + 1] = iniparam.originalintercept;
-			fixed_param[ndims + 2] = Math.sqrt(iniparam.originalds[0] * iniparam.originalds[0] + 
-		               iniparam.originalds[1] * iniparam.originalds[1]);
+			fixed_param[ndims + 2] = iniparam.ds;
 
 			PointSampleList<FloatType> datalist = gatherfullData(label);
 			final Cursor<FloatType> listcursor = datalist.localizingCursor();
@@ -616,8 +611,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			if (model == UserChoiceModel.Splineordersec) {
 				fixed_param[ndims] = iniparam.slope;
 				fixed_param[ndims + 1] = iniparam.intercept;
-				fixed_param[ndims + 2] = Math.sqrt(iniparam.originalds[0] *  iniparam.originalds[0] +
-						                   iniparam.originalds[1] *  iniparam.originalds[1]);
+				
 				UserChoiceFunction = new GaussianSplinesecorder();
 
 			}
@@ -990,14 +984,16 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 					final double currentintercept = iniparam.originalintercept;
 
-					final double ds = Math.sqrt(iniparam.originalds[0] * iniparam.originalds[0] + iniparam.originalds[1] * iniparam.originalds[1]);
+					final double ds = fixed_param[ndims + 2];
 					final double lineIntensity = LMparam[2 * ndims + 1];
 					final double background = LMparam[2 * ndims + 2];
 					double[] startfit = new double[ndims];
 
+					final double newslope = (startpos[1] - inipos[1])/ (startpos[0] - inipos[0]) - Curvature * (startpos[0] + inipos[0]);
+
 					//+ 2 * Curvature * startpos[0]
-					double dx = iniparam.originalds[0];
-					double dy =  iniparam.originalds[1];
+					double dx = ds / Math.sqrt(1 + (newslope) * (newslope) );
+					double dy = (newslope) * dx;
 					double[] dxvector = { dx, dy };
 					double sigmas = 0;
 					 
@@ -1007,7 +1003,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					}
 
 					sigmas = Math.min(psf[0], psf[1]);
-					final int numgaussians = (int) Math.max(2, Math.ceil(sigmas /  ds));
+					final int numgaussians = (int)  Math.max(Math.ceil(sigmas /  ds), 2);
 
 					try {
 						startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
@@ -1056,14 +1052,17 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					
 					final double currentslope = iniparam.originalslope;
 					final double currentintercept = iniparam.originalintercept;
-					final double ds = Math.sqrt(iniparam.originalds[0] * iniparam.originalds[0] + iniparam.originalds[1] * iniparam.originalds[1]);
+					final double ds = fixed_param[ndims + 2];
 					final double lineIntensity = LMparam[2 * ndims + 1];
 					final double background = LMparam[2 * ndims + 2];
 					System.out.println("Curvature: " + Curvature);
 					double[] endfit = new double[ndims];
 					// + 2 * Curvature * endpos[0]
-					double dx = iniparam.originalds[0];
-					double dy =  iniparam.originalds[1];
+					final double newslope = (endpos[1] - inipos[1])/ (endpos[0] - inipos[0]) - Curvature * (endpos[0] + inipos[0]);
+
+					//+ 2 * Curvature * startpos[0]
+					double dx = ds / Math.sqrt(1 + (newslope) * (newslope) );
+					double dy = (newslope) * dx;
 					double[] dxvector = { dx, dy };
 					double sigmas = 0;
  
@@ -1072,7 +1071,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						sigmas+=psf[d] * psf[d];
 					}
 				sigmas = Math.min(psf[0], psf[1]);
-				final int numgaussians = (int) Math.max(2, Math.round(sigmas /  ds));
+				final int numgaussians = (int) Math.max(Math.round(sigmas /  ds), 2);
 				
 					try {
 						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
@@ -1121,14 +1120,15 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 					final double currentintercept = iniparam.originalintercept;
 
-					final double ds = LMparam[2 * ndims];
+					final double ds = Math.abs(LMparam[2 * ndims]);
 					final double lineIntensity = LMparam[2 * ndims + 2];
 					final double background = LMparam[2 * ndims + 3];
 					double[] startfit = new double[ndims];
+					final double newslope = (startpos[1] - inipos[1])/ (startpos[0] - inipos[0]) - Curvature * (startpos[0] + inipos[0]);
 
 					//+ 2 * Curvature * startpos[0]
-					double dx = ds / Math.sqrt(1 + (currentslope+ 2 * Curvature * startpos[0]) * (currentslope+ 2 * Curvature * startpos[0]) );
-					double dy = (currentslope + 2 * Curvature * startpos[0]) * dx;
+					double dx = ds / Math.sqrt(1 + (newslope) * (newslope) );
+					double dy = (newslope) * dx;
 					double[] dxvector = { dx, dy };
 					double sigmas = 0;
 					 
@@ -1137,7 +1137,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						sigmas+=psf[d] * psf[d];
 					}
 				sigmas = Math.sqrt(sigmas);
-				final int numgaussians = (int) Math.max(2, Math.ceil(sigmas /  Math.sqrt(dx * dx + dy * dy)));
+				final int numgaussians = (int) Math.max(Math.round(sigmas /  ds), 2);
 
 					try {
 						startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
@@ -1202,14 +1202,15 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					
 					final double currentslope = iniparam.originalslope;
 					final double currentintercept = iniparam.originalintercept;
-					final double ds = LMparam[2 * ndims];
+					final double ds = Math.abs(LMparam[2 * ndims]);
 					final double lineIntensity = LMparam[2 * ndims + 2];
 					final double background = LMparam[2 * ndims + 3];
 					System.out.println("Curvature: " + Curvature);
+					final double newslope = (endpos[1] - inipos[1])/ (endpos[0] - inipos[0]) - Curvature * (endpos[0] + inipos[0]);
 					double[] endfit = new double[ndims];
 					// + 2 * Curvature * endpos[0]
-					double dx = ds / Math.sqrt(1 + (currentslope + 2 * Curvature * endpos[0]) * (currentslope + 2 * Curvature * endpos[0]));
-					double dy = (currentslope+ 2 * Curvature * endpos[0]) * dx;
+					double dx = ds / Math.sqrt(1 + (newslope) * (newslope));
+					double dy = (newslope) * dx;
 					double[] dxvector = { dx, dy };
 					double sigmas = 0;
  
@@ -1218,7 +1219,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						sigmas+=psf[d] * psf[d];
 					}
 				sigmas = Math.sqrt(sigmas);
-				final int numgaussians = (int) Math.min(3, Math.ceil(sigmas /  Math.sqrt(dx * dx + dy * dy)));
+				final int numgaussians = (int) Math.max(Math.round(sigmas /  ds), 2);
 				
 					try {
 						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
