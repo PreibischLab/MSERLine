@@ -138,10 +138,10 @@ public class Velocitydetector {
 			Normalize.normalize(Views.iterable(groundframe), minval, maxval);
 			Normalize.normalize(Views.iterable(groundframepre), minval, maxval);
 
-			final MedianFilter2D<FloatType> medfilter = new MedianFilter2D<FloatType>(groundframepre, 1);
+			final MedianFilter2D<FloatType> medfilter = new MedianFilter2D<FloatType>(groundframepre, 2);
 			medfilter.process();
-			RandomAccessibleInterval<FloatType> inputimg = medfilter.getResult();
-		//	RandomAccessibleInterval<FloatType> inputimg = Kernels.SupressLowthresh(preinputimg);
+			RandomAccessibleInterval<FloatType> preinputimg = medfilter.getResult();
+			RandomAccessibleInterval<FloatType> inputimg = Kernels.Supressthresh(preinputimg);
 			Normalize.normalize(Views.iterable(inputimg), minval, maxval);
 			/**
 			 * 
@@ -192,10 +192,10 @@ public class Velocitydetector {
 				IntervalView<FloatType> currentframepre = Views.hyperSlice(preprocessedimg, ndims - 1, frame);
 				Normalize.normalize(Views.iterable(currentframe), minval, maxval);
 				Normalize.normalize(Views.iterable(currentframepre), minval, maxval);
-				final MedianFilter2D<FloatType> medfiltercurr = new MedianFilter2D<FloatType>(currentframepre, 1);
+				final MedianFilter2D<FloatType> medfiltercurr = new MedianFilter2D<FloatType>(currentframepre, 2);
 				medfiltercurr.process();
-				RandomAccessibleInterval<FloatType> inputimgpre = medfiltercurr.getResult();
-				//RandomAccessibleInterval<FloatType> inputimgpre = Kernels.SupressLowthresh(preinputimgpre);
+				RandomAccessibleInterval<FloatType> preinputimgpre = medfiltercurr.getResult();
+				RandomAccessibleInterval<FloatType> inputimgpre = Kernels.Supressthresh(preinputimgpre);
 				Normalize.normalize(Views.iterable(inputimgpre), minval, maxval);
 				/**
 				 * 
@@ -203,7 +203,7 @@ public class Velocitydetector {
 				 * 
 				 */
 				LinefindingMethod findLinesViaHF = LinefindingMethod.MSER;
-				UserChoiceModel userChoiceModelHF = UserChoiceModel.Splineordersecfixedds;
+				UserChoiceModel userChoiceModelHF = UserChoiceModel.Splineordersec;
 				Pair<Pair<ArrayList<Trackproperties>, ArrayList<Trackproperties>>, Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>>> returnVector = null;
 
 				if (findLinesViaHF == LinefindingMethod.MSER) {

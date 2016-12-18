@@ -82,20 +82,25 @@ public class Gaussiansplinesecfixedds implements MTFitFunction {
 		double slope = (maxVal[1] - minVal[1]) / (maxVal[0] - minVal[0]) - curvature * (maxVal[0] + minVal[0]);
 
 		double ds = b[ndims + 2];
-		double mplus2bxstart = slope;
-		double mplus2bxend = slope;
+		double mplus2bxstart = slope + 2 * curvature* minVal[0] ;
+		double mplus2bxend = slope +  2 * curvature* maxVal[0];
+		
 
-		double[] dxvector = { ds / Math.sqrt(1 + slope * slope), slope * ds / Math.sqrt(1 + slope * slope) };
+		double[] dxvectorstart = { ds / Math.sqrt(1 + mplus2bxstart* mplus2bxstart), 
+				mplus2bxstart* ds / Math.sqrt(1 + mplus2bxstart* mplus2bxstart) };
 
-		double[] dxvectorCstart = { -2 * ds * a[0] / (Math.pow(1 + mplus2bxstart * mplus2bxstart, 3 / 2)),
-				-2 * ds * mplus2bxstart * a[0] / (Math.pow(1 + mplus2bxstart * mplus2bxstart, 3 / 2)) };
-		double[] dxvectorCend = { -2 * ds * a[ndims] / (Math.pow(1 + mplus2bxend * mplus2bxend, 3 / 2)),
-				-2 * ds * mplus2bxend * a[ndims] / (Math.pow(1 + mplus2bxend * mplus2bxend, 3 / 2)) };
+		double[] dxvectorend = { ds / Math.sqrt(1 + mplus2bxend * mplus2bxend ), 
+				mplus2bxend * ds / Math.sqrt(1 + mplus2bxend  * mplus2bxend ) };
+		
+		double[] dxvectorCstart = { ds * ((maxVal[0] + minVal[0]) - 2 * minVal[0]) / (Math.pow(1 + mplus2bxstart * mplus2bxstart, 3 / 2)),
+				 ds * mplus2bxstart * ((maxVal[0] + minVal[0]) - 2 * minVal[0]) / (Math.pow(1 + mplus2bxstart * mplus2bxstart, 3 / 2)) };
+		double[] dxvectorCend = { ds * ((maxVal[0] + minVal[0]) - 2 * maxVal[0]) / (Math.pow(1 + mplus2bxend * mplus2bxend, 3 / 2)),
+				 ds * mplus2bxend * ((maxVal[0] + minVal[0]) - 2 * maxVal[0]) / (Math.pow(1 + mplus2bxend * mplus2bxend, 3 / 2)) };
 
 		double dsum = 0;
 		double sum = 0;
 		for (int i = 0; i < x.length; i++) {
-			minVal[i] += dxvector[i];
+			minVal[i] += dxvectorstart[i];
 			di = x[i] - minVal[i];
 			sum += b[i] * di * di;
 			dsum += 2 * b[i] * di * dxvectorCstart[i];
@@ -105,7 +110,7 @@ public class Gaussiansplinesecfixedds implements MTFitFunction {
 		double dsumend = 0;
 		double sumend = 0;
 		for (int i = 0; i < x.length; i++) {
-			maxVal[i] -= dxvector[i];
+			maxVal[i] -= dxvectorend[i];
 			di = x[i] - maxVal[i];
 			sumend += b[i] * di * di;
 			dsumend += -2 * b[i] * di * dxvectorCend[i];
@@ -159,8 +164,8 @@ public class Gaussiansplinesecfixedds implements MTFitFunction {
 
 			sum = 0;
 
-			double dx = ds / Math.sqrt(1 + (slope) * (slope));
-			double dy = (slope) * dx;
+			double dx = ds / Math.sqrt(1 + (slope + 2 * curvature* minVal[0]) * (slope + 2 * curvature* minVal[0]));
+			double dy = (slope + 2 * curvature* minVal[0]) * dx;
 			double[] dxvector = { dx, dy };
 
 			for (int i = 0; i < x.length; i++) {
@@ -171,9 +176,9 @@ public class Gaussiansplinesecfixedds implements MTFitFunction {
 			}
 			sumofgaussians += Math.exp(-sum);
 
-			if (minVal[0] >= maxVal[0] || minVal[1] >= maxVal[1] && originalslope > 0)
+			if (minVal[0] >= maxVal[0] || minVal[1] >= maxVal[1] && slope > 0)
 				break;
-			if (minVal[0] >= maxVal[0] || minVal[1] <= maxVal[1] && originalslope < 0)
+			if (minVal[0] >= maxVal[0] || minVal[1] <= maxVal[1] && slope < 0)
 				break;
 
 		}

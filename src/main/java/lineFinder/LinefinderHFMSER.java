@@ -145,7 +145,7 @@ public class LinefinderHFMSER implements LinefinderHF{
 		
 		final ImagePlus currentimp = IJ.getImage();
 		IJ.run("8-bit");
-
+		
 		newimg = ImagePlusAdapter.wrapByte(currentimp);
 
 		}
