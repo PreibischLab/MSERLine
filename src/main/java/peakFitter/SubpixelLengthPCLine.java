@@ -289,7 +289,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 		
 
 		// This parameter is guess estimate for spacing between the Gaussians
-		MinandMax[2 * ndims] =   0.7 *Math.min(psf[0], psf[1]);
+		MinandMax[2 * ndims] =   0.5 *Math.min(psf[0], psf[1]);
 		MinandMax[2 * ndims + 1] = maxintensityline; 
 		// This parameter guess estimates the background noise level
 		MinandMax[2 * ndims + 2] = 0.0; 

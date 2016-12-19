@@ -92,10 +92,15 @@ public class Gaussiansplinesecfixedds implements MTFitFunction {
 		double[] dxvectorend = { ds / Math.sqrt(1 + mplus2bxend * mplus2bxend ), 
 				mplus2bxend * ds / Math.sqrt(1 + mplus2bxend  * mplus2bxend ) };
 		
-		double[] dxvectorCstart = { ds * ((maxVal[0] + minVal[0]) - 2 * minVal[0]) / (Math.pow(1 + mplus2bxstart * mplus2bxstart, 3 / 2)),
-				 ds * mplus2bxstart * ((maxVal[0] + minVal[0]) - 2 * minVal[0]) / (Math.pow(1 + mplus2bxstart * mplus2bxstart, 3 / 2)) };
-		double[] dxvectorCend = { ds * ((maxVal[0] + minVal[0]) - 2 * maxVal[0]) / (Math.pow(1 + mplus2bxend * mplus2bxend, 3 / 2)),
-				 ds * mplus2bxend * ((maxVal[0] + minVal[0]) - 2 * maxVal[0]) / (Math.pow(1 + mplus2bxend * mplus2bxend, 3 / 2)) };
+		double[] dxvectorCstart = { - ds * mplus2bxstart * (-(maxVal[0] + minVal[0]) + 2 * minVal[0]) / (Math.pow(1 + mplus2bxstart * mplus2bxstart, 3 / 2)),
+				 (ds *(Math.sqrt( 1 + mplus2bxstart * mplus2bxstart) 
+						 - mplus2bxstart * mplus2bxstart/Math.sqrt( 1 + mplus2bxstart * mplus2bxstart))*
+				 (-(maxVal[0] + minVal[0]) + 2 * minVal[0]))/(1 + mplus2bxstart * mplus2bxstart)};
+		
+		
+		double[] dxvectorCend = { -ds * mplus2bxend * (-(maxVal[0] + minVal[0]) + 2 * maxVal[0]) / (Math.pow(1 + mplus2bxend * mplus2bxend, 3 / 2)),
+				 (ds *(Math.sqrt( 1 + mplus2bxend * mplus2bxend) - mplus2bxend*mplus2bxend/Math.sqrt( 1 + mplus2bxend * mplus2bxend))*
+						 (-(maxVal[0] + minVal[0]) + 2 * maxVal[0]))/(1 + mplus2bxend * mplus2bxend)};
 
 		double dsum = 0;
 		double sum = 0;
