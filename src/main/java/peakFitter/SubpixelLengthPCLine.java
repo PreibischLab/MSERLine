@@ -258,10 +258,9 @@ public ArrayList<Indexedlength> getEndPoints(){
        			
        			inputcursor.fwd();
        			
-       			if (inputcursor.get().get()/maxintensityline > Intensityratio){
        			
        				inputcursor.localize(newposition);
-
+ 
        				if (inputcursor.getDoublePosition(0) <= minVal[0]
     						&& inputcursor.get().get() / maxintensityline > Intensityratio) {
     					minVal[0] = inputcursor.getDoublePosition(0);
@@ -275,7 +274,6 @@ public ArrayList<Indexedlength> getEndPoints(){
     				}
 
        			
-       			}
                   }
 		final double[] MinandMax = new double[2 * ndims + 3];
 
@@ -320,7 +318,6 @@ public ArrayList<Indexedlength> getEndPoints(){
        			
        			inputcursor.fwd();
        			
-       			if (inputcursor.get().get()/maxintensityline > Intensityratio){
        			
        				inputcursor.localize(newposition);
 
@@ -337,7 +334,6 @@ public ArrayList<Indexedlength> getEndPoints(){
     				}
 
        			
-       			}
                   }
 		final double[] MinandMax = new double[2 * ndims + 2];
 
@@ -382,7 +378,6 @@ public ArrayList<Indexedlength> getEndPoints(){
        			
        			inputcursor.fwd();
        			
-       			if (inputcursor.get().get()/maxintensityline > Intensityratio){
        			
        				// To get the min and max co-rodinates along the line so we have
        				// starting points to
@@ -402,7 +397,6 @@ public ArrayList<Indexedlength> getEndPoints(){
     				}
 
        			
-       			}
                   }
    			final double[] MinandMax = new double[2 * ndims + 6];
    			
@@ -418,7 +412,7 @@ public ArrayList<Indexedlength> getEndPoints(){
    			MinandMax[2 * ndims] =  0.5 * Math.min(psf[0], psf[1]);
    			MinandMax[2 * ndims + 1] = maxintensityline; 
    			// This parameter guess estimates the background noise level
-   			MinandMax[2 * ndims + 2] = 0.5; 
+   			MinandMax[2 * ndims + 2] = 0; 
    			
    			MinandMax[2 * ndims + 3] = slope; 
    			MinandMax[2 * ndims + 4] = Curvature; 
@@ -565,7 +559,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 						sigmas+=dxvector[d] * dxvector[d];
 					}
 				sigmas = Math.sqrt(sigmas);
-				final int numgaussians = (int) Math.max(2, Math.ceil(sigmas /  ds));
+				final int numgaussians = (int) Math.max(Math.round(sigmas /  ds), 2);
 					System.out.println("Doing Mask Fits: ");
 					try {
 								
@@ -1026,3 +1020,4 @@ public ArrayList<Indexedlength> getEndPoints(){
 		}
 		
 }
+

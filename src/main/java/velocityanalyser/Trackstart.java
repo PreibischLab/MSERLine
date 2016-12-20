@@ -21,13 +21,14 @@ public class Trackstart implements Linetracker {
 
 		public Trackstart(
 				final ArrayList<ArrayList<Trackproperties>> Allandend,  
-				final long maxframe){
+				final int maxframe){
 			this.Allandend = Allandend;
 			this.maxframe = maxframe;
 			
 			
 		}
 		
+
 		public ArrayList<Subgraphs> getFramedgraph() {
 
 			return Framedgraph;

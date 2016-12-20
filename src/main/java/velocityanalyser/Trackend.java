@@ -21,13 +21,15 @@ public class Trackend implements Linetracker {
 
 		public Trackend(
 				final ArrayList<ArrayList<Trackproperties>> Allstartand,  
-				final long maxframe){
+				final int maxframe){
 			this.Allstartand = Allstartand;
 			this.maxframe = maxframe;
 			
 			
 		}
 		
+		
+
 		public ArrayList<Subgraphs> getFramedgraph() {
 
 			return Framedgraph;

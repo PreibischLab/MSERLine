@@ -158,7 +158,7 @@ public class GaussianMaskFitMSER {
 			cursor.fwd();
 
 			
-			double value = 1.0;
+			double value = maxintensityline;
 			for (int d = 0; d < ndims; ++d) {
 				sumofgaussians = 0;
 				for (int n = 1; n <= numgaussians; ++n){	
@@ -204,7 +204,7 @@ public class GaussianMaskFitMSER {
 		while (cursor.hasNext()) {
 			cursor.fwd();
 			
-			double value = 1.0;
+			double value = maxintensityline;
 
 			
 			

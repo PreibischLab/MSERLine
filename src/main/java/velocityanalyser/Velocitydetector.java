@@ -79,7 +79,7 @@ public class Velocitydetector {
 
 		// minimum length of the lines to be detected, the smallest possible
 		// number is 2.
-		final int minlength = (int) (0.25 * radius);
+		final int minlength = (int) (radius);
 
 		if (ndims == 2) {
 
@@ -123,25 +123,23 @@ public class Velocitydetector {
 			}
 
 			// Draw the detected lines
-			RandomAccessibleInterval<FloatType> gaussimg = new ArrayImgFactory<FloatType>().create(img,
-					new FloatType());
-			PushCurves.DrawstartLine(gaussimg, PrevFrameparam.fst, PrevFrameparam.snd, psf);
-			ImageJFunctions.show(gaussimg).setTitle("Exact-line-start");
+						RandomAccessibleInterval<FloatType> gaussimg = new ArrayImgFactory<FloatType>().create(img,
+								new FloatType());
+						PushCurves.DrawstartLine(gaussimg, PrevFrameparam.fst, PrevFrameparam.snd, psf);
+						ImageJFunctions.show(gaussimg).setTitle("Exact-line-start");
 
 		}
 
 		if (ndims > 2) {
-			// Do Hough transform on the First seed image
 
 			RandomAccessibleInterval<FloatType> groundframe = Views.hyperSlice(img, ndims - 1, 0);
 			RandomAccessibleInterval<FloatType> groundframepre = Views.hyperSlice(preprocessedimg, ndims - 1, 0);
-			Normalize.normalize(Views.iterable(groundframe), minval, maxval);
-			Normalize.normalize(Views.iterable(groundframepre), minval, maxval);
+			
 
 			final MedianFilter2D<FloatType> medfilter = new MedianFilter2D<FloatType>(groundframepre, 1);
 			medfilter.process();
-			RandomAccessibleInterval<FloatType> inputimg = medfilter.getResult();
-			//RandomAccessibleInterval<FloatType> inputimg = Kernels.Supressthresh(preinputimg);
+			RandomAccessibleInterval<FloatType> preinputimg = medfilter.getResult();
+			RandomAccessibleInterval<FloatType> inputimg = Kernels.CannyEdgeandMean(preinputimg, radius);
 			Normalize.normalize(Views.iterable(inputimg), minval, maxval);
 			/**
 			 * 
@@ -168,11 +166,12 @@ public class Velocitydetector {
 
 				PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, inputimg, minlength, 0, psf, newlineHough,
 						UserChoiceModel.Line);
+				
 			}
 
 			if (findLinesVia == LinefindingMethod.MSERwHough) {
 				LinefinderMSERwHough newlineMserwHough = new LinefinderMSERwHough(groundframe, inputimg, minlength, 0);
-				newlineMserwHough.setMaxlines(5);
+				newlineMserwHough.setMaxlines(4);
 				PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, inputimg, minlength, 0, psf,
 						newlineMserwHough, UserChoiceModel.Line);
 
@@ -190,12 +189,11 @@ public class Velocitydetector {
 
 				IntervalView<FloatType> currentframe = Views.hyperSlice(img, ndims - 1, frame);
 				IntervalView<FloatType> currentframepre = Views.hyperSlice(preprocessedimg, ndims - 1, frame);
-				Normalize.normalize(Views.iterable(currentframe), minval, maxval);
-				Normalize.normalize(Views.iterable(currentframepre), minval, maxval);
+			
 				final MedianFilter2D<FloatType> medfiltercurr = new MedianFilter2D<FloatType>(currentframepre, 1);
 				medfiltercurr.process();
-				RandomAccessibleInterval<FloatType> inputimgpre = medfiltercurr.getResult();
-				//RandomAccessibleInterval<FloatType> inputimgpre = Kernels.Supressthresh(preinputimgpre);
+				RandomAccessibleInterval<FloatType> preinputimgpre = medfiltercurr.getResult();
+				RandomAccessibleInterval<FloatType> inputimgpre = Kernels.CannyEdgeandMean(preinputimgpre, radius);
 				Normalize.normalize(Views.iterable(inputimgpre), minval, maxval);
 				/**
 				 * 
@@ -203,6 +201,7 @@ public class Velocitydetector {
 				 * 
 				 */
 				LinefindingMethod findLinesViaHF = LinefindingMethod.MSER;
+				
 				UserChoiceModel userChoiceModelHF = UserChoiceModel.Splineordersec;
 				Pair<Pair<ArrayList<Trackproperties>, ArrayList<Trackproperties>>, Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>>> returnVector = null;
 
@@ -220,7 +219,7 @@ public class Velocitydetector {
 
 				if (findLinesViaHF == LinefindingMethod.Hough) {
 					LinefinderHFHough newlineHough = new LinefinderHFHough(currentframe, inputimgpre, minlength, frame);
- 
+					
 					ImageJFunctions.show(currentframe);
 					returnVector = FindlinesVia.LinefindingMethodHF(currentframe, inputimgpre, PrevFrameparam,
 							minlength, frame, psf, newlineHough, userChoiceModelHF);
@@ -231,7 +230,7 @@ public class Velocitydetector {
 					LinefinderHFMSERwHough newlineMserwHough = new LinefinderHFMSERwHough(currentframe, inputimgpre,
 							minlength, frame);
 					ImageJFunctions.show(inputimgpre).setTitle("Preprocessed extended image");
-					newlineMserwHough.setMaxlines(10);
+					newlineMserwHough.setMaxlines(8);
 					returnVector = FindlinesVia.LinefindingMethodHF(currentframe, inputimgpre, PrevFrameparam,
 							minlength, frame, psf, newlineMserwHough, userChoiceModelHF);
 					Overlay overlay = newlineMserwHough.getOverlay();
@@ -248,10 +247,7 @@ public class Velocitydetector {
 
 				Allstart.add(startStateVectors);
 				Allend.add(endStateVectors);
-				// Draw the lines detected in the current frame
-				RandomAccessibleInterval<FloatType> newgaussimg = new ArrayImgFactory<FloatType>().create(groundframe,
-						new FloatType());
-				PushCurves.DrawstartLine(newgaussimg, NewFrameparam.fst, NewFrameparam.snd, psf);
+				
 
 			}
 

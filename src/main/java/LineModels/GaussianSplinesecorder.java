@@ -101,6 +101,9 @@ public class GaussianSplinesecorder implements MTFitFunction {
 		double[] dxvectorderivstart = { 1 / Math.sqrt(1 + mplus2bxstart* mplus2bxstart), mplus2bxstart / Math.sqrt(1 + mplus2bxstart * mplus2bxstart) };
 		double[] dxvectorderivend = { 1 / Math.sqrt(1 + mplus2bxend * mplus2bxend), mplus2bxend / Math.sqrt(1 + mplus2bxend * mplus2bxend) };
 		
+		double sumofgaussians = 0;
+		
+		while(true){
 		double dsum = 0;
 		double sum = 0;
 		for (int i = 0; i < x.length; i++) {
@@ -109,18 +112,24 @@ public class GaussianSplinesecorder implements MTFitFunction {
 			sum += b[i] * di * di;
 			dsum += 2 * b[i] * di * dxvectorderivstart[i];
 		}
-		double sumofgaussians = dsum * Math.exp(-sum);
+		sumofgaussians+= dsum * Math.exp(-sum);
+		if (minVal[0] > maxVal[0] || minVal[1] > maxVal[1] && slope > 0)
+			break;
+		if (minVal[0] > maxVal[0] || minVal[1] < maxVal[1] && slope < 0)
+			break;
 
+	}
+		/*
 		double dsumend = 0;
 		double sumend = 0;
 		for (int i = 0; i < x.length; i++) {
 			maxVal[i] -= dxvectorend[i];
 			di = x[i] - maxVal[i];
 			sumend += b[i] * di * di;
-			dsumend += -2 * b[i] * di * dxvectorderivend[i];
+			dsumend += 2 * b[i] * di * dxvectorderivend[i];
 		}
 		sumofgaussians += dsumend * Math.exp(-sumend);
-
+*/
 		return sumofgaussians;
 
 	}
@@ -149,16 +158,16 @@ public class GaussianSplinesecorder implements MTFitFunction {
 		double[] dxvectorend = { ds / Math.sqrt(1 + mplus2bxend * mplus2bxend ), 
 				mplus2bxend * ds / Math.sqrt(1 + mplus2bxend  * mplus2bxend ) };
 		
-		double[] dxvectorCstart = { - ds * mplus2bxstart * (-(maxVal[0] + minVal[0]) + 2 * minVal[0]) / (Math.pow(1 + mplus2bxstart * mplus2bxstart, 3 / 2)),
-				 (ds *(Math.sqrt( 1 + mplus2bxstart * mplus2bxstart) 
-						 - mplus2bxstart * mplus2bxstart/Math.sqrt( 1 + mplus2bxstart * mplus2bxstart))*
-				 (-(maxVal[0] + minVal[0]) + 2 * minVal[0]))/(1 + mplus2bxstart * mplus2bxstart)};
+		double dxbydb = - ds * mplus2bxstart * (-(maxVal[0] + minVal[0]) + 2 * minVal[0]) / (Math.pow(1 + mplus2bxstart * mplus2bxstart, 3 / 2));
 		
+		double[] dxvectorCstart = {dxbydb, mplus2bxstart* dxbydb + (-(maxVal[0] + minVal[0]) + 2 * minVal[0]) * dxvectorstart[0]};
 		
-		double[] dxvectorCend = { -ds * mplus2bxend * (-(maxVal[0] + minVal[0]) + 2 * maxVal[0]) / (Math.pow(1 + mplus2bxend * mplus2bxend, 3 / 2)),
-				 (ds *(Math.sqrt( 1 + mplus2bxend * mplus2bxend) - mplus2bxend*mplus2bxend/Math.sqrt( 1 + mplus2bxend * mplus2bxend))*
-						 (-(maxVal[0] + minVal[0]) + 2 * maxVal[0]))/(1 + mplus2bxend * mplus2bxend)};
+		double dxbydbend = - ds * mplus2bxend * (-(maxVal[0] + minVal[0]) + 2 * maxVal[0]) / (Math.pow(1 + mplus2bxend * mplus2bxend, 3 / 2));
+		
+		double[] dxvectorCend = { dxbydbend, mplus2bxend * dxbydbend +  (-(maxVal[0] + minVal[0]) + 2 * maxVal[0]) * dxvectorend[0] };
 
+		double sumofgaussians = 0;
+		while(true){
 		double dsum = 0;
 		double sum = 0;
 		for (int i = 0; i < x.length; i++) {
@@ -167,18 +176,23 @@ public class GaussianSplinesecorder implements MTFitFunction {
 			sum += b[i] * di * di;
 			dsum += 2 * b[i] * di * dxvectorCstart[i];
 		}
-		double sumofgaussians = dsum * Math.exp(-sum);
-
+		sumofgaussians+= dsum * Math.exp(-sum);
+		if (minVal[0] > maxVal[0] || minVal[1] > maxVal[1] && slope > 0)
+			break;
+		if (minVal[0] > maxVal[0] || minVal[1] < maxVal[1] && slope < 0)
+			break;
+		}
+		/*
 		double dsumend = 0;
 		double sumend = 0;
 		for (int i = 0; i < x.length; i++) {
 			maxVal[i] -= dxvectorend[i];
 			di = x[i] - maxVal[i];
 			sumend += b[i] * di * di;
-			dsumend += -2 * b[i] * di * dxvectorCend[i];
+			dsumend += 2 * b[i] * di * dxvectorCend[i];
 		}
 		sumofgaussians += dsumend * Math.exp(-sumend);
-
+*/
 		return sumofgaussians;
 
 	}
@@ -217,7 +231,6 @@ public class GaussianSplinesecorder implements MTFitFunction {
 		double sumofgaussians = 0;
 		double di;
 		double curvature = a[2 * ndims + 1];
-		double originalslope = b[ndims];
 		double slope = (maxVal[1] - minVal[1]) / (maxVal[0] - minVal[0]) - curvature * (maxVal[0] + minVal[0]);
 
 		double ds = Math.abs(a[2 * ndims]);

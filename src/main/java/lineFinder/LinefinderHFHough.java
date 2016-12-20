@@ -88,7 +88,7 @@ public class LinefinderHFHough implements LinefinderHF {
 	    intimg = WaterafterDisttransform.getResult();
 		Maxlabel = WaterafterDisttransform.GetMaxlabelsseeded(intimg);
 
-		for (int label = 1; label < Maxlabel ; label++) {
+		for (int label = 1; label < Maxlabel  ; label++) {
 
            // Do not offset here
 			Pair<RandomAccessibleInterval<FloatType>, FinalInterval> pair =  Boundingboxes.CurrentLabelImagepair(intimg, Preprocessedsource, label);
