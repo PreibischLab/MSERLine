@@ -54,7 +54,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 	public double termepsilon = 1e-2;
 	// Mask fits iteration param
 	public int iterations = 300;
-	public double cutoffdistance = 20;
+	public double cutoffdistance = 15;
 	public boolean halfgaussian = false;
 	public double Intensityratio = 0.5;
 	private final UserChoiceModel model;

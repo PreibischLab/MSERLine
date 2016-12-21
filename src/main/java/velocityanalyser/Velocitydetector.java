@@ -55,11 +55,11 @@ public class Velocitydetector {
 		new ImageJ();
 
 		// Load the stack of images
-		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("../res/super_bent.tif"),
+		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("../res/super_bentHHHN.tif"),
 				new ArrayImgFactory<FloatType>());
 
 		RandomAccessibleInterval<FloatType> preprocessedimg = util.ImgLib2Util
-				.openAs32Bit(new File("../res/super_bent.tif"), new ArrayImgFactory<FloatType>());
+				.openAs32Bit(new File("../res/super_bentHHHN.tif"), new ArrayImgFactory<FloatType>());
 		int ndims = img.numDimensions();
 
 		// Normalize the intensity of the whole stack to be between min and max
@@ -306,7 +306,7 @@ public class Velocitydetector {
 
 			}
 
-			FileWriter writer = new FileWriter("../res/length-movingstartSNR30.txt", true);
+			FileWriter writer = new FileWriter("../res/length-movingstartSNR10.txt", true);
 
 			for (int index = 0; index < lengthliststart.size(); ++index) {
 
@@ -338,7 +338,7 @@ public class Velocitydetector {
 
 			}
 
-			FileWriter writerend = new FileWriter("../res/length-movingendSNR30.txt", true);
+			FileWriter writerend = new FileWriter("../res/length-movingendSNR10.txt", true);
 
 			for (int index = 0; index < lengthlistend.size(); ++index) {
 
