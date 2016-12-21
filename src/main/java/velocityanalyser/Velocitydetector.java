@@ -55,11 +55,11 @@ public class Velocitydetector {
 		new ImageJ();
 
 		// Load the stack of images
-		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("../res/super_bentHHHN.tif"),
+		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("../res/super_bent.tif"),
 				new ArrayImgFactory<FloatType>());
 
 		RandomAccessibleInterval<FloatType> preprocessedimg = util.ImgLib2Util
-				.openAs32Bit(new File("../res/super_bentHHHN.tif"), new ArrayImgFactory<FloatType>());
+				.openAs32Bit(new File("../res/super_bent.tif"), new ArrayImgFactory<FloatType>());
 		int ndims = img.numDimensions();
 
 		// Normalize the intensity of the whole stack to be between min and max
@@ -183,7 +183,7 @@ public class Velocitydetector {
 			// Now start tracking the moving ends of the Microtubule and make
 			// seperate graph for both ends
 
-			final int maxframe = (int) img.dimension(ndims - 1);
+			final int maxframe = 3;//(int) img.dimension(ndims - 1);
 
 			for (int frame = 1; frame < maxframe; ++frame) {
 
@@ -200,7 +200,7 @@ public class Velocitydetector {
 				 * Getting tracks for both the ends
 				 * 
 				 */
-				LinefindingMethod findLinesViaHF = LinefindingMethod.MSER;
+				LinefindingMethod findLinesViaHF = LinefindingMethod.Hough;
 				
 				UserChoiceModel userChoiceModelHF = UserChoiceModel.Splineordersec;
 				Pair<Pair<ArrayList<Trackproperties>, ArrayList<Trackproperties>>, Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>>> returnVector = null;
@@ -305,7 +305,7 @@ public class Velocitydetector {
 				}
 
 			}
-
+/*
 			FileWriter writer = new FileWriter("../res/length-movingstartSNR10.txt", true);
 
 			for (int index = 0; index < lengthliststart.size(); ++index) {
@@ -317,7 +317,7 @@ public class Velocitydetector {
 			}
 
 			writer.close();
-
+*/
 			ArrayList<Pair<Integer, double[]>> lengthlistend = new ArrayList<Pair<Integer, double[]>>();
 			for (int index = 1; index < Allend.size(); ++index) {
 
@@ -337,7 +337,7 @@ public class Velocitydetector {
 				}
 
 			}
-
+/*
 			FileWriter writerend = new FileWriter("../res/length-movingendSNR10.txt", true);
 
 			for (int index = 0; index < lengthlistend.size(); ++index) {
@@ -349,7 +349,7 @@ public class Velocitydetector {
 			}
 
 			writerend.close();
-
+*/
 		}
 
 	}

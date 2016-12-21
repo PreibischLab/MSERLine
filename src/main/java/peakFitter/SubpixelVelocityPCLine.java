@@ -1167,6 +1167,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					System.out.println("New X: " + startfit[0] + " New Y: " + startfit[1]+ " " + "New Xlm: " + startpos[0]
 							+ " New Ylm: " + endpos[1]);
 					System.out.println("Number of Gaussians used: " + (numgaussians ) + " " + ds );
+				/*
 					FileWriter writer;
 					try {
 						writer = new FileWriter("../res/dsparams-movingstartSNR10.txt", true);
@@ -1181,7 +1182,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						e.printStackTrace();
 					}
 					
-						
+						*/
 					return PointofInterest;
 				} else {
 
@@ -1247,6 +1248,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					System.out.println("New X: " + endfit[0] + " New Y: " + endfit[1] + " "+ "New Xlm: " + endpos[0]
 							+ " New Ylm: " + endpos[1]);
 					System.out.println("Number of Gaussians used: " + (numgaussians ) + " " + ds);
+					/*
 					FileWriter writer;
 					try {
 						writer = new FileWriter("../res/dsparams-movingendSNR10.txt", true);
@@ -1259,6 +1261,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
+					*/
 					return PointofInterest;
 
 				}
