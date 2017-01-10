@@ -13,6 +13,7 @@ import org.jgrapht.graph.Subgraph;
 
 import fiji.tool.SliceListener;
 import fiji.tool.SliceObserver;
+import graphconstructs.Trackproperties;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.gui.Line;
@@ -21,16 +22,15 @@ import net.imagej.DrawingTool;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.numeric.real.FloatType;
-import mpicbg.spim.segmentation.SnakeObject;
 
 public class DisplayGraph {
 	// add listener to the imageplus slice slider
 	private ImagePlus imp;
-	private final SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge> graph;
+	private final SimpleWeightedGraph<Trackproperties, DefaultWeightedEdge> graph;
 	private final int ndims;
 	final Color colorDraw;
 	
-	public DisplayGraph(final ImagePlus imp, SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge> graph,
+	public DisplayGraph(final ImagePlus imp, SimpleWeightedGraph<Trackproperties, DefaultWeightedEdge> graph,
 			Color colorDraw){
 		
 		this.imp = imp;
@@ -66,8 +66,8 @@ public class DisplayGraph {
 			getImp().getOverlay().clear(); 
 			for (DefaultWeightedEdge e : graph.edgeSet()) {
 				
-		        SnakeObject Spotbase = graph.getEdgeSource(e);
-		        SnakeObject Spottarget = graph.getEdgeTarget(e);
+		        Trackproperties Spotbase = graph.getEdgeSource(e);
+		        Trackproperties Spottarget = graph.getEdgeTarget(e);
 		        
 		        
 		        
@@ -75,9 +75,9 @@ public class DisplayGraph {
 		        final double[] targetedge = new double[ndims];
 		        for (int d = 0; d < ndims - 1; ++d){
 		        	
-		        	startedge[d] = Spotbase.centreofMass[d];
+		        	startedge[d] = Spotbase.oldpoint[d];
 		        	
-		        	targetedge[d] = Spottarget.centreofMass[d];
+		        	targetedge[d] = Spottarget.oldpoint[d];
 		        	
 		        }
 		        

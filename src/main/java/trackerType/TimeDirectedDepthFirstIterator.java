@@ -4,25 +4,26 @@ import org.jgrapht.Graph;
 import org.jgrapht.Graphs;
 import org.jgrapht.graph.DefaultWeightedEdge;
 
-import mpicbg.spim.segmentation.SnakeObject;
-public class TimeDirectedDepthFirstIterator extends SortedDepthFirstIterator<SnakeObject, DefaultWeightedEdge> {
+import graphconstructs.Trackproperties;
 
-	public TimeDirectedDepthFirstIterator(Graph<SnakeObject, DefaultWeightedEdge> g, SnakeObject startVertex) {
+public class TimeDirectedDepthFirstIterator extends SortedDepthFirstIterator<Trackproperties, DefaultWeightedEdge> {
+
+	public TimeDirectedDepthFirstIterator(Graph<Trackproperties, DefaultWeightedEdge> g, Trackproperties startVertex) {
 		super(g, startVertex, null);
 	}
 	
 	
 	
-    protected void addUnseenChildrenOf(SnakeObject vertex) {
+    protected void addUnseenChildrenOf(Trackproperties vertex) {
     	
-    	int ts = vertex.getFeature(SnakeObject.FRAME).intValue();
+    	int ts = vertex.getFeature(Trackproperties.FRAME).intValue();
         for (DefaultWeightedEdge edge : specifics.edgesOf(vertex)) {
             if (nListeners != 0) {
                 fireEdgeTraversed(createEdgeTraversalEvent(edge));
             }
 
-            SnakeObject oppositeV = Graphs.getOppositeVertex(graph, edge, vertex);
-            int tt = oppositeV.getFeature(SnakeObject.FRAME).intValue();
+            Trackproperties oppositeV = Graphs.getOppositeVertex(graph, edge, vertex);
+            int tt = oppositeV.getFeature(Trackproperties.FRAME).intValue();
             if (tt <= ts) {
             	continue;
             }

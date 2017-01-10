@@ -1,18 +1,22 @@
 package costMatrix;
 
-import mpicbg.spim.segmentation.SnakeObject;;
+import graphconstructs.Trackproperties;
 
-public class IntensityDiffCostFunction implements CostFunction< SnakeObject, SnakeObject >
+public class IntensityDiffCostFunction implements CostFunction< Trackproperties, Trackproperties >
 	{
 
 		
 	
 
 	@Override
-	public double linkingCost( final SnakeObject source, final SnakeObject target )
+	public double linkingCost( final Trackproperties source, final Trackproperties target )
 	{
-		return source.IntensityweightedsquareDistanceTo(target );
+		
+		return 0;
+		//return source.IntensityweightedsquareDistanceTo(target );
 	}
+
+	
 		
 
 	

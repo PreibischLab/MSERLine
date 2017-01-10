@@ -34,7 +34,8 @@ import org.jgrapht.traverse.BreadthFirstIterator;
 import org.jgrapht.traverse.DepthFirstIterator;
 import org.jgrapht.traverse.GraphIterator;
 
-import mpicbg.spim.segmentation.SnakeObject;
+import graphconstructs.Trackproperties;
+
 
 
 public class TrackModel
@@ -49,11 +50,11 @@ public class TrackModel
 	/**
 	 * The mother graph, from which all subsequent fields are calculated. This
 	 * graph is not made accessible to the outside world. Editing it must be
-	 * trough the model methods {@link #addEdge(SnakeObject, SnakeObject, double)},
-	 * {@link #removeEdge(DefaultWeightedEdge)}, {@link #removeEdge(SnakeObject, SnakeObject)}
+	 * trough the model methods {@link #addEdge(Trackproperties, Trackproperties, double)},
+	 * {@link #removeEdge(DefaultWeightedEdge)}, {@link #removeEdge(Trackproperties, Trackproperties)}
 	 * .
 	 */
-	private ListenableUndirectedGraph< SnakeObject, DefaultWeightedEdge > graph;
+	private ListenableUndirectedGraph< Trackproperties, DefaultWeightedEdge > graph;
 
 	private final MyGraphListener mgl;
 
@@ -63,7 +64,7 @@ public class TrackModel
 
 	/**
 	 * The edges that have been added to this model by
-	 * {@link #addEdge(SnakeObject, SnakeObject, double)}.
+	 * {@link #addEdge(Trackproperties, Trackproperties, double)}.
 	 * <p>
 	 * It is the parent instance responsibility to clear this field when it is
 	 * fit to do so.
@@ -73,7 +74,7 @@ public class TrackModel
 	/**
 	 * The edges that have removed from this model by
 	 * {@link #removeEdge(DefaultWeightedEdge)} or
-	 * {@link #removeEdge(SnakeObject, SnakeObject)}.
+	 * {@link #removeEdge(Trackproperties, Trackproperties)}.
 	 * <p>
 	 * It is the parent instance responsibility to clear this field when it is
 	 * fit to do so.
@@ -83,7 +84,7 @@ public class TrackModel
 	/**
 	 * The edges that have been modified in this model by changing its cost
 	 * using {@link #setEdgeWeight(DefaultWeightedEdge, double)} or modifying
-	 * the SnakeObjects it links elsewhere.
+	 * the Trackpropertiess it links elsewhere.
 	 * <p>
 	 * It is the parent instance responsibility to clear this field when it is
 	 * fit to do so.
@@ -92,9 +93,9 @@ public class TrackModel
 
 	/**
 	 * The track IDs that have been modified, updated or created, <b>solely</b>
-	 * by removing or adding an edge. Possibly after the removal of a SnakeObject.
+	 * by removing or adding an edge. Possibly after the removal of a Trackproperties.
 	 * Tracks having edges that are <b>modified</b>, for instance by modifying a
-	 * SnakeObject it contains, will not be listed here, but must be sought from the
+	 * Trackproperties it contains, will not be listed here, but must be sought from the
 	 * {@link #edgesModified} field.
 	 * <p>
 	 * It is the parent instance responsibility to clear this field when it is
@@ -113,9 +114,9 @@ public class TrackModel
 
 	Map< DefaultWeightedEdge, Integer > edgeToID;
 
-	private Map< Integer, HashSet< SnakeObject > > connectedVertexSets;
+	private Map< Integer, HashSet< Trackproperties > > connectedVertexSets;
 
-	Map< SnakeObject, Integer > vertexToID;
+	Map< Trackproperties, Integer > vertexToID;
 
 	private Map< Integer, Boolean > visibility;
 
@@ -129,10 +130,10 @@ public class TrackModel
 
 	public TrackModel()
 	{
-		this( new SimpleWeightedGraph< SnakeObject, DefaultWeightedEdge >( DefaultWeightedEdge.class ) );
+		this( new SimpleWeightedGraph< Trackproperties, DefaultWeightedEdge >( DefaultWeightedEdge.class ) );
 	}
 
-	public TrackModel( final SimpleWeightedGraph< SnakeObject, DefaultWeightedEdge > graph )
+	public TrackModel( final SimpleWeightedGraph< Trackproperties, DefaultWeightedEdge > graph )
 	{
 		this.mgl = new MyGraphListener();
 		setGraph( graph );
@@ -151,13 +152,13 @@ public class TrackModel
 	 * @param graph
 	 *            the graph to parse for tracks.
 	 */
-	void setGraph( final SimpleWeightedGraph< SnakeObject, DefaultWeightedEdge > graph )
+	void setGraph( final SimpleWeightedGraph< Trackproperties, DefaultWeightedEdge > graph )
 	{
 		if ( null != this.graph )
 		{
 			this.graph.removeGraphListener( mgl );
 		}
-		this.graph = new ListenableUndirectedGraph< SnakeObject, DefaultWeightedEdge >( graph );
+		this.graph = new ListenableUndirectedGraph< Trackproperties, DefaultWeightedEdge >( graph );
 		this.graph.addGraphListener( mgl );
 		init( graph );
 	}
@@ -167,7 +168,7 @@ public class TrackModel
 	 */
 	void clear()
 	{
-		setGraph( new SimpleWeightedGraph< SnakeObject, DefaultWeightedEdge >( DefaultWeightedEdge.class ) );
+		setGraph( new SimpleWeightedGraph< Trackproperties, DefaultWeightedEdge >( DefaultWeightedEdge.class ) );
 	}
 
 	/**
@@ -175,16 +176,16 @@ public class TrackModel
 	 * such as a saved file. It allows specifying the exact mapping of track IDs
 	 * to the connected sets. The model content is completely replaced by the
 	 * specified parameters, including the global graph, its connected
-	 * components (both in SnakeObjects and edges), visibility and naming.
+	 * components (both in Trackpropertiess and edges), visibility and naming.
 	 * <p>
 	 * It is the caller responsibility to ensure that the graph and provided
 	 * component are coherent. Unexpected behavior might result otherwise.
 	 *
 	 * @param graph
 	 *            the mother graph for the model.
-	 * @param trackSnakeObjects
+	 * @param trackTrackpropertiess
 	 *            the mapping of track IDs vs the connected components as sets
-	 *            of SnakeObjects.
+	 *            of Trackpropertiess.
 	 * @param trackEdges
 	 *            the mapping of track IDs vs the connected components as sets
 	 *            of edges.
@@ -193,14 +194,14 @@ public class TrackModel
 	 * @param trackNames
 	 *            the track names.
 	 */
-	public void from( final SimpleWeightedGraph< SnakeObject, DefaultWeightedEdge > graph, final Map<Integer, HashSet<SnakeObject>> trackSnakeObjects, final Map< Integer, Set< DefaultWeightedEdge > > trackEdges, final Map< Integer, Boolean > trackVisibility, final Map< Integer, String > trackNames )
+	public void from( final SimpleWeightedGraph< Trackproperties, DefaultWeightedEdge > graph, final Map<Integer, HashSet<Trackproperties>> trackTrackpropertiess, final Map< Integer, Set< DefaultWeightedEdge > > trackEdges, final Map< Integer, Boolean > trackVisibility, final Map< Integer, String > trackNames )
 	{
 
 		if ( null != this.graph )
 		{
 			this.graph.removeGraphListener( mgl );
 		}
-		this.graph = new ListenableUndirectedGraph< SnakeObject, DefaultWeightedEdge >( graph );
+		this.graph = new ListenableUndirectedGraph< Trackproperties, DefaultWeightedEdge >( graph );
 		this.graph.addGraphListener( mgl );
 
 		edgesAdded.clear();
@@ -210,17 +211,17 @@ public class TrackModel
 
 		visibility = trackVisibility;
 		names = trackNames;
-		connectedVertexSets = trackSnakeObjects;
+		connectedVertexSets = trackTrackpropertiess;
 		connectedEdgeSets = trackEdges;
 
 		// Rebuild the id maps
 		IDcounter = 0;
-		vertexToID = new HashMap< SnakeObject, Integer >();
-		for ( final Integer id : trackSnakeObjects.keySet() )
+		vertexToID = new HashMap< Trackproperties, Integer >();
+		for ( final Integer id : trackTrackpropertiess.keySet() )
 		{
-			for ( final SnakeObject SnakeObject : trackSnakeObjects.get( id ) )
+			for ( final Trackproperties Trackproperties : trackTrackpropertiess.get( id ) )
 			{
-				vertexToID.put( SnakeObject, id );
+				vertexToID.put( Trackproperties, id );
 			}
 			if ( id > IDcounter )
 			{
@@ -244,17 +245,17 @@ public class TrackModel
 	 * DEFAULT VISIBILIT METHODS made to be called from the mother model.
 	 */
 
-	void addSnakeObject( final SnakeObject SnakeObjectToAdd )
+	void addTrackproperties( final Trackproperties TrackpropertiesToAdd )
 	{
-		graph.addVertex( SnakeObjectToAdd );
+		graph.addVertex( TrackpropertiesToAdd );
 	}
 
-	void removeSnakeObject( final SnakeObject SnakeObjectToRemove )
+	void removeTrackproperties( final Trackproperties TrackpropertiesToRemove )
 	{
-		graph.removeVertex( SnakeObjectToRemove );
+		graph.removeVertex( TrackpropertiesToRemove );
 	}
 
-	DefaultWeightedEdge addEdge( final SnakeObject source, final SnakeObject target, final double weight )
+	DefaultWeightedEdge addEdge( final Trackproperties source, final Trackproperties target, final double weight )
 	{
 		if ( !graph.containsVertex( source ) )
 		{
@@ -269,7 +270,7 @@ public class TrackModel
 		return edge;
 	}
 
-	DefaultWeightedEdge removeEdge( final SnakeObject source, final SnakeObject target )
+	DefaultWeightedEdge removeEdge( final Trackproperties source, final Trackproperties target )
 	{
 		return graph.removeEdge( source, target );
 	}
@@ -308,24 +309,24 @@ public class TrackModel
 	 *            graph
 	 * @param function
 	 *            the function used to set values of a new vertex in the new
-	 *            graph, from the matching SnakeObject
+	 *            graph, from the matching Trackproperties
 	 * @param mappings
-	 *            a map that will receive mappings from {@link SnakeObject} to the new
+	 *            a map that will receive mappings from {@link Trackproperties} to the new
 	 *            vertices. Can be <code>null</code> if you do not want to get
 	 *            the mappings
 	 * @param <V>
 	 *            the type of the vertices.
 	 * @return a new {@link SimpleDirectedWeightedGraph}.
 	 */
-	public < V > SimpleDirectedWeightedGraph< V, DefaultWeightedEdge > copy( final VertexFactory< V > factory, final Function1< SnakeObject, V > function, final Map< SnakeObject, V > mappings )
+	public < V > SimpleDirectedWeightedGraph< V, DefaultWeightedEdge > copy( final VertexFactory< V > factory, final Function1< Trackproperties, V > function, final Map< Trackproperties, V > mappings )
 	{
 		final SimpleDirectedWeightedGraph< V, DefaultWeightedEdge > copy = new SimpleDirectedWeightedGraph< V, DefaultWeightedEdge >( DefaultWeightedEdge.class );
-		final Set< SnakeObject > SnakeObjects = graph.vertexSet();
+		final Set< Trackproperties > Trackpropertiess = graph.vertexSet();
 		// To store mapping of old graph vs new graph
-		Map< SnakeObject, V > map;
+		Map< Trackproperties, V > map;
 		if ( null == mappings )
 		{
-			map = new HashMap< SnakeObject, V >( SnakeObjects.size() );
+			map = new HashMap< Trackproperties, V >( Trackpropertiess.size() );
 		}
 		else
 		{
@@ -333,11 +334,11 @@ public class TrackModel
 		}
 
 		// Generate new vertices
-		for ( final SnakeObject SnakeObject : Collections.unmodifiableCollection( SnakeObjects ) )
+		for ( final Trackproperties Trackproperties : Collections.unmodifiableCollection( Trackpropertiess ) )
 		{
 			final V vertex = factory.createVertex();
-			function.compute( SnakeObject, vertex );
-			map.put( SnakeObject, vertex );
+			function.compute( Trackproperties, vertex );
+			map.put( Trackproperties, vertex );
 			copy.addVertex( vertex );
 		}
 
@@ -362,7 +363,7 @@ public class TrackModel
 	 * 
 	 * @see org.jgrapht.Graph#containsEdge(Object, Object)
 	 */
-	public boolean containsEdge( final SnakeObject source, final SnakeObject target )
+	public boolean containsEdge( final Trackproperties source, final Trackproperties target )
 	{
 		return graph.containsEdge( source, target );
 	}
@@ -378,26 +379,26 @@ public class TrackModel
 	 * 
 	 * @see org.jgrapht.Graph#getEdge(Object, Object)
 	 */
-	public DefaultWeightedEdge getEdge( final SnakeObject source, final SnakeObject target )
+	public DefaultWeightedEdge getEdge( final Trackproperties source, final Trackproperties target )
 	{
 		return graph.getEdge( source, target );
 	}
 
 	/**
-	 * Returns the set of edges of a SnakeObject.
+	 * Returns the set of edges of a Trackproperties.
 	 * 
-	 * @param SnakeObject
-	 *            the SnakeObject.
-	 * @return the set of edges connected to this SnakeObject. Can be empty if the SnakeObject
+	 * @param Trackproperties
+	 *            the Trackproperties.
+	 * @return the set of edges connected to this Trackproperties. Can be empty if the Trackproperties
 	 *         does not have any edge.
 	 * 
 	 * @see org.jgrapht.Graph#edgesOf(Object)
 	 */
-	public Set< DefaultWeightedEdge > edgesOf( final SnakeObject SnakeObject )
+	public Set< DefaultWeightedEdge > edgesOf( final Trackproperties Trackproperties )
 	{
-		if ( graph.containsVertex( SnakeObject ) )
+		if ( graph.containsVertex( Trackproperties ) )
 		{
-			return graph.edgesOf( SnakeObject );
+			return graph.edgesOf( Trackproperties );
 		}
 		else
 		{
@@ -430,35 +431,35 @@ public class TrackModel
 	 * 
 	 * @see org.jgrapht.Graph#vertexSet()
 	 */
-	public Set< SnakeObject > vertexSet()
+	public Set< Trackproperties > vertexSet()
 	{
 		return graph.vertexSet();
 	}
 
 	/**
-	 * Returns the source SnakeObject of the specified edge.
+	 * Returns the source Trackproperties of the specified edge.
 	 * 
 	 * @param e
 	 *            the edge.
-	 * @return the source SnakeObject of this edge.
+	 * @return the source Trackproperties of this edge.
 	 * 
 	 * @see org.jgrapht.Graph#getEdgeSource(Object)
 	 */
-	public SnakeObject getEdgeSource( final DefaultWeightedEdge e )
+	public Trackproperties getEdgeSource( final DefaultWeightedEdge e )
 	{
 		return graph.getEdgeSource( e );
 	}
 
 	/**
-	 * Returns the target SnakeObject of the specified edge.
+	 * Returns the target Trackproperties of the specified edge.
 	 * 
 	 * @param e
 	 *            the edge.
-	 * @return the target SnakeObject of this edge.
+	 * @return the target Trackproperties of this edge.
 	 * 
 	 * @see org.jgrapht.Graph#getEdgeTarget(Object)
 	 */
-	public SnakeObject getEdgeTarget( final DefaultWeightedEdge e )
+	public Trackproperties getEdgeTarget( final DefaultWeightedEdge e )
 	{
 		return graph.getEdgeTarget( e );
 	}
@@ -615,13 +616,13 @@ public class TrackModel
 	}
 
 	/**
-	 * Returns the SnakeObjects of the track with the specified ID.
+	 * Returns the Trackpropertiess of the track with the specified ID.
 	 *
 	 * @param trackID
 	 *            the track ID.
-	 * @return the set of SnakeObjects.
+	 * @return the set of Trackpropertiess.
 	 */
-	public HashSet< SnakeObject > trackSnakeObjects( final Integer trackID )
+	public HashSet< Trackproperties > trackTrackpropertiess( final Integer trackID )
 	{
 		return connectedVertexSets.get( trackID );
 	}
@@ -660,17 +661,17 @@ public class TrackModel
 	}
 
 	/**
-	 * Returns the track ID the specified SnakeObject belong to, or <code>null</code>
-	 * if the specified SnakeObject cannot be found in this model.
+	 * Returns the track ID the specified Trackproperties belong to, or <code>null</code>
+	 * if the specified Trackproperties cannot be found in this model.
 	 * 
-	 * @param SnakeObject
-	 *            the SnakeObject to search for.
+	 * @param Trackproperties
+	 *            the Trackproperties to search for.
 	 *
 	 * @return the track ID it belongs to.
 	 */
-	public Integer trackIDOf( final SnakeObject SnakeObject )
+	public Integer trackIDOf( final Trackproperties Trackproperties )
 	{
-		return vertexToID.get( SnakeObject );
+		return vertexToID.get( Trackproperties );
 	}
 
 	/*
@@ -684,14 +685,14 @@ public class TrackModel
 	 * @param graph
 	 *            the graph to read edges and vertices from.
 	 */
-	private void init( final UndirectedGraph< SnakeObject, DefaultWeightedEdge > graph )
+	private void init( final UndirectedGraph< Trackproperties, DefaultWeightedEdge > graph )
 	{
-		vertexToID = new HashMap< SnakeObject, Integer >();
+		vertexToID = new HashMap< Trackproperties, Integer >();
 		edgeToID = new HashMap< DefaultWeightedEdge, Integer >();
 		IDcounter = 0;
 		visibility = new HashMap< Integer, Boolean >();
 		names = new HashMap< Integer, String >();
-		connectedVertexSets = new HashMap< Integer, HashSet< SnakeObject > >();
+		connectedVertexSets = new HashMap< Integer, HashSet< Trackproperties > >();
 		connectedEdgeSets = new HashMap< Integer, Set< DefaultWeightedEdge > >();
 
 		edgesAdded.clear();
@@ -699,10 +700,10 @@ public class TrackModel
 		edgesRemoved.clear();
 		tracksUpdated.clear();
 
-		final Set< SnakeObject > vertexSet = graph.vertexSet();
+		final Set< Trackproperties > vertexSet = graph.vertexSet();
 		if ( vertexSet.size() > 0 )
 		{
-			final BreadthFirstIterator< SnakeObject, DefaultWeightedEdge > i = new BreadthFirstIterator< SnakeObject, DefaultWeightedEdge >( graph, null );
+			final BreadthFirstIterator< Trackproperties, DefaultWeightedEdge > i = new BreadthFirstIterator< Trackproperties, DefaultWeightedEdge >( graph, null );
 			i.addTraversalListener( new MyTraversalListener() );
 
 			while ( i.hasNext() )
@@ -762,20 +763,20 @@ public class TrackModel
 	 */
 
 	/**
-	 * Returns a new depth first iterator over the SnakeObjects connected by links in
+	 * Returns a new depth first iterator over the Trackpropertiess connected by links in
 	 * this model. A boolean flag allow to set whether the returned iterator
 	 * does take into account the edge direction. If true, the iterator will not
 	 * be able to iterate backward in time.
 	 *
 	 * @param start
-	 *            the SnakeObject to start iteration with. Can be <code>null</code>,
+	 *            the Trackproperties to start iteration with. Can be <code>null</code>,
 	 *            then the start will be taken randomly and will traverse all
 	 *            the links.
 	 * @param directed
 	 *            if true returns a directed iterator, undirected if false.
 	 * @return a new depth-first iterator.
 	 */
-	public GraphIterator< SnakeObject, DefaultWeightedEdge > getDepthFirstIterator( final SnakeObject start, final boolean directed )
+	public GraphIterator< Trackproperties, DefaultWeightedEdge > getDepthFirstIterator( final Trackproperties start, final boolean directed )
 	{
 		if ( directed )
 		{
@@ -783,19 +784,19 @@ public class TrackModel
 		}
 		else
 		{
-			return new DepthFirstIterator< SnakeObject, DefaultWeightedEdge >( graph, start );
+			return new DepthFirstIterator< Trackproperties, DefaultWeightedEdge >( graph, start );
 		}
 	}
 
 	/**
-	 * Returns a new depth first iterator over the SnakeObjects connected by links in
+	 * Returns a new depth first iterator over the Trackpropertiess connected by links in
 	 * this model. This iterator is sorted: when branching, it chooses the next
 	 * vertex according to a specified comparator. A boolean flag allow to set
 	 * whether the returned iterator does take into account the edge direction.
 	 * If true, the iterator will not be able to iterate backward in time.
 	 *
 	 * @param start
-	 *            the SnakeObject to start iteration with. Can be <code>null</code>,
+	 *            the Trackproperties to start iteration with. Can be <code>null</code>,
 	 *            then the start will be taken randomly and will traverse all
 	 *            the links.
 	 * @param directed
@@ -805,7 +806,7 @@ public class TrackModel
 	 *            branching.
 	 * @return a new depth-first iterator.
 	 */
-	public SortedDepthFirstIterator< SnakeObject, DefaultWeightedEdge > getSortedDepthFirstIterator( final SnakeObject start, final Comparator< SnakeObject > comparator, final boolean directed )
+	public SortedDepthFirstIterator< Trackproperties, DefaultWeightedEdge > getSortedDepthFirstIterator( final Trackproperties start, final Comparator< Trackproperties > comparator, final boolean directed )
 	{
 		if ( directed )
 		{
@@ -813,7 +814,7 @@ public class TrackModel
 		}
 		else
 		{
-			return new SortedDepthFirstIterator< SnakeObject, DefaultWeightedEdge >( graph, start, comparator );
+			return new SortedDepthFirstIterator< Trackproperties, DefaultWeightedEdge >( graph, start, comparator );
 		}
 	}
 
@@ -823,25 +824,25 @@ public class TrackModel
 	}
 
 	/**
-	 * Returns the shortest path between two connected SnakeObject, using Dijkstra's
+	 * Returns the shortest path between two connected Trackproperties, using Dijkstra's
 	 * algorithm. The edge weights, if any, are ignored here, meaning that the
 	 * returned path is the shortest in terms of number of edges.
 	 * <p>
-	 * Returns <code>null</code> if the two SnakeObjects are not connected by a track,
-	 * or if one of the SnakeObject do not belong to the graph, or if the graph field
+	 * Returns <code>null</code> if the two Trackpropertiess are not connected by a track,
+	 * or if one of the Trackproperties do not belong to the graph, or if the graph field
 	 * is <code>null</code>.
 	 *
 	 * @param source
-	 *            the SnakeObject to start the path with
+	 *            the Trackproperties to start the path with
 	 * @param target
-	 *            the SnakeObject to stop the path with
+	 *            the Trackproperties to stop the path with
 	 * @return the shortest path, as a list of edges.
 	 */
-	public List< DefaultWeightedEdge > dijkstraShortestPath( final SnakeObject source, final SnakeObject target )
+	public List< DefaultWeightedEdge > dijkstraShortestPath( final Trackproperties source, final Trackproperties target )
 	{
 		if ( null == graph ) { return null; }
-		final AsUnweightedGraph< SnakeObject, DefaultWeightedEdge > unWeightedGrah = new AsUnweightedGraph< SnakeObject, DefaultWeightedEdge >( graph );
-		final DijkstraShortestPath< SnakeObject, DefaultWeightedEdge > pathFinder = new DijkstraShortestPath< SnakeObject, DefaultWeightedEdge >( unWeightedGrah, source, target );
+		final AsUnweightedGraph< Trackproperties, DefaultWeightedEdge > unWeightedGrah = new AsUnweightedGraph< Trackproperties, DefaultWeightedEdge >( graph );
+		final DijkstraShortestPath< Trackproperties, DefaultWeightedEdge > pathFinder = new DijkstraShortestPath< Trackproperties, DefaultWeightedEdge >( unWeightedGrah, source, target );
 		final List< DefaultWeightedEdge > path = pathFinder.getPathEdgeList();
 		return path;
 	}
@@ -850,9 +851,9 @@ public class TrackModel
 	 * Inner Classes
 	 */
 
-	private class MyTraversalListener implements TraversalListener< SnakeObject, DefaultWeightedEdge >
+	private class MyTraversalListener implements TraversalListener< Trackproperties, DefaultWeightedEdge >
 	{
-		private HashSet<SnakeObject> currentConnectedVertexSet;
+		private HashSet<Trackproperties> currentConnectedVertexSet;
 
 		private Set< DefaultWeightedEdge > currentConnectedEdgeSet;
 
@@ -873,7 +874,7 @@ public class TrackModel
 				{
 					edgeToID.remove( e );
 				}
-				for ( final SnakeObject v : currentConnectedVertexSet )
+				for ( final Trackproperties v : currentConnectedVertexSet )
 				{
 					vertexToID.remove( v );
 				}
@@ -892,7 +893,7 @@ public class TrackModel
 		@Override
 		public void connectedComponentStarted( final ConnectedComponentTraversalEvent e )
 		{
-			currentConnectedVertexSet = new HashSet< SnakeObject >();
+			currentConnectedVertexSet = new HashSet< Trackproperties >();
 			currentConnectedEdgeSet = new HashSet< DefaultWeightedEdge >();
 			ID = IDcounter++;
 		}
@@ -901,15 +902,15 @@ public class TrackModel
 		 * @see TraversalListenerAdapter#vertexTraversed(VertexTraversalEvent)
 		 */
 		@Override
-		public void vertexTraversed( final VertexTraversalEvent< SnakeObject > event )
+		public void vertexTraversed( final VertexTraversalEvent< Trackproperties > event )
 		{
-			final SnakeObject v = event.getVertex();
+			final Trackproperties v = event.getVertex();
 			currentConnectedVertexSet.add( v );
 			vertexToID.put( v, ID );
 		}
 
 		@Override
-		public void edgeTraversed( final EdgeTraversalEvent< SnakeObject, DefaultWeightedEdge > event )
+		public void edgeTraversed( final EdgeTraversalEvent< Trackproperties, DefaultWeightedEdge > event )
 		{
 			final DefaultWeightedEdge e = event.getEdge();
 			currentConnectedEdgeSet.add( e );
@@ -917,7 +918,7 @@ public class TrackModel
 		}
 
 		@Override
-		public void vertexFinished( final VertexTraversalEvent< SnakeObject > e )
+		public void vertexFinished( final VertexTraversalEvent< Trackproperties > e )
 		{}
 	}
 
@@ -927,16 +928,16 @@ public class TrackModel
 	 * <p>
 	 * By complex change, we mean the changes occurring in the graph caused by
 	 * another change that was initiated manually by the user. For instance,
-	 * imagine we have a simple track branch made of 5 SnakeObjects that link linearly,
+	 * imagine we have a simple track branch made of 5 Trackpropertiess that link linearly,
 	 * like this:
 	 *
 	 * <pre>
 	 * S1 - S2 - S3 - S4 - S5
 	 * </pre>
 	 *
-	 * The user might want to remove the S3 SnakeObject, in the middle of the track. On
+	 * The user might want to remove the S3 Trackproperties, in the middle of the track. On
 	 * top of the track rearrangement, that is dealt with elsewhere in the model
-	 * class, this SnakeObject removal also triggers 2 edges removal: the links S2-S3
+	 * class, this Trackproperties removal also triggers 2 edges removal: the links S2-S3
 	 * and S3-S4 disappear. The only way for the {@link TrackModel} to be aware
 	 * of that, and to forward these events to its listener, is to listen itself
 	 * to the {@link #graph} that store links.
@@ -944,13 +945,13 @@ public class TrackModel
 	 * This is done through this class. This class is notified every time a
 	 * change occur in the {@link #graph}:
 	 * <ul>
-	 * <li>It ignores events triggered by SnakeObjects being added or removed, because
+	 * <li>It ignores events triggered by Trackpropertiess being added or removed, because
 	 * they can't be triggered automatically, and are dealt with in the
-	 * {@link TrackModel#addSnakeObjectTo(SnakeObject, Integer)} and
-	 * {@link TrackModel#removeSnakeObject(SnakeObject, Integer)} methods.
+	 * {@link TrackModel#addTrackpropertiesTo(Trackproperties, Integer)} and
+	 * {@link TrackModel#removeTrackproperties(Trackproperties, Integer)} methods.
 	 * <li>It catches all events triggered by a link being added or removed in
 	 * the graph, whether they are triggered manually through a call to a model
-	 * method such as {@link TrackModel#addEdge(SnakeObject, SnakeObject, double)}, or
+	 * method such as {@link TrackModel#addEdge(Trackproperties, Trackproperties, double)}, or
 	 * triggered by another call. They are used to build the
 	 * {@link TrackModel#edgesAdded} and {@link TrackModel#edgesRemoved} fields,
 	 * that will be used to notify listeners of the model.
@@ -958,24 +959,24 @@ public class TrackModel
 	 * @author Jean-Yves Tinevez &lt;jeanyves.tinevez@gmail.com&gt; Aug 12, 2011
 	 *
 	 */
-	private class MyGraphListener implements GraphListener< SnakeObject, DefaultWeightedEdge >
+	private class MyGraphListener implements GraphListener< Trackproperties, DefaultWeightedEdge >
 	{
 
 		@Override
-		public void vertexAdded( final GraphVertexChangeEvent< SnakeObject > event )
+		public void vertexAdded( final GraphVertexChangeEvent< Trackproperties > event )
 		{}
 
 		@Override
-		public void vertexRemoved( final GraphVertexChangeEvent< SnakeObject > event )
+		public void vertexRemoved( final GraphVertexChangeEvent< Trackproperties > event )
 		{
 			if ( null == connectedEdgeSets ) { return; }
 
-			final SnakeObject v = event.getVertex();
+			final Trackproperties v = event.getVertex();
 			vertexToID.remove( v );
 			final Integer id = vertexToID.get( v );
 			if ( id != null )
 			{
-				final Set< SnakeObject > set = connectedVertexSets.get( id );
+				final Set< Trackproperties > set = connectedVertexSets.get( id );
 				if ( null == set ) { return; // it was removed when removing the
 												// last edge of a track, most
 												// likely.
@@ -993,7 +994,7 @@ public class TrackModel
 		}
 
 		@Override
-		public void edgeAdded( final GraphEdgeChangeEvent< SnakeObject, DefaultWeightedEdge > event )
+		public void edgeAdded( final GraphEdgeChangeEvent< Trackproperties, DefaultWeightedEdge > event )
 		{
 			// To signal to ModelChangeListener
 			edgesAdded.add( event.getEdge() );
@@ -1008,9 +1009,9 @@ public class TrackModel
 			final DefaultWeightedEdge e = event.getEdge();
 
 			// Was it added to known tracks?
-			final SnakeObject sv = graph.getEdgeSource( e );
+			final Trackproperties sv = graph.getEdgeSource( e );
 			final Integer sid = vertexToID.get( sv );
-			final SnakeObject tv = graph.getEdgeTarget( e );
+			final Trackproperties tv = graph.getEdgeTarget( e );
 			final Integer tid = vertexToID.get( tv );
 
 			if ( null != tid && null != sid )
@@ -1043,9 +1044,9 @@ public class TrackModel
 					nes.add( e );
 
 					// Vertices:
-					final Set< SnakeObject > svs = connectedVertexSets.get( sid );
-					final Set< SnakeObject > tvs = connectedVertexSets.get( tid );
-					final HashSet< SnakeObject > nvs = new HashSet< SnakeObject >( ses.size() + tes.size() );
+					final Set< Trackproperties > svs = connectedVertexSets.get( sid );
+					final Set< Trackproperties > tvs = connectedVertexSets.get( tid );
+					final HashSet< Trackproperties > nvs = new HashSet< Trackproperties >( ses.size() + tes.size() );
 					nvs.addAll( svs );
 					nvs.addAll( tvs );
 
@@ -1054,7 +1055,7 @@ public class TrackModel
 					{
 						nid = sid;
 						rid = tid;
-						for ( final SnakeObject v : tvs )
+						for ( final Trackproperties v : tvs )
 						{
 							// Vertices of target set change id
 							vertexToID.put( v, nid );
@@ -1068,7 +1069,7 @@ public class TrackModel
 					{
 						nid = tid;
 						rid = sid;
-						for ( final SnakeObject v : svs )
+						for ( final Trackproperties v : svs )
 						{
 							// Vertices of source set change id
 							vertexToID.put( v, nid );
@@ -1104,7 +1105,7 @@ public class TrackModel
 			{
 				// Case 4: the edge was added between two lonely vertices.
 				// Create a new set id from this
-				final HashSet< SnakeObject > nvs = new HashSet< SnakeObject >( 2 );
+				final HashSet< Trackproperties > nvs = new HashSet< Trackproperties >( 2 );
 				nvs.add( graph.getEdgeSource( e ) );
 				nvs.add( graph.getEdgeTarget( e ) );
 
@@ -1158,7 +1159,7 @@ public class TrackModel
 		}
 
 		@Override
-		public void edgeRemoved( final GraphEdgeChangeEvent< SnakeObject, DefaultWeightedEdge > event )
+		public void edgeRemoved( final GraphEdgeChangeEvent< Trackproperties, DefaultWeightedEdge > event )
 		{
 			// To signal to ModelChangeListeners
 			edgesRemoved.add( event.getEdge() );
@@ -1190,11 +1191,11 @@ public class TrackModel
 				names.remove( id );
 				visibility.remove( id );
 				/* We need to remove also the vertices */
-				final Set< SnakeObject > vertexSet = connectedVertexSets.get( id );
+				final Set< Trackproperties > vertexSet = connectedVertexSets.get( id );
 				// Forget the vertices were in a set
-				for ( final SnakeObject SnakeObject : vertexSet )
+				for ( final Trackproperties Trackproperties : vertexSet )
 				{
-					vertexToID.remove( SnakeObject );
+					vertexToID.remove( Trackproperties );
 				}
 				// Forget the vertex set
 				connectedVertexSets.remove( id );
@@ -1212,29 +1213,29 @@ public class TrackModel
 				// So there are some edges remaining in the set.
 				// Look at the connected component of its source and target.
 				// Source
-				final HashSet< SnakeObject > sourceVCS = new HashSet< SnakeObject >();
+				final HashSet< Trackproperties > sourceVCS = new HashSet< Trackproperties >();
 				final HashSet< DefaultWeightedEdge > sourceECS = new HashSet< DefaultWeightedEdge >();
 				{
-					final SnakeObject source = graph.getEdgeSource( e );
+					final Trackproperties source = graph.getEdgeSource( e );
 					// Get its connected set
-					final BreadthFirstIterator< SnakeObject, DefaultWeightedEdge > i = new BreadthFirstIterator< SnakeObject, DefaultWeightedEdge >( graph, source );
+					final BreadthFirstIterator< Trackproperties, DefaultWeightedEdge > i = new BreadthFirstIterator< Trackproperties, DefaultWeightedEdge >( graph, source );
 					while ( i.hasNext() )
 					{
-						final SnakeObject sv = i.next();
+						final Trackproperties sv = i.next();
 						sourceVCS.add( sv );
 						sourceECS.addAll( graph.edgesOf( sv ) );
 					}
 				}
 				// Target
-				final HashSet< SnakeObject > targetVCS = new HashSet< SnakeObject >();
+				final HashSet< Trackproperties > targetVCS = new HashSet< Trackproperties >();
 				final HashSet< DefaultWeightedEdge > targetECS = new HashSet< DefaultWeightedEdge >();
 				{
-					final SnakeObject target = graph.getEdgeTarget( e );
+					final Trackproperties target = graph.getEdgeTarget( e );
 					// Get its connected set
-					final BreadthFirstIterator< SnakeObject, DefaultWeightedEdge > i = new BreadthFirstIterator< SnakeObject, DefaultWeightedEdge >( graph, target );
+					final BreadthFirstIterator< Trackproperties, DefaultWeightedEdge > i = new BreadthFirstIterator< Trackproperties, DefaultWeightedEdge >( graph, target );
 					while ( i.hasNext() )
 					{
-						final SnakeObject sv = i.next();
+						final Trackproperties sv = i.next();
 						targetVCS.add( sv );
 						targetECS.addAll( graph.edgesOf( sv ) );
 					}
@@ -1282,7 +1283,7 @@ public class TrackModel
 							edgeToID.put( te, newid );
 						}
 						connectedVertexSets.put( newid, sourceVCS );
-						for ( final SnakeObject tv : sourceVCS )
+						for ( final Trackproperties tv : sourceVCS )
 						{
 							vertexToID.put( tv, newid );
 						}
@@ -1300,7 +1301,7 @@ public class TrackModel
 						 * Nothing remains from the smallest part. The remaining
 						 * solitary vertex has no right to be called a track.
 						 */
-						final SnakeObject solitary = sourceVCS.iterator().next();
+						final Trackproperties solitary = sourceVCS.iterator().next();
 						vertexToID.remove( solitary );
 					}
 
@@ -1326,7 +1327,7 @@ public class TrackModel
 								edgeToID.put( te, newid );
 							}
 							connectedVertexSets.put( newid, targetVCS );
-							for ( final SnakeObject v : targetVCS )
+							for ( final Trackproperties v : targetVCS )
 							{
 								vertexToID.put( v, newid );
 							}
@@ -1344,7 +1345,7 @@ public class TrackModel
 							 * remaining solitary vertex has no right to be
 							 * called a track.
 							 */
-							final SnakeObject solitary = targetVCS.iterator().next();
+							final Trackproperties solitary = targetVCS.iterator().next();
 							vertexToID.remove( solitary );
 						}
 

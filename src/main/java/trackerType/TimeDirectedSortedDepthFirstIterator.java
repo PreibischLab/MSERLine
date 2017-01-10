@@ -12,29 +12,30 @@ import org.jgrapht.Graph;
 import org.jgrapht.Graphs;
 import org.jgrapht.graph.DefaultWeightedEdge;
 
-import mpicbg.spim.segmentation.SnakeObject;
+import graphconstructs.Trackproperties;
 
-public class TimeDirectedSortedDepthFirstIterator extends SortedDepthFirstIterator<SnakeObject, DefaultWeightedEdge> {
 
-	public TimeDirectedSortedDepthFirstIterator(final Graph<SnakeObject, DefaultWeightedEdge> g, final SnakeObject startVertex, final Comparator<SnakeObject> comparator) {
+public class TimeDirectedSortedDepthFirstIterator extends SortedDepthFirstIterator<Trackproperties, DefaultWeightedEdge> {
+
+	public TimeDirectedSortedDepthFirstIterator(final Graph<Trackproperties, DefaultWeightedEdge> g, final Trackproperties startVertex, final Comparator<Trackproperties> comparator) {
 		super(g, startVertex, comparator);
 	}
 
 
 
     @Override
-	protected void addUnseenChildrenOf(final SnakeObject vertex) {
+	protected void addUnseenChildrenOf(final Trackproperties vertex) {
 
 		// Retrieve target vertices, and sort them in a list
-		final List< SnakeObject > sortedChildren = new ArrayList< SnakeObject >();
+		final List< Trackproperties > sortedChildren = new ArrayList< Trackproperties >();
     	// Keep a map of matching edges so that we can retrieve them in the same order
-    	final Map<SnakeObject, DefaultWeightedEdge> localEdges = new HashMap<SnakeObject, DefaultWeightedEdge>();
+    	final Map<Trackproperties, DefaultWeightedEdge> localEdges = new HashMap<Trackproperties, DefaultWeightedEdge>();
 
-    	final int ts = vertex.getFeature(SnakeObject.FRAME).intValue();
+    	final int ts = vertex.getFeature(Trackproperties.FRAME).intValue();
         for (final DefaultWeightedEdge edge : specifics.edgesOf(vertex)) {
 
-        	final SnakeObject oppositeV = Graphs.getOppositeVertex(graph, edge, vertex);
-        	final int tt = oppositeV.getFeature(SnakeObject.FRAME).intValue();
+        	final Trackproperties oppositeV = Graphs.getOppositeVertex(graph, edge, vertex);
+        	final int tt = oppositeV.getFeature(Trackproperties.FRAME).intValue();
         	if (tt <= ts) {
         		continue;
         	}
@@ -46,9 +47,9 @@ public class TimeDirectedSortedDepthFirstIterator extends SortedDepthFirstIterat
         }
 
 		Collections.sort( sortedChildren, Collections.reverseOrder( comparator ) );
-		final Iterator< SnakeObject > it = sortedChildren.iterator();
+		final Iterator< graphconstructs.Trackproperties > it = sortedChildren.iterator();
         while (it.hasNext()) {
-			final SnakeObject child = it.next();
+			final Trackproperties child = it.next();
 
             if (nListeners != 0) {
                 fireEdgeTraversed(createEdgeTraversalEvent(localEdges.get(child)));

@@ -17,25 +17,26 @@ import org.jgrapht.event.GraphVertexChangeEvent;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.util.ModifiableInteger;
 
-import mpicbg.spim.segmentation.SnakeObject;
+import graphconstructs.Trackproperties;
 
 
-public class TimeDirectedNeighborIndex extends NeighborIndex< SnakeObject, DefaultWeightedEdge >
+
+public class TimeDirectedNeighborIndex extends NeighborIndex< Trackproperties, DefaultWeightedEdge >
 {
 
 	// ~ Instance fields
 	// --------------------------------------------------------
 
-	Map< SnakeObject, Neighbors< SnakeObject, DefaultWeightedEdge > > predecessorMap = new HashMap< SnakeObject, Neighbors< SnakeObject, DefaultWeightedEdge > >();
+	Map< Trackproperties, Neighbors< Trackproperties, DefaultWeightedEdge > > predecessorMap = new HashMap< Trackproperties, Neighbors< Trackproperties, DefaultWeightedEdge > >();
 
-	Map< SnakeObject, Neighbors< SnakeObject, DefaultWeightedEdge > > successorMap = new HashMap< SnakeObject, Neighbors< SnakeObject, DefaultWeightedEdge > >();
+	Map< Trackproperties, Neighbors< Trackproperties, DefaultWeightedEdge > > successorMap = new HashMap< Trackproperties, Neighbors< Trackproperties, DefaultWeightedEdge > >();
 
-	private final Graph< SnakeObject, DefaultWeightedEdge > graph;
+	private final Graph< Trackproperties, DefaultWeightedEdge > graph;
 
 	// ~ Constructors
 	// -----------------------------------------------------------
 
-	public TimeDirectedNeighborIndex( final Graph< SnakeObject, DefaultWeightedEdge > g )
+	public TimeDirectedNeighborIndex( final Graph< Trackproperties, DefaultWeightedEdge > g )
 	{
 		super( g );
 		this.graph = g;
@@ -55,7 +56,7 @@ public class TimeDirectedNeighborIndex extends NeighborIndex< SnakeObject, Defau
 	 *
 	 * @return all unique predecessors of the specified vertex
 	 */
-	public Set< SnakeObject > predecessorsOf( final SnakeObject v )
+	public Set< Trackproperties > predecessorsOf( final Trackproperties v )
 	{
 		return getPredecessors( v ).getNeighbors();
 	}
@@ -66,14 +67,14 @@ public class TimeDirectedNeighborIndex extends NeighborIndex< SnakeObject, Defau
 	 * in the returned list. Because a list of predecessors can not be
 	 * efficiently maintained, it is reconstructed on every invocation by
 	 * duplicating entries in the neighbor set. It is thus more efficient to use
-	 * {@link #predecessorsOf(SnakeObject)} unless duplicate neighbors are required.
+	 * {@link #predecessorsOf(Trackproperties)} unless duplicate neighbors are required.
 	 *
 	 * @param v
 	 *            the vertex whose predecessors are desired
 	 *
 	 * @return all predecessors of the specified vertex
 	 */
-	public List< SnakeObject > predecessorListOf( final SnakeObject v )
+	public List< Trackproperties > predecessorListOf( final Trackproperties v )
 	{
 		return getPredecessors( v ).getNeighborList();
 	}
@@ -89,7 +90,7 @@ public class TimeDirectedNeighborIndex extends NeighborIndex< SnakeObject, Defau
 	 *
 	 * @return all unique successors of the specified vertex
 	 */
-	public Set< SnakeObject > successorsOf( final SnakeObject v )
+	public Set< Trackproperties > successorsOf( final Trackproperties v )
 	{
 		return getSuccessors( v ).getNeighbors();
 	}
@@ -100,14 +101,14 @@ public class TimeDirectedNeighborIndex extends NeighborIndex< SnakeObject, Defau
 	 * in the returned list. Because a list of successors can not be efficiently
 	 * maintained, it is reconstructed on every invocation by duplicating
 	 * entries in the neighbor set. It is thus more efficient to use
-	 * {@link #successorsOf(SnakeObject)} unless duplicate neighbors are required.
+	 * {@link #successorsOf(Trackproperties)} unless duplicate neighbors are required.
 	 *
 	 * @param v
 	 *            the vertex whose successors are desired
 	 *
 	 * @return all successors of the specified vertex
 	 */
-	public List< SnakeObject > successorListOf( final SnakeObject v )
+	public List< Trackproperties > successorListOf( final Trackproperties v )
 	{
 		return getSuccessors( v ).getNeighborList();
 	}
@@ -116,11 +117,11 @@ public class TimeDirectedNeighborIndex extends NeighborIndex< SnakeObject, Defau
 	 * @see org.jgrapht.event.GraphListener#edgeAdded(GraphEdgeChangeEvent)
 	 */
 	@Override
-	public void edgeAdded( final GraphEdgeChangeEvent< SnakeObject, DefaultWeightedEdge > e )
+	public void edgeAdded( final GraphEdgeChangeEvent< Trackproperties, DefaultWeightedEdge > e )
 	{
 		final DefaultWeightedEdge edge = e.getEdge();
-		final SnakeObject source = graph.getEdgeSource( edge );
-		final SnakeObject target = graph.getEdgeTarget( edge );
+		final Trackproperties source = graph.getEdgeSource( edge );
+		final Trackproperties target = graph.getEdgeTarget( edge );
 
 		// if a map does not already contain an entry,
 		// then skip addNeighbor, since instantiating the map
@@ -149,11 +150,11 @@ public class TimeDirectedNeighborIndex extends NeighborIndex< SnakeObject, Defau
 	 * @see org.jgrapht.event.GraphListener#edgeRemoved(GraphEdgeChangeEvent)
 	 */
 	@Override
-	public void edgeRemoved( final GraphEdgeChangeEvent< SnakeObject, DefaultWeightedEdge > e )
+	public void edgeRemoved( final GraphEdgeChangeEvent< Trackproperties, DefaultWeightedEdge > e )
 	{
 		final DefaultWeightedEdge edge = e.getEdge();
-		final SnakeObject source = graph.getEdgeSource( edge );
-		final SnakeObject target = graph.getEdgeTarget( edge );
+		final Trackproperties source = graph.getEdgeSource( edge );
+		final Trackproperties target = graph.getEdgeTarget( edge );
 		if ( successorMap.containsKey( source ) )
 		{
 			successorMap.get( source ).removeNeighbor( target );
@@ -168,7 +169,7 @@ public class TimeDirectedNeighborIndex extends NeighborIndex< SnakeObject, Defau
 	 * @see org.jgrapht.event.VertexSetListener#vertexAdded(GraphVertexChangeEvent)
 	 */
 	@Override
-	public void vertexAdded( final GraphVertexChangeEvent< SnakeObject > e )
+	public void vertexAdded( final GraphVertexChangeEvent< Trackproperties > e )
 	{
 		// nothing to cache until there are edges
 	}
@@ -177,51 +178,51 @@ public class TimeDirectedNeighborIndex extends NeighborIndex< SnakeObject, Defau
 	 * @see org.jgrapht.event.VertexSetListener#vertexRemoved(GraphVertexChangeEvent)
 	 */
 	@Override
-	public void vertexRemoved( final GraphVertexChangeEvent< SnakeObject > e )
+	public void vertexRemoved( final GraphVertexChangeEvent< Trackproperties > e )
 	{
 		predecessorMap.remove( e.getVertex() );
 		successorMap.remove( e.getVertex() );
 	}
 
-	private Neighbors< SnakeObject, DefaultWeightedEdge > getPredecessors( final SnakeObject v )
+	private Neighbors< Trackproperties, DefaultWeightedEdge > getPredecessors( final Trackproperties v )
 	{
-		Neighbors< SnakeObject, DefaultWeightedEdge > neighbors = predecessorMap.get( v );
+		Neighbors< Trackproperties, DefaultWeightedEdge > neighbors = predecessorMap.get( v );
 		if ( neighbors == null )
 		{
-			final List< SnakeObject > nl = Graphs.neighborListOf( graph, v );
-			final List< SnakeObject > bnl = new ArrayList< SnakeObject >();
-			final int ts = v.getFeature( SnakeObject.FRAME ).intValue();
-			for ( final SnakeObject SnakeObject : nl )
+			final List< Trackproperties > nl = Graphs.neighborListOf( graph, v );
+			final List< Trackproperties > bnl = new ArrayList< Trackproperties >();
+			final int ts = v.getFeature( Trackproperties.FRAME ).intValue();
+			for ( final Trackproperties Trackproperties : nl )
 			{
-				final int tt = SnakeObject.getFeature( SnakeObject.FRAME ).intValue();
+				final int tt = Trackproperties.getFeature( Trackproperties.FRAME ).intValue();
 				if ( tt < ts )
 				{
-					bnl.add( SnakeObject );
+					bnl.add( Trackproperties );
 				}
 			}
-			neighbors = new Neighbors< SnakeObject, DefaultWeightedEdge >( v, bnl );
+			neighbors = new Neighbors< Trackproperties, DefaultWeightedEdge >( v, bnl );
 			predecessorMap.put( v, neighbors );
 		}
 		return neighbors;
 	}
 
-	private Neighbors< SnakeObject, DefaultWeightedEdge > getSuccessors( final SnakeObject v )
+	private Neighbors< Trackproperties, DefaultWeightedEdge > getSuccessors( final Trackproperties v )
 	{
-		Neighbors< SnakeObject, DefaultWeightedEdge > neighbors = successorMap.get( v );
+		Neighbors< Trackproperties, DefaultWeightedEdge > neighbors = successorMap.get( v );
 		if ( neighbors == null )
 		{
-			final List< SnakeObject > nl = Graphs.neighborListOf( graph, v );
-			final List< SnakeObject > bnl = new ArrayList< SnakeObject >();
-			final int ts = v.getFeature( SnakeObject.FRAME ).intValue();
-			for ( final SnakeObject SnakeObject : nl )
+			final List< Trackproperties > nl = Graphs.neighborListOf( graph, v );
+			final List< Trackproperties > bnl = new ArrayList< Trackproperties >();
+			final int ts = v.getFeature( Trackproperties.FRAME ).intValue();
+			for ( final Trackproperties Trackproperties : nl )
 			{
-				final int tt = SnakeObject.getFeature( SnakeObject.FRAME ).intValue();
+				final int tt = Trackproperties.getFeature( Trackproperties.FRAME ).intValue();
 				if ( tt > ts )
 				{
-					bnl.add( SnakeObject );
+					bnl.add( Trackproperties );
 				}
 			}
-			neighbors = new Neighbors< SnakeObject, DefaultWeightedEdge >( v, bnl );
+			neighbors = new Neighbors< Trackproperties, DefaultWeightedEdge >( v, bnl );
 			successorMap.put( v, neighbors );
 		}
 		return neighbors;

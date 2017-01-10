@@ -1,6 +1,6 @@
 package costMatrix;
 
-import mpicbg.spim.segmentation.SnakeObject;
+import graphconstructs.Trackproperties;
 
 /**
  * Implementation of various cost functions
@@ -10,13 +10,15 @@ import mpicbg.spim.segmentation.SnakeObject;
 
 // Cost function base don minimizing the squared distances
 
-public class SquareDistCostFunction implements CostFunction< SnakeObject, SnakeObject >
+public class SquareDistCostFunction implements CostFunction< Trackproperties, Trackproperties >
 {
 
 	@Override
-	public double linkingCost( final SnakeObject source, final SnakeObject target )
+	public double linkingCost( final Trackproperties source, final Trackproperties target )
 	{
-		return source.squareDistanceTo(target );
+		
+		return 0;
+		//return source.squareDistanceTo(target );
 	}
 	
 	
