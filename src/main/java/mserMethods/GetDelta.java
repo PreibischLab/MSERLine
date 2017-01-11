@@ -39,7 +39,7 @@ public class GetDelta {
 	 */
 	
 	public static double Bestdeltaparam(final Img<UnsignedByteType> newimg,final double delta, final long minSize, 
-			final long maxSize, final double maxVar, final double minDiversity, final int minlength, final int maxlines, final int maxdelta,  final boolean darktoBright){
+			final long maxSize, final double maxVar, final double minDiversity, final long minlength, final int maxlines, final int maxdelta,  final boolean darktoBright){
 	
 		
 		
