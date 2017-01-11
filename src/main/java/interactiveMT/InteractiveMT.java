@@ -111,8 +111,6 @@ public class InteractiveMT implements PlugIn {
 	float deltaMax = 500f;
 	float maxVarMin = 0;
 	float maxVarMax = 1;
-	long maxLinesMin = 1;
-	long maxLinesMax = 500;
 	boolean darktobright = false;
 	long minSize = 1;
 	long maxSize = 1000;
@@ -128,7 +126,6 @@ public class InteractiveMT implements PlugIn {
 	float delta = 1f;
 	int deltaInit = 10;
 	int maxVarInit = 1;
-	int maxLinesInit = 10;
 	int minSizeInit = 1;
 	int maxSizeInit = 100;
 	
@@ -136,7 +133,6 @@ public class InteractiveMT implements PlugIn {
 	
 	public int minDiversityInit = 0;
 	public int radius = 1;
-	public int MaxLines = 5;
 	public long Size = 1;
 	
 	public  float maxVar = 1;
@@ -186,7 +182,7 @@ public class InteractiveMT implements PlugIn {
 	int slice2, currentframe;
 
 	public static enum ValueChange {
-		SLICE, ROI, ALL, DELTA, FindLinesVia, MAXVAR, MINDIVERSITY, DARKTOBRIGHT, AUTODELTA, MAXLINES, MINSIZE, MAXSIZE, SHOWMSER;
+		SLICE, ROI, ALL, DELTA, FindLinesVia, MAXVAR, MINDIVERSITY, DARKTOBRIGHT, MINSIZE, MAXSIZE, SHOWMSER;
 	}
 
 	boolean isFinished = false;
@@ -382,7 +378,7 @@ public class InteractiveMT implements PlugIn {
 				if (roimanager == null) {
 					roimanager = new RoiManager();
 				}
-				if (change == ValueChange.SHOWMSER){
+				if (change == ValueChange.SHOWMSER ){
 
 					MouseEvent mev = new MouseEvent(preprocessedimp.getCanvas(), MouseEvent.MOUSE_RELEASED, System.currentTimeMillis(), 0, 0, 0,
 							1, false);
@@ -555,7 +551,6 @@ public class InteractiveMT implements PlugIn {
 				if (FindLinesViaMSER) {
 
 					LinefinderMSER newlineMser = new LinefinderMSER(img, Preprocessedimg, minlength, 0);
-					newlineMser.setMaxlines(MaxLines);
 
 					Overlay overlay = newlineMser.getOverlay();
 					ImagePlus impcurr = IJ.getImage();
@@ -576,7 +571,6 @@ public class InteractiveMT implements PlugIn {
 				if (FindLinesViaMSERwHOUGH) {
 
 					LinefinderMSERwHough newlineMserwHough = new LinefinderMSERwHough(img, Preprocessedimg, minlength, 0);
-					newlineMserwHough.setMaxlines(MaxLines);
 					Overlay overlay = newlineMserwHough.getOverlay();
 					ImagePlus impcurr = IJ.getImage();
 					impcurr.setOverlay(overlay);
@@ -620,7 +614,6 @@ public class InteractiveMT implements PlugIn {
 
 				if (FindLinesViaMSERwHOUGH) {
 					LinefinderMSERwHough newlineMserwHough = new LinefinderMSERwHough(groundframe, groundframepre, minlength, currentframe);
-					newlineMserwHough.setMaxlines(MaxLines);
 					newlineMserwHough.setDelta(delta);
 					PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength, currentframe, psf,
 							newlineMserwHough, UserChoiceModel.Line);
@@ -798,7 +791,7 @@ public class InteractiveMT implements PlugIn {
 	private void DisplayMSER(){
 		
 		// Create dialog
-		final Frame frame = new Frame("Mser Parameters");
+		final Frame frame = new Frame("Interactive Mser");
 		frame.setSize(550, 550);
 
 		/* Instantiation */
@@ -809,27 +802,23 @@ public class InteractiveMT implements PlugIn {
 				final Scrollbar delta = new Scrollbar(Scrollbar.HORIZONTAL, deltaInit, 10, 0, 10 + scrollbarSize);
 				final Scrollbar maxVar = new Scrollbar(Scrollbar.HORIZONTAL, maxVarInit, 10, 0, 10 + scrollbarSize);
 				final Scrollbar minDiversity = new Scrollbar(Scrollbar.HORIZONTAL, minDiversityInit, 10, 0, 10 + scrollbarSize);
-				final Scrollbar maxLines = new Scrollbar(Scrollbar.HORIZONTAL, MaxLines, 10, 0, 10 + scrollbarSize);
 				final Scrollbar minSize= new Scrollbar(Scrollbar.HORIZONTAL, minSizeInit, 10, 0, 10 + scrollbarSize);
 				final Scrollbar maxSize = new Scrollbar(Scrollbar.HORIZONTAL, maxSizeInit, 10, 0, 10 + scrollbarSize);
-				final Checkbox ComputeTree = new Checkbox("Compute Tree and display");
+				final Button ComputeTree = new Button("Compute Tree and display");
 				
 				this.maxVar = computeValueFromScrollbarPosition(maxVarInit, maxVarMin, maxVarMax, scrollbarSize);
 				this.delta = computeValueFromScrollbarPosition(deltaInit, deltaMin, deltaMax, scrollbarSize);
 				this.minDiversity = computeValueFromScrollbarPosition(minDiversityInit, minDiversityMin, minDiversityMax, scrollbarSize);
-				this.MaxLines = (int) computeValueFromScrollbarPosition(maxLinesInit, maxLinesMin, maxLinesMax, scrollbarSize);
 				this.minSize = (int)computeValueFromScrollbarPosition(minSizeInit, minSizemin, minSizemax, scrollbarSize);
 				this.maxSize = (int)computeValueFromScrollbarPosition(maxSizeInit, maxSizemin, maxSizemax, scrollbarSize);
 				
 				final Checkbox min = new Checkbox("Look for Minima ", darktobright);
-				final Checkbox auto = new Checkbox("Auto determine Delta", AutoDelta);
 				
 
 				
 				final Label deltaText = new Label("delta = " + this.delta, Label.CENTER);
 				final Label maxVarText = new Label("maxVar = " + this.maxVar, Label.CENTER);
 				final Label minDiversityText = new Label("minDiversity = " + this.minDiversity, Label.CENTER);
-				final Label maxLinesText = new Label("maxLines = " + this.MaxLines, Label.CENTER);
 				final Label minSizeText = new Label("MinSize = " + this.minSize, Label.CENTER);
 				final Label maxSizeText = new Label("MaxSize = " + this.maxSize, Label.CENTER);
 				/* Location */
@@ -859,12 +848,8 @@ public class InteractiveMT implements PlugIn {
 				++c.gridy;
 				frame.add(minDiversity, c);
 				
-	            ++c.gridy;
+	        
 				
-	            frame.add(maxLinesText, c);
-					
-				++c.gridy;
-				frame.add(maxLines, c);
 				
 				++c.gridy;
 					
@@ -884,9 +869,7 @@ public class InteractiveMT implements PlugIn {
 				c.insets = new Insets(10, 175, 0, 175);
 				frame.add(min, c);
 
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				frame.add(auto, c);
+			
 				
 				++c.gridy;
 				c.insets = new Insets(10, 175, 0, 175);
@@ -909,9 +892,7 @@ public class InteractiveMT implements PlugIn {
 						new minDiversityListener(minDiversityText, minDiversityMin, minDiversityMax, scrollbarSize, minDiversity));
 				
 				
-				
-				maxLines.addAdjustmentListener(
-						new maxLinesListener(maxLinesText, maxLinesMin, maxLinesMax, scrollbarSize, maxLines));
+		
 				
 			
 				
@@ -928,12 +909,10 @@ public class InteractiveMT implements PlugIn {
 				delta.addAdjustmentListener(new DeltaListener(deltaText, deltaMin, deltaMax, scrollbarSize, delta));
 				maxVar.addAdjustmentListener(new maxVarListener(maxVarText, maxVarMin, maxVarMax, scrollbarSize, maxVar));
 				minDiversity.addAdjustmentListener(new minDiversityListener(minDiversityText, minDiversityMin, minDiversityMax, scrollbarSize, minDiversity));
-				maxLines.addAdjustmentListener(new maxLinesListener(maxLinesText, maxLinesMin, maxLinesMax, scrollbarSize, maxLines));
 				minSize.addAdjustmentListener(new minSizeListener(minSizeText, minSizemin, minSizemax, scrollbarSize, minSize));
 				maxSize.addAdjustmentListener(new maxSizeListener(maxSizeText, maxSizemin, maxSizemax, scrollbarSize, maxSize));
 				min.addItemListener(new DarktobrightListener());
-				auto.addItemListener(new AutoDeltaListener());
-				ComputeTree.addItemListener(new ComputeTreeListener());
+				ComputeTree.addActionListener(new ComputeTreeListener());
 				frame.addWindowListener(new FrameListener(frame));
 
 				frame.setVisible(true);
@@ -944,23 +923,15 @@ public class InteractiveMT implements PlugIn {
 		
 	}
 	
-	protected class ComputeTreeListener implements ItemListener {
+	protected class ComputeTreeListener implements ActionListener {
+	
+
 		@Override
-		public void itemStateChanged(final ItemEvent arg0) {
-			boolean oldState = ShowMser;
+		public void actionPerformed(ActionEvent arg0) {
+			ShowMser = true;
+			updatePreview(ValueChange.SHOWMSER);
 			
-			if (arg0.getStateChange() == ItemEvent.DESELECTED)
-				ShowMser = false;
-			else if (arg0.getStateChange() == ItemEvent.SELECTED)
-				ShowMser = true;
-
-			if (ShowMser != oldState) {
-				while (isComputing)
-					SimpleMultiThreading.threadWait(10);
-
-				updatePreview(ValueChange.SHOWMSER);
-			}
-	}
+		}
 	}
 	
 	protected class DarktobrightListener implements ItemListener {
@@ -981,24 +952,7 @@ public class InteractiveMT implements PlugIn {
 			}
 		}
 	}
-	protected class AutoDeltaListener implements ItemListener {
-		@Override
-		public void itemStateChanged(final ItemEvent arg0) {
-			boolean oldState = AutoDelta;
-
-			if (arg0.getStateChange() == ItemEvent.DESELECTED)
-				AutoDelta = false;
-			else if (arg0.getStateChange() == ItemEvent.SELECTED)
-				AutoDelta = true;
-
-			if (AutoDelta != oldState) {
-				while (isComputing)
-					SimpleMultiThreading.threadWait(10);
-
-				updatePreview(ValueChange.AUTODELTA);
-			}
-		}
-	}
+	
 	
 	
 	protected class FrameListener extends WindowAdapter {
@@ -1015,43 +969,6 @@ public class InteractiveMT implements PlugIn {
 		}
 	}
 	
-	protected class maxLinesListener implements AdjustmentListener {
-		final Label label;
-		final float min, max;
-		final int scrollbarSize;
-
-		final Scrollbar maxlinesScrollbar;
-
-		public maxLinesListener(final Label label, final float min, final float max, final int scrollbarSize,
-				final Scrollbar maxlinesScrollbar) {
-			this.label = label;
-			this.min = min;
-			this.max = max;
-			this.scrollbarSize = scrollbarSize;
-
-			this.maxlinesScrollbar = maxlinesScrollbar;
-			
-		}
-		
-		@Override
-		public void adjustmentValueChanged(final AdjustmentEvent event) {
-			MaxLines = (int) computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
-
-			
-				maxlinesScrollbar.setValue(computeScrollbarPositionFromValue(MaxLines, min, max, scrollbarSize));
-			
-
-			label.setText("MaxLines = " + MaxLines);
-
-			// if ( !event.getValueIsAdjusting() )
-			{
-				while (isComputing) {
-					SimpleMultiThreading.threadWait(10);
-				}
-				updatePreview(ValueChange.MAXLINES);
-			}
-		}
-	}
 	
 	protected class DeltaListener implements AdjustmentListener {
 		final Label label;
@@ -1672,100 +1589,6 @@ public class InteractiveMT implements PlugIn {
 		final EllipseRoi ellipse = new EllipseRoi(x - dx, y - dy, x + dx, y + dy, scale2 / scale1);
 		return ellipse;
 	}
-	public double Bestdeltaparam(final Img<UnsignedByteType> newimg,final double delta, final long minSize, 
-			final long maxSize, final double maxVar, final double minDiversity, final int minlength, final int maxlines, final int maxdelta,  final boolean darktoBright){
-	
-		
-		System.out.println("Determining the best delta parameter for the image:");
-		
-			int stepdelta = 10;
-			
-			
-			double MaxBestdelta = delta;
-			ArrayList<Double> Bestdelta = new ArrayList<Double>();
-			int Maxellipsecount = Integer.MIN_VALUE;
-			
-			
-			for (int i = 0; i < maxdelta ; ++i){
-			
-				
-				
-			double bestdelta = delta +  i* stepdelta;	
-				
-			int ellipsecount = 0;
-			
-			
-			ArrayList<double[]> ellipselist = new ArrayList<double[]>();
-			
-
-		MserTree<UnsignedByteType> newtree = MserTree.buildMserTree(newimg, bestdelta, minSize, maxSize, maxVar,
-				minDiversity, darktoBright);
-		final HashSet<Mser<UnsignedByteType>> rootset = newtree.roots();
-		final Iterator<Mser<UnsignedByteType>> rootsetiterator = rootset.iterator();
-		
-		while (rootsetiterator.hasNext()) {
-
-			Mser<UnsignedByteType> rootmser = rootsetiterator.next();
-
-			if (rootmser.size() > 0) {
-
-				final double[] meanandcov = { rootmser.mean()[0], rootmser.mean()[1], rootmser.cov()[0],
-						rootmser.cov()[1], rootmser.cov()[2] };
-				ellipselist.add(meanandcov);
-
-			}
-		}
-		
-		if (ellipselist.size() > 0){
-		
-		for (int index = 0; index < ellipselist.size(); ++index) {
-			
-			
-			final double[] mean = { ellipselist.get(index)[0] , ellipselist.get(index)[1] };
-			final double[] covar = { ellipselist.get(index)[2], ellipselist.get(index)[3],
-					ellipselist.get(index)[4] };
-			final EllipseRoi ellipseroi = createEllipse(mean, covar, 3);
-			
-    		final double perimeter = ellipseroi.getLength();
-    		
-    		if (perimeter > Math.PI * minlength ){
-    			
-    			ellipsecount++;
-    		}
-		}
-		}
-		if (ellipsecount > Maxellipsecount && rootset.size() <= maxlines){
-			
-			Maxellipsecount = ellipsecount;
-			MaxBestdelta = bestdelta;
-		//	System.out.println(rootset.size() + " " + MaxBestdelta);
-		}
-		
-
-		Bestdelta.add(MaxBestdelta);
-		
-		}
-			
-			Set<Double> mySet = new HashSet<Double>(Bestdelta);
-			double maxcollection = 0;
-			double frequdelta = MaxBestdelta;
-			
-			for(Double s: mySet){
-
-				 System.out.println( "Best delta:" + s + " " + "Stable over iterations: " + Collections.frequency(Bestdelta,s));
-
-				 
-				 if (Collections.frequency(Bestdelta,s) > maxcollection){
-				                      maxcollection = Collections.frequency(Bestdelta,s);
-				                      frequdelta = s;
-				 }
-				 
-				}
-		
-			return frequdelta;
-		
-		
-		}
 	
 	
 	public static void main(String[] args) {
