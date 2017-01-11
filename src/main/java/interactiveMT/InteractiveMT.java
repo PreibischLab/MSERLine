@@ -67,6 +67,7 @@ import mpicbg.imglib.image.ImageFactory;
 import mpicbg.imglib.multithreading.SimpleMultiThreading;
 import mpicbg.imglib.util.Util;
 import net.imglib2.Cursor;
+import net.imglib2.FinalInterval;
 import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.componenttree.mser.Mser;
@@ -102,21 +103,22 @@ public class InteractiveMT implements PlugIn {
 
 	final int extraSize = 40;
 	final int scrollbarSize = 1000;
+	final int scrollbarSizebig = 1000;
 	// steps per octave
-	public static int standardSensitivity = 8;
+	public static int standardSensitivity = 4;
 	int sensitivity = standardSensitivity;
 	float deltaMin = 1f;
 	float deltaMax = 500f;
 	float maxVarMin = 0;
 	float maxVarMax = 1;
-	int maxLinesMin = 1;
-	int maxLinesMax = 500;
+	long maxLinesMin = 1;
+	long maxLinesMax = 500;
 	boolean darktobright = false;
 	long minSize = 1;
 	long maxSize = 1000;
 	long minSizemin = 0;
-	long  minSizemax = 10;
-	long maxSizemin = 1000;
+	long  minSizemax = 100;
+	long maxSizemin = 100;
 	long maxSizemax = 100000;
 	
 	
@@ -126,19 +128,19 @@ public class InteractiveMT implements PlugIn {
 	float delta = 1f;
 	int deltaInit = 10;
 	int maxVarInit = 1;
-	int maxLinesInit = 1;
+	int maxLinesInit = 10;
 	int minSizeInit = 1;
-	int maxSizeInit = 1000;
+	int maxSizeInit = 100;
 	
    
 	
-	int minDiversityInit = 0;
-	int radius = 1;
-	int MaxLines = 5;
+	public int minDiversityInit = 0;
+	public int radius = 1;
+	public int MaxLines = 5;
 	public long Size = 1;
 	
-	public  double maxVar = 1;
-	public double minDiversity = 1;
+	public  float maxVar = 1;
+	public float minDiversity = 1;
 	
 	
 	Color colorDraw = null;
@@ -375,8 +377,24 @@ public class InteractiveMT implements PlugIn {
 		
 		// Re-compute MSER ellipses if neccesary
 				ArrayList<EllipseRoi> Rois = new ArrayList<EllipseRoi>();
+				RoiManager roimanager = RoiManager.getInstance();
+
+				if (roimanager == null) {
+					roimanager = new RoiManager();
+				}
 				if (change == ValueChange.SHOWMSER){
-				
+
+					MouseEvent mev = new MouseEvent(preprocessedimp.getCanvas(), MouseEvent.MOUSE_RELEASED, System.currentTimeMillis(), 0, 0, 0,
+							1, false);
+					
+					if (mev != null) {
+
+						roimanager.close();
+
+						roimanager = new RoiManager();
+
+						
+					}
 			
 					
 					IJ.log(" Computing the Component tree");
@@ -395,23 +413,8 @@ public class InteractiveMT implements PlugIn {
 						o.clear();
 						
 						
-						RoiManager roimanager = RoiManager.getInstance();
-
-						if (roimanager == null) {
-							roimanager = new RoiManager();
-						}
 						
-						MouseEvent mev = new MouseEvent(preprocessedimp.getCanvas(), MouseEvent.MOUSE_RELEASED, System.currentTimeMillis(), 0, 0, 0,
-								1, false);
 						
-						if (mev != null) {
-
-							roimanager.close();
-
-							roimanager = new RoiManager();
-
-							
-						}
 			           for (int index = 0; index < Rois.size(); ++index) {
 							
 							EllipseRoi or = Rois.get(index);
@@ -806,7 +809,7 @@ public class InteractiveMT implements PlugIn {
 				final Scrollbar delta = new Scrollbar(Scrollbar.HORIZONTAL, deltaInit, 10, 0, 10 + scrollbarSize);
 				final Scrollbar maxVar = new Scrollbar(Scrollbar.HORIZONTAL, maxVarInit, 10, 0, 10 + scrollbarSize);
 				final Scrollbar minDiversity = new Scrollbar(Scrollbar.HORIZONTAL, minDiversityInit, 10, 0, 10 + scrollbarSize);
-				final Scrollbar maxLines = new Scrollbar(Scrollbar.HORIZONTAL, maxLinesInit, 10, 0, 10 + scrollbarSize);
+				final Scrollbar maxLines = new Scrollbar(Scrollbar.HORIZONTAL, MaxLines, 10, 0, 10 + scrollbarSize);
 				final Scrollbar minSize= new Scrollbar(Scrollbar.HORIZONTAL, minSizeInit, 10, 0, 10 + scrollbarSize);
 				final Scrollbar maxSize = new Scrollbar(Scrollbar.HORIZONTAL, maxSizeInit, 10, 0, 10 + scrollbarSize);
 				final Checkbox ComputeTree = new Checkbox("Compute Tree and display");
@@ -827,8 +830,8 @@ public class InteractiveMT implements PlugIn {
 				final Label maxVarText = new Label("maxVar = " + this.maxVar, Label.CENTER);
 				final Label minDiversityText = new Label("minDiversity = " + this.minDiversity, Label.CENTER);
 				final Label maxLinesText = new Label("maxLines = " + this.MaxLines, Label.CENTER);
-				final Label minSizeText = new Label("minSize = " + this.minSize, Label.CENTER);
-				final Label maxSizeText = new Label("maxSize = " + this.maxSize, Label.CENTER);
+				final Label minSizeText = new Label("MinSize = " + this.minSize, Label.CENTER);
+				final Label maxSizeText = new Label("MaxSize = " + this.maxSize, Label.CENTER);
 				/* Location */
 				frame.setLayout(layout);
 
@@ -1035,7 +1038,7 @@ public class InteractiveMT implements PlugIn {
 			MaxLines = (int) computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
 
 			
-				maxlinesScrollbar.setValue(computeScrollbarPositionFromValue(delta, min, max, scrollbarSize));
+				maxlinesScrollbar.setValue(computeScrollbarPositionFromValue(MaxLines, min, max, scrollbarSize));
 			
 
 			label.setText("MaxLines = " + MaxLines);
@@ -1184,7 +1187,7 @@ public class InteractiveMT implements PlugIn {
 		
 		@Override
 		public void adjustmentValueChanged(final AdjustmentEvent event) {
-			maxVar = computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
+			maxVar = (computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize));
 
 			
 				maxVarScrollbar.setValue(computeScrollbarPositionFromValue((float)maxVar, min, max, scrollbarSize));
@@ -1215,14 +1218,13 @@ public class InteractiveMT implements PlugIn {
 			this.min = min;
 			this.max = max;
 			this.scrollbarSize = scrollbarSize;
-
 			this.minDiversityScrollbar = minDiversityScrollbar;
 			
 		}
 		
 		@Override
 		public void adjustmentValueChanged(final AdjustmentEvent event) {
-			minDiversity = computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
+			minDiversity = (computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize));
 
 			
 				minDiversityScrollbar.setValue(computeScrollbarPositionFromValue((float)minDiversity, min, max, scrollbarSize));
@@ -1367,7 +1369,7 @@ public class InteractiveMT implements PlugIn {
 
 			cursor.get().set(positionable.get().get());
 		}
-
+	
 		return img;
 	}
 	protected Img<FloatType> extractImage(final Img<FloatType> intervalView,
