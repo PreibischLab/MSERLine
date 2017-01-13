@@ -32,13 +32,13 @@ import net.imglib2.view.Views;
  * @param <T>
  *            the type of the source image.
  */
-public class MedianFilter2D< T extends RealType< T > & NativeType< T >> extends BenchmarkAlgorithm implements OutputAlgorithm< RandomAccessibleInterval< T >>
+public class MedianFilterImg2D< T extends RealType< T > & NativeType< T >> extends BenchmarkAlgorithm implements OutputAlgorithm< Img< T >>
 {
 	private static final String BASE_ERROR_MSG = "[MedianFiler2D] ";
 
-	private final RandomAccessibleInterval< T > source;
+	private final Img< T > source;
 
-	private RandomAccessibleInterval< T > output;
+	private Img< T > output;
 
 	private final int radius;
 
@@ -52,7 +52,7 @@ public class MedianFilter2D< T extends RealType< T > & NativeType< T >> extends 
 	 *            determines the size of the neighborhood. In 2D or 3D, a radius
 	 *            of 1 will generate a 3x3 neighborhood.
 	 */
-	public MedianFilter2D( final RandomAccessibleInterval<T> source, final int radius )
+	public MedianFilterImg2D( final Img<T> source, final int radius )
 	{
 		this.source = source;
 		this.radius = radius;
@@ -131,7 +131,7 @@ public class MedianFilter2D< T extends RealType< T > & NativeType< T >> extends 
 	}
 
 	@Override
-	public RandomAccessibleInterval<T> getResult()
+	public Img<T> getResult()
 	{
 		return output;
 	}

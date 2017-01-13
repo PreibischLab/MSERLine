@@ -163,6 +163,7 @@ implements OutputAlgorithm<Pair<ArrayList<Indexedlength>, ArrayList<Indexedlengt
 	
 	public SubpixelLengthPCLine( final RandomAccessibleInterval<FloatType> source, 
 			             final Linefinder finder,
+			           
 			             final double[] psf,
 			             final int minlength,
 			             final UserChoiceModel model,

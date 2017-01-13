@@ -1,5 +1,6 @@
 package interactiveMT;
 
+import java.awt.BorderLayout;
 import java.awt.Button;
 import java.awt.Checkbox;
 import java.awt.CheckboxGroup;
@@ -22,12 +23,15 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.security.spec.MGF1ParameterSpec;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
+import javax.swing.border.EmptyBorder;
 
 import com.sun.tools.javac.util.Pair;
 
@@ -90,6 +94,7 @@ import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import peakFitter.SortListbyproperty;
 import preProcessing.MedianFilter2D;
+import preProcessing.MedianFilterImg2D;
 import roiFinder.Roifinder;
 import roiFinder.RoifinderMSER;
 
@@ -101,14 +106,14 @@ import roiFinder.RoifinderMSER;
 
 public class InteractiveMT implements PlugIn {
 
-	final int extraSize = 40;
+	
 	final int scrollbarSize = 1000;
 	final int scrollbarSizebig = 1000;
 	// steps per octave
 	public static int standardSensitivity = 4;
 	int sensitivity = standardSensitivity;
-	float deltaMin = 1f;
-	float deltaMax = 500f;
+	float deltaMin = 0;
+	float deltaMax = 400f;
 	float maxVarMin = 0;
 	float maxVarMax = 1;
 	boolean darktobright = false;
@@ -117,7 +122,7 @@ public class InteractiveMT implements PlugIn {
 	long minSizemin = 0;
 	long  minSizemax = 100;
 	long maxSizemin = 100;
-	long maxSizemax = 100000;
+	long maxSizemax = 10000;
 	
 	
 	float minDiversityMin = 0;
@@ -130,7 +135,6 @@ public class InteractiveMT implements PlugIn {
 	int maxSizeInit = 100;
 	
    
-	
 	public int minDiversityInit = 0;
 	public int radius = 1;
 	public long Size = 1;
@@ -161,11 +165,14 @@ public class InteractiveMT implements PlugIn {
 	int channel = 0;
 	Img<FloatType> img;
 	Img<FloatType> Preprocessedimg;
-	
+	Img<FloatType> originalimg;
+	Img<FloatType> originalPreprocessedimg;
+	int inix = 20;
+	int iniy = 20;
 	MserTree<UnsignedByteType> newtree;
 	// Image 2d at the current slice
-	Img<FloatType> currentimg;
-	Img<FloatType> currentPreprocessedimg;
+	RandomAccessibleInterval<FloatType> currentimg;
+	RandomAccessibleInterval<FloatType> currentPreprocessedimg;
 	Color originalColor = new Color(0.8f, 0.8f, 0.8f);
 	Color inactiveColor = new Color(0.95f, 0.95f, 0.95f);
 	ImagePlus imp;
@@ -176,13 +183,14 @@ public class InteractiveMT implements PlugIn {
 	private int ndims;
 	ArrayList<CommonOutputHF> output;
 	public Rectangle standardRectangle;
-	Img<UnsignedByteType> newimg;
-
+	public FinalInterval interval;
+	RandomAccessibleInterval<UnsignedByteType> newimg;
+	ArrayList<double[]> AllmeanCovar;
 	// first and last slice to process
-	int slice2, currentframe;
+	int endStack, currentframe;
 
 	public static enum ValueChange {
-		SLICE, ROI, ALL, DELTA, FindLinesVia, MAXVAR, MINDIVERSITY, DARKTOBRIGHT, MINSIZE, MAXSIZE, SHOWMSER;
+		ROI, ALL, DELTA, FindLinesVia, MAXVAR, MINDIVERSITY, DARKTOBRIGHT, MINSIZE, MAXSIZE, SHOWMSER, FRAME;
 	}
 
 	boolean isFinished = false;
@@ -244,8 +252,61 @@ public class InteractiveMT implements PlugIn {
 		delta = value;
 		deltaInit = computeScrollbarPositionFromValue(delta, deltaMin, deltaMax, scrollbarSize);
 	}
+	
+	public double getInitialDelta(final float value){
+		
+		return delta;
+		
+	}
+	
+	
 
+	public void setInitialmaxVar(final float value) {
+		maxVar = value;
+		maxVarInit = computeScrollbarPositionFromValue(maxVar, maxVarMin, maxVarMax, scrollbarSize);
+	}
 
+     public double getInitialmaxVar(final float value){
+		
+		return maxVar;
+		
+	}
+
+     
+     public void setInitialminDiversity(final float value) {
+ 		minDiversity = value;
+ 		minDiversityInit = computeScrollbarPositionFromValue(minDiversity, minDiversityMin, minDiversityMax, scrollbarSize);
+ 	}
+
+      public double getInitialminDiversity(final float value){
+ 		
+ 		return minDiversity;
+ 		
+ 	}
+      
+      public void setInitialminSize(final int value) {
+   		minSize = value;
+   		minSizeInit = computeScrollbarPositionFromValue(minSize, minSizemin, minSizemax, scrollbarSize);
+   	}
+
+        public double getInitialminSize(final int value){
+   		
+   		return minSize;
+   		
+   	}
+        
+        
+        public void setInitialmaxSize(final int value) {
+     		maxSize = value;
+     		maxSizeInit = computeScrollbarPositionFromValue(maxSize, maxSizemin, maxSizemax, scrollbarSize);
+     	}
+
+          public double getInitialmaxSize(final int value){
+     		
+     		return maxSize;
+     		
+     	}
+      
 
 	public InteractiveMT(final ImagePlus imp, final ImagePlus preprocessedimp, final double[] psf,
 			final int minlength) {
@@ -254,18 +315,18 @@ public class InteractiveMT implements PlugIn {
 		this.psf = psf;
 		this.minlength = minlength;
 		ndims = imp.getNDimensions();
-		standardRectangle = new Rectangle(20, 20, imp.getWidth() - 40, imp.getHeight() - 40);
-		
+		standardRectangle = new Rectangle(inix, iniy, imp.getWidth() - 2 * inix, imp.getHeight() - 2 * inix);
+		originalimg = ImageJFunctions.convertFloat(imp.duplicate());
+		originalPreprocessedimg = ImageJFunctions.convertFloat(preprocessedimp.duplicate());
 
 
 	}
 
 	@Override
 	public void run(String arg) {
-		stacksize = imp.getStackSize();
+		stacksize = preprocessedimp.getNFrames();
 		output = new ArrayList<CommonOutputHF>();
-		slice2 = stacksize;
-
+		endStack = stacksize;
 		if (imp == null)
 			imp = WindowManager.getCurrentImage();
 		if (preprocessedimp == null)
@@ -291,12 +352,10 @@ public class InteractiveMT implements PlugIn {
 
 		currentframe = preprocessedimp.getFrame() - 1;
 		preprocessedimp.setPosition(preprocessedimp.getChannel(), preprocessedimp.getSlice(), preprocessedimp.getFrame());
-
 		imp.setPosition(preprocessedimp.getChannel(), preprocessedimp.getSlice(), preprocessedimp.getFrame());
+		
 		img = ImageJFunctions.convertFloat(imp.duplicate());
 		Preprocessedimg = ImageJFunctions.convertFloat(preprocessedimp.duplicate());
-	
-
 				
 		int z = currentframe;
 		
@@ -327,7 +386,9 @@ public class InteractiveMT implements PlugIn {
 	 */
 
 	protected void updatePreview(final ValueChange change) {
-
+		
+		
+	
 		// check if Roi changed
 		boolean roiChanged = false;
 		Roi roi = preprocessedimp.getRoi();
@@ -337,27 +398,33 @@ public class InteractiveMT implements PlugIn {
 			roiChanged = true;
 		}
 
-		final Rectangle rect = roi.getBounds();
+		Rectangle rect = roi.getBounds();
 		if (roiChanged || currentimg == null || currentPreprocessedimg == null || newimg == null  ||
-				change == ValueChange.SLICE || rect.getMinX() != standardRectangle.getMinX()
+				change == ValueChange.FRAME || rect.getMinX() != standardRectangle.getMinX()
 				|| rect.getMaxX() != standardRectangle.getMaxX() || rect.getMinY() != standardRectangle.getMinY()
 				|| rect.getMaxY() != standardRectangle.getMaxY()) {
 			standardRectangle = rect;
+			
+			long[] min = {(long)standardRectangle.getMinX(), (long)standardRectangle.getMinY()};
+			long[] max = {(long)standardRectangle.getMaxX(), (long)standardRectangle.getMaxY()};
+			interval = new FinalInterval(min, max);
+			
 			if (ndims == 2){
 				
-				currentimg = extractImage(img, standardRectangle, extraSize);
-				currentPreprocessedimg = extractImage(Preprocessedimg, standardRectangle, extraSize);
-				newimg = extractImageUnsignedByteType(Preprocessedimg, standardRectangle, extraSize);
-				roiChanged = true;
+				currentimg = extractImage(originalimg);
+				currentPreprocessedimg = extractImage(originalPreprocessedimg);
+				newimg = copytoByteImage(currentPreprocessedimg);
 				
+				roiChanged = true;
 			}
 			if (ndims > 2){
-			currentimg = extractImage(Views.hyperSlice(img, ndims - 1, currentframe  ), standardRectangle, extraSize);
-			currentPreprocessedimg = extractImage(Views.hyperSlice(Preprocessedimg, ndims - 1, currentframe  ), standardRectangle, extraSize);
-			newimg = extractImageUnsignedByteType(Views.hyperSlice(Preprocessedimg, ndims - 1, currentframe  ), standardRectangle, extraSize);
+			
+				currentimg = extractImage(Views.hyperSlice(originalimg, ndims - 1, currentframe  ));
+				currentPreprocessedimg = extractImage(Views.hyperSlice(originalPreprocessedimg, ndims - 1, currentframe  ));
+				newimg = copytoByteImage(currentPreprocessedimg);
+			
 			roiChanged = true;
 			}
-			
 		}
 
 		// if we got some mouse click but the ROI did not change we can return
@@ -366,10 +433,7 @@ public class InteractiveMT implements PlugIn {
 			return;
 		}
 		
-		
 			
-			
-		
 		
 		// Re-compute MSER ellipses if neccesary
 				ArrayList<EllipseRoi> Rois = new ArrayList<EllipseRoi>();
@@ -380,6 +444,7 @@ public class InteractiveMT implements PlugIn {
 				}
 				if (change == ValueChange.SHOWMSER ){
 
+					
 					MouseEvent mev = new MouseEvent(preprocessedimp.getCanvas(), MouseEvent.MOUSE_RELEASED, System.currentTimeMillis(), 0, 0, 0,
 							1, false);
 					
@@ -391,7 +456,8 @@ public class InteractiveMT implements PlugIn {
 
 						
 					}
-			
+		
+
 					
 					IJ.log(" Computing the Component tree");
 					 newtree = MserTree.buildMserTree(newimg, delta, minSize, maxSize, maxVar,
@@ -448,8 +514,10 @@ public class InteractiveMT implements PlugIn {
 		
 		
 		
-		final Label MTText = new Label("Step 1) Choose method to do sub-pixel localization ", Label.CENTER);
-		final Button FindLinesListener = new Button("Find Lines in current Frame:");
+		final Label MTText = new Label("Step 1) Determine end points of MT (start from seeds) ", Label.CENTER);
+		final Button FindLinesListener = new Button("Find endpoints");
+		final Button MoveNext = new Button("Move next");
+		final Button JumptoFrame = new Button("Jump to frame:");
 		final Checkbox mser = new Checkbox("MSER",Finders, FindLinesViaMSER );
 		final Checkbox hough = new Checkbox("HOUGH", Finders, FindLinesViaHOUGH );
 		final Checkbox mserwhough = new Checkbox("MSERwHOUGH",Finders, FindLinesViaMSERwHOUGH );
@@ -492,8 +560,16 @@ public class InteractiveMT implements PlugIn {
 		c.insets = new Insets(10, 10, 0, 0);
 		frame.add(mserwhough, c);
 		++c.gridy;
-		c.insets = new Insets(10, 160, 0,160);
+		c.insets = new Insets(10, 10, 0, 355);
 		frame.add(FindLinesListener, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 355);
+		frame.add(MoveNext, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 355);
+		frame.add(JumptoFrame, c);
 		
 		
 		
@@ -506,7 +582,8 @@ public class InteractiveMT implements PlugIn {
 		mser.addItemListener(new MserListener());
 		hough.addItemListener(new HoughListener());
 		mserwhough.addItemListener(new MserwHoughListener());
-		
+		MoveNext.addActionListener(new moveNextListener());
+		JumptoFrame.addActionListener(new moveToFrameListener());
 		
 		frame.addWindowListener(new FrameListener(frame));
 
@@ -515,7 +592,110 @@ public class InteractiveMT implements PlugIn {
 	
 	}
 	
+	protected class moveNextListener implements ActionListener {
+		@Override
+		public void actionPerformed(final ActionEvent arg0) {
+		
+			// add listener to the imageplus slice slider
+			sliceObserver = new SliceObserver(preprocessedimp, new ImagePlusListener());
+			
+			preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame());
+			imp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame());
+			if (preprocessedimp.getFrame() + 1 <= stacksize) {
+				preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame() + 1);
+				imp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame());
+				IJ.log("Current Frame:" +  (preprocessedimp.getFrame() + 1) + "stacksize:" + stacksize);
+			} else {
+				IJ.log("Max frame number exceeded, moving to last frame instead" + "Stacksize: " + stacksize);
+				preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), stacksize);
+				imp.setPosition(channel, preprocessedimp.getSlice(), stacksize);
+				currentframe = stacksize;
+			}
+			currentframe = preprocessedimp.getFrame();
+			
+			if (preprocessedimp.getType() == ImagePlus.COLOR_RGB || preprocessedimp.getType() == ImagePlus.COLOR_256) {
+				IJ.log("Color images are not supported, please convert to 8, 16 or 32-bit grayscale");
+				return;
+			}
+
+			Roi roi = preprocessedimp.getRoi();
+			if (roi == null) {
+				// IJ.log( "A rectangular ROI is required to define the area..."
+				// );
+				preprocessedimp.setRoi(standardRectangle);
+				roi = preprocessedimp.getRoi();
+			}
+			
+			updatePreview(ValueChange.FRAME);
+			isStarted = true;
+
+			// check whenever roi is modified to update accordingly
+			roiListener = new RoiListener();
+			preprocessedimp.getCanvas().addMouseListener(roiListener);
+			
+			
+		}
+		}
+	private boolean moveDialogue() {
+		GenericDialog gd = new GenericDialog("Choose Frame");
+
+		if (stacksize > 1) {
+			gd.addNumericField("Move to frame", currentframe, 0);
+
+		}
+
+		gd.showDialog();
+		if (stacksize > 1) {
+			currentframe = (int) gd.getNextNumber();
+
+		}
+		return !gd.wasCanceled();
+	}
 	
+	protected class moveToFrameListener implements ActionListener {
+		@Override
+		public void actionPerformed(final ActionEvent arg0) {
+		
+			boolean dialog = moveDialogue();
+			if (dialog) {
+				// add listener to the imageplus slice slider
+				sliceObserver = new SliceObserver(imp, new ImagePlusListener());
+				imp.setPosition(channel, imp.getSlice(), imp.getFrame());
+
+
+				if (currentframe <= stacksize) {
+					preprocessedimp.setPosition(channel, imp.getSlice(), currentframe);
+					imp.setPosition(channel, imp.getSlice(), currentframe);
+				} else {
+					IJ.log("Max frame number exceeded, moving to last frame instead");
+					preprocessedimp.setPosition(channel, imp.getSlice(),stacksize);
+					imp.setPosition(channel, imp.getSlice(),stacksize);
+					currentframe = stacksize;
+				}
+
+				if (preprocessedimp.getType() == ImagePlus.COLOR_RGB || preprocessedimp.getType() == ImagePlus.COLOR_256) {
+					IJ.log("Color images are not supported, please convert to 8, 16 or 32-bit grayscale");
+					return;
+				}
+
+				Roi roi = preprocessedimp.getRoi();
+				if (roi == null) {
+					// IJ.log( "A rectangular ROI is required to define the
+					// area..."
+					// );
+					preprocessedimp.setRoi(standardRectangle);
+					roi = preprocessedimp.getRoi();
+				}
+			}
+			updatePreview(ValueChange.FRAME);
+			isStarted = true;
+
+			// check whenever roi is modified to update accordingly
+			roiListener = new RoiListener();
+			preprocessedimp.getCanvas().addMouseListener(roiListener);
+			
+		}
+		}
 	
 	protected class FindLinesListener implements ActionListener {
 		
@@ -524,14 +704,14 @@ public class InteractiveMT implements PlugIn {
 
 			// add listener to the imageplus slice slider
 			sliceObserver = new SliceObserver(preprocessedimp, new ImagePlusListener());
-
-			preprocessedimp.setSlice(1);
+			
+			
 			
 			IJ.log("Starting Chosen Line finder");
 			
 			
 			
-			currentframe = 1;
+			
 
 			if (preprocessedimp.getType() == ImagePlus.COLOR_RGB || preprocessedimp.getType() == ImagePlus.COLOR_256) {
 				IJ.log("Color images are not supported, please convert to 8, 16 or 32-bit grayscale");
@@ -557,6 +737,7 @@ public class InteractiveMT implements PlugIn {
 					impcurr.setOverlay(overlay);
 					PrevFrameparam = FindlinesVia.LinefindingMethod(img, Preprocessedimg, minlength, 0, psf, newlineMser,
 							UserChoiceModel.Line);
+					
 
 				}
 				if (FindLinesViaHOUGH) {
@@ -591,12 +772,12 @@ public class InteractiveMT implements PlugIn {
 				
 				RandomAccessibleInterval<FloatType> groundframe = currentimg;
 				RandomAccessibleInterval<FloatType> groundframepre = currentPreprocessedimg;
-
 				Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> PrevFrameparam = null;
 				if (FindLinesViaMSER) {
 					
 
-					LinefinderInteractiveMSER newlineMser = new LinefinderInteractiveMSER(groundframe, groundframepre, newtree, minlength, currentframe );
+					LinefinderInteractiveMSER newlineMser = new LinefinderInteractiveMSER(groundframe, groundframepre,
+							newtree, minlength, currentframe );
 					
 					PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength, currentframe , psf, newlineMser,
 							UserChoiceModel.Line);
@@ -671,6 +852,7 @@ public class InteractiveMT implements PlugIn {
               	
               	final MedianFilter2D<FloatType> medfilter = new MedianFilter2D<FloatType>(currentPreprocessedimg, radius);
     			medfilter.process();
+    			IJ.log(" Median filter sucessfully applied to current Image" );
     		   currentPreprocessedimg = medfilter.getResult();
               	
               	
@@ -696,8 +878,9 @@ public class InteractiveMT implements PlugIn {
               	   
               	IJ.log(" Applying Median Filter to the whole stack (takes some time)"  );
               	
-              	final MedianFilter2D<FloatType> medfilter = new MedianFilter2D<FloatType>(Preprocessedimg, radius);
+              	final MedianFilterImg2D<FloatType> medfilter = new MedianFilterImg2D<FloatType>(Preprocessedimg, radius);
     			medfilter.process();
+    			IJ.log(" Median filter sucessfully applied to the whole stack" );
     			Preprocessedimg = medfilter.getResult();
               	
               	
@@ -793,12 +976,19 @@ public class InteractiveMT implements PlugIn {
 		// Create dialog
 		final Frame frame = new Frame("Interactive Mser");
 		frame.setSize(550, 550);
-
+		frame.setLayout(new BorderLayout());
 		/* Instantiation */
 		final GridBagLayout layout = new GridBagLayout();
 		final GridBagConstraints c = new GridBagConstraints();
 		
-				
+		
+		final Label exdeltaText = new Label("delta = stepsize of thresholds." ,Label.CENTER);
+		final Label exmaxVarText = new Label("maxVar = maximum instability score of the region. " , Label.CENTER);
+		final Label exminDiversityText = new Label("minDiversity = minimum diversity of adjacent regions. " , Label.CENTER);
+		final Label exminSizeText = new Label("MinSize = mimimum size of accepted region. " , Label.CENTER);
+		final Label exmaxSizeText = new Label("MaxSize = maximum size of accepted region. " , Label.CENTER);
+		
+		
 				final Scrollbar delta = new Scrollbar(Scrollbar.HORIZONTAL, deltaInit, 10, 0, 10 + scrollbarSize);
 				final Scrollbar maxVar = new Scrollbar(Scrollbar.HORIZONTAL, maxVarInit, 10, 0, 10 + scrollbarSize);
 				final Scrollbar minDiversity = new Scrollbar(Scrollbar.HORIZONTAL, minDiversityInit, 10, 0, 10 + scrollbarSize);
@@ -816,18 +1006,34 @@ public class InteractiveMT implements PlugIn {
 				
 
 				
-				final Label deltaText = new Label("delta = " + this.delta, Label.CENTER);
-				final Label maxVarText = new Label("maxVar = " + this.maxVar, Label.CENTER);
-				final Label minDiversityText = new Label("minDiversity = " + this.minDiversity, Label.CENTER);
-				final Label minSizeText = new Label("MinSize = " + this.minSize, Label.CENTER);
-				final Label maxSizeText = new Label("MaxSize = " + this.maxSize, Label.CENTER);
+				final Label deltaText = new Label("delta = " , Label.CENTER);
+				final Label maxVarText = new Label("maxVar = " , Label.CENTER);
+				final Label minDiversityText = new Label("minDiversity = " , Label.CENTER);
+				final Label minSizeText = new Label("MinSize = ", Label.CENTER);
+				final Label maxSizeText = new Label("MaxSize = " , Label.CENTER);
 				/* Location */
 				frame.setLayout(layout);
 
 				c.fill = GridBagConstraints.HORIZONTAL;
 				c.gridx = 0;
 				c.gridy = 0;
-				c.weightx = 1;
+				c.weightx = 4;
+				c.weighty = 1.5;
+				
+				frame.add(exdeltaText, c);
+				++c.gridy;
+
+				frame.add(exmaxVarText, c);
+				++c.gridy;
+
+				frame.add(exminDiversityText, c);
+				++c.gridy;
+
+				frame.add(exminSizeText, c);
+				++c.gridy;
+
+				frame.add(exmaxSizeText, c);
+				++c.gridy;
 				
 				frame.add(deltaText, c);
 				
@@ -1167,8 +1373,7 @@ public class InteractiveMT implements PlugIn {
 		ArrayList<EllipseRoi> Allrois = new ArrayList<EllipseRoi>();
 		final Iterator<Mser<UnsignedByteType>> rootsetiterator = rootset.iterator();
 		
-		ArrayList<double[]> ellipselist = new ArrayList<double[]>();
-		ArrayList<double[]> meanandcovlist = new ArrayList<double[]>();
+		AllmeanCovar = new ArrayList<double[]>();
 		
 		
 		while (rootsetiterator.hasNext()) {
@@ -1179,25 +1384,25 @@ public class InteractiveMT implements PlugIn {
 
 				final double[] meanandcov = { rootmser.mean()[0], rootmser.mean()[1], rootmser.cov()[0],
 						rootmser.cov()[1], rootmser.cov()[2] };
-				meanandcovlist.add(meanandcov);
-				ellipselist.add(meanandcov);
+				AllmeanCovar.add(meanandcov);
 
 			}
 		}
 		
 		// We do this so the ROI remains attached the the same label and is not changed if the program is run again
-	       SortListbyproperty.sortpointList(ellipselist);
-			for (int index = 0; index < ellipselist.size(); ++index) {
+	       SortListbyproperty.sortpointList(AllmeanCovar);
+			for (int index = 0; index < AllmeanCovar.size(); ++index) {
 				
 			
 				
-				final double[] mean = { ellipselist.get(index)[0], ellipselist.get(index)[1] };
-				final double[] covar = { ellipselist.get(index)[2], ellipselist.get(index)[3],
-						ellipselist.get(index)[4] };
+				final double[] mean = { AllmeanCovar.get(index)[0], AllmeanCovar.get(index)[1] };
+				final double[] covar = { AllmeanCovar.get(index)[2], AllmeanCovar.get(index)[3],
+						AllmeanCovar.get(index)[4] };
 				
 				
 				EllipseRoi roi = createEllipse(mean, covar, 3);
 		        Allrois.add(roi);
+		        
 			}
 			
 			return Allrois;
@@ -1207,8 +1412,8 @@ public class InteractiveMT implements PlugIn {
 	public boolean DialogueNormalize() {
 		// Create dialog
 		GenericDialog gd = new GenericDialog("Image Intensity Normalization");
-		gd.addNumericField("Mininum Value for Intensity Normalization:", minval.get(), 0);
-		gd.addNumericField("Maximum Value for Intensity Normalization:", maxval.get(), 0);
+		gd.addNumericField(" Minimum Value for Intensity Normalization: ", minval.get(), 0);
+		gd.addNumericField(" Maximum Value for Intensity Normalization: ", maxval.get(), 0);
 		gd.showDialog();
 		minval = new FloatType((int)gd.getNextNumber());
 		maxval = new FloatType((int)gd.getNextNumber());
@@ -1233,206 +1438,44 @@ public class InteractiveMT implements PlugIn {
 		return !gd.wasCanceled();
 	}
 	
-	/**
-	 * Extract the current 2d region of interest from the souce image
-	 * 
-	 * @param intervalView
-	 *            - the source image, a {@link Image} which is a copy of the
-	 *            {@link ImagePlus}
-	 * @param rectangle
-	 *            - the area of interest
-	 * @param extraSize
-	 *            - the extra size around so that detections at the border of
-	 *            the roi are not messed up
-	 * @return
-	 */
-	protected Img<FloatType> extractImage(final IntervalView<FloatType> intervalView,
-			final Rectangle rectangle, final int extraSize) {
+	protected RandomAccessibleInterval<FloatType> extractImage(final RandomAccessibleInterval<FloatType> intervalView) {
 		
 		final FloatType type = intervalView.randomAccess().get().createVariable();
 		final ImgFactory<FloatType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(intervalView, type);
-		final Img<FloatType> img = factory.create(new int[] { rectangle.width + extraSize, rectangle.height + extraSize },
+		final RandomAccessibleInterval<FloatType> img = factory.create(intervalView,
 				type);
 		
-
-		final int offsetX = rectangle.x - extraSize / 2;
-		final int offsetY = rectangle.y - extraSize / 2;
-
-		final int[] location = new int[intervalView.numDimensions()];
+		
+		final long[] location = new long[intervalView.numDimensions()];
 
 		if (location.length > 2)
 			location[2] = (preprocessedimp.getCurrentSlice() - 1) / preprocessedimp.getNChannels();
 
-		final Cursor<FloatType> cursor = img.localizingCursor();
-		final RandomAccess<net.imglib2.type.numeric.real.FloatType> positionable;
-
-		if (offsetX >= 0 && offsetY >= 0 && offsetX + img.dimension(0) < intervalView.dimension(0)
-				&& offsetY + img.dimension(1) < intervalView.dimension(1)) {
-			// it is completely inside so we need no outofbounds for copying
-			positionable = intervalView.randomAccess();
-		} else {
-			positionable = Views.extendMirrorSingle(intervalView).randomAccess();
-		}
-
+		final Cursor<FloatType> cursor = Views.iterable(intervalView).localizingCursor();
+		final RandomAccess<FloatType> positionable =  img.randomAccess();
+		
 		while (cursor.hasNext()) {
 			cursor.fwd();
 			
 			cursor.localize(location);
-
-			location[0] += offsetX;
-			location[1] += offsetY;
-
-			positionable.setPosition(location);
-
-			cursor.get().set(positionable.get().get());
-		}
-	
-		return img;
-	}
-	protected Img<FloatType> extractImage(final Img<FloatType> intervalView,
-			final Rectangle rectangle, final int extraSize) {
-		
-		final FloatType type = intervalView.randomAccess().get().createVariable();
-		final ImgFactory<FloatType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(intervalView, type);
-		final Img<FloatType> img = factory.create(new int[] { rectangle.width + extraSize, rectangle.height + extraSize },
-				type);
-		
-
-		final int offsetX = rectangle.x - extraSize / 2;
-		final int offsetY = rectangle.y - extraSize / 2;
-
-		final int[] location = new int[intervalView.numDimensions()];
-
-		if (location.length > 2)
-			location[2] = (preprocessedimp.getCurrentSlice() - 1) / preprocessedimp.getNChannels();
-
-		final Cursor<FloatType> cursor = img.localizingCursor();
-		final RandomAccess<net.imglib2.type.numeric.real.FloatType> positionable;
-
-		if (offsetX >= 0 && offsetY >= 0 && offsetX + img.dimension(0) < intervalView.dimension(0)
-				&& offsetY + img.dimension(1) < intervalView.dimension(1)) {
-			// it is completely inside so we need no outofbounds for copying
-			positionable = intervalView.randomAccess();
-		} else {
-			positionable = Views.extendMirrorSingle(intervalView).randomAccess();
-		}
-
-		while (cursor.hasNext()) {
-			cursor.fwd();
 			
-			cursor.localize(location);
-
-			location[0] += offsetX;
-			location[1] += offsetY;
-
+			if (location[0] >= interval.realMin(0) && location[0] <= interval.realMax(0) 
+					&& location[1] >= interval.realMin(1) && location[1] <= interval.realMax(1) ){
+			
 			positionable.setPosition(location);
-
-			cursor.get().set(positionable.get().get());
+			positionable.get().set(cursor.get());
+			
+			}
+			
+			
 		}
-
+		
+		
+		
 		return img;
 	}
 	
-	/**
-	 * Extract the current 2d region of interest from the souce image
-	 * 
-	 * @param intervalView
-	 *            - the source image, a {@link Image} which is a copy of the
-	 *            {@link ImagePlus}
-	 * @param rectangle
-	 *            - the area of interest
-	 * @param extraSize
-	 *            - the extra size around so that detections at the border of
-	 *            the roi are not messed up
-	 * @return
-	 */
-	protected Img<UnsignedByteType> extractImageUnsignedByteType(final IntervalView<FloatType> intervalView,
-			final Rectangle rectangle, final int extraSize) {
-		
-		final UnsignedByteType type = new UnsignedByteType();
-		final ImgFactory<UnsignedByteType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(intervalView, type);
-		final Img<UnsignedByteType> img = factory.create(new int[] { rectangle.width + extraSize, rectangle.height + extraSize },
-				type);
-		
-
-		Normalize.normalize(intervalView, new FloatType(0), new FloatType(255));
-		final int offsetX = rectangle.x - extraSize / 2;
-		final int offsetY = rectangle.y - extraSize / 2;
-
-		final int[] location = new int[intervalView.numDimensions()];
-
-		if (location.length > 2)
-			location[2] = (preprocessedimp.getCurrentSlice() - 1) / preprocessedimp.getNChannels();
-
-		final Cursor<UnsignedByteType> cursor = img.localizingCursor();
-		final RandomAccess<FloatType> positionable;
-
-		if (offsetX >= 0 && offsetY >= 0 && offsetX + img.dimension(0) < intervalView.dimension(0)
-				&& offsetY + img.dimension(1) < intervalView.dimension(1)) {
-			// it is completely inside so we need no outofbounds for copying
-			positionable = intervalView.randomAccess();
-		} else {
-			positionable = Views.extendMirrorSingle(intervalView).randomAccess();
-		}
-
-		while (cursor.hasNext()) {
-			cursor.fwd();
-			
-			cursor.localize(location);
-
-			location[0] += offsetX;
-			location[1] += offsetY;
-
-			positionable.setPosition(location);
-
-			cursor.get().set( (int)positionable.get().get());
-		}
-
-		return img;
-	}
-	protected Img<UnsignedByteType> extractImageUnsignedByteType(final Img<FloatType> intervalView,
-			final Rectangle rectangle, final int extraSize) {
-		
-		final UnsignedByteType type = new UnsignedByteType();
-		final ImgFactory<UnsignedByteType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(intervalView, type);
-		final Img<UnsignedByteType> img = factory.create(new int[] { rectangle.width + extraSize, rectangle.height + extraSize },
-				type);
-		
-		Normalize.normalize(intervalView, new FloatType(0), new FloatType(255));
-		final int offsetX = rectangle.x - extraSize / 2;
-		final int offsetY = rectangle.y - extraSize / 2;
-
-		final int[] location = new int[intervalView.numDimensions()];
-
-		if (location.length > 2)
-			location[2] = (preprocessedimp.getCurrentSlice() - 1) / preprocessedimp.getNChannels();
-
-		final Cursor<UnsignedByteType> cursor = img.localizingCursor();
-		final RandomAccess<FloatType> positionable;
-
-		if (offsetX >= 0 && offsetY >= 0 && offsetX + img.dimension(0) < intervalView.dimension(0)
-				&& offsetY + img.dimension(1) < intervalView.dimension(1)) {
-			// it is completely inside so we need no outofbounds for copying
-			positionable = intervalView.randomAccess();
-		} else {
-			positionable = Views.extendMirrorSingle(intervalView).randomAccess();
-		}
-
-		while (cursor.hasNext()) {
-			cursor.fwd();
-			
-			cursor.localize(location);
-
-			location[0] += offsetX;
-			location[1] += offsetY;
-
-			positionable.setPosition(location);
-
-			cursor.get().set((int)positionable.get().get());
-		}
-
-		return img;
-	}
+	
 	
 	
 	protected final void close(final Frame parent, final SliceObserver sliceObserver, final ImagePlus imp, RoiListener roiListener) {
@@ -1525,7 +1568,7 @@ public class InteractiveMT implements PlugIn {
 				while (isComputing) {
 					SimpleMultiThreading.threadWait(10);
 				}
-				updatePreview(ValueChange.SLICE);
+				updatePreview(ValueChange.FRAME);
 
 			}
 		}
@@ -1563,6 +1606,46 @@ public class InteractiveMT implements PlugIn {
         // return the copy
         return output;
     }
+	/**
+     * Generic, type-agnostic method to create an identical copy of an Img
+     *
+     * @param currentPreprocessedimg2 - the Img to copy
+     * @return - the copy of the Img
+     */
+    public Img< UnsignedByteType > copytoByteImage( final RandomAccessibleInterval<FloatType> input)
+    {
+        // create a new Image with the same properties
+        // note that the input provides the size for the new image as it implements
+        // the Interval interface
+ 
+    	
+    	Normalize.normalize(Views.iterable(input), new FloatType(0), new FloatType(255));
+        final UnsignedByteType type = new UnsignedByteType();
+		final ImgFactory<UnsignedByteType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(input, type);
+		final Img<UnsignedByteType> output = factory.create(input,
+				type);
+        // create a cursor for both images
+        Cursor< FloatType > cursorInput =Views.iterable(input).cursor();
+        Cursor< UnsignedByteType > cursorOutput = output.cursor();
+ 
+        // iterate over the input
+        while ( cursorInput.hasNext())
+        {
+            // move both cursors forward by one pixel
+            cursorInput.fwd();
+            cursorOutput.fwd();
+ 
+            // set the value of this pixel of the output image to the same as the input,
+            // every Type supports T.set( T type )
+            cursorOutput.get().set( (int) cursorInput.get().get() );
+        }
+ 
+        // return the copy
+        return output;
+    }
+    
+    
+    
     /**
 	 * 2D correlated Gaussian
 	 * 
@@ -1582,8 +1665,8 @@ public class InteractiveMT implements PlugIn {
 		final double scale1 = Math.sqrt(0.5 * (a + c + d)) * nsigmas;
 		final double scale2 = Math.sqrt(0.5 * (a + c - d)) * nsigmas;
 		final double theta = 0.5 * Math.atan2((2 * b), (a - c));
-		final double x = mean[0] + standardRectangle.x;
-		final double y = mean[1] + standardRectangle.y;
+		final double x = mean[0]  ;
+		final double y = mean[1] ;
 		final double dx = scale1 * Math.cos(theta);
 		final double dy = scale1 * Math.sin(theta);
 		final EllipseRoi ellipse = new EllipseRoi(x - dx, y - dy, x + dx, y + dy, scale2 / scale1);
@@ -1594,8 +1677,8 @@ public class InteractiveMT implements PlugIn {
 	public static void main(String[] args) {
 		new ImageJ();
 
-		ImagePlus imp = new Opener().openImage("/Users/varunkapoor/res/super_bent.tif");
-		ImagePlus Preprocessedimp = new Opener().openImage("/Users/varunkapoor/res/super_bent.tif");
+		ImagePlus imp = new Opener().openImage("/Users/varunkapoor/res/super_bent_small.tif");
+		ImagePlus Preprocessedimp = new Opener().openImage("/Users/varunkapoor/res/super_bent_small.tif");
 		imp.show();
 		// Convert the image to 8-bit or 16-bit, very crucial for snakes
 		IJ.run("16-bit");
@@ -1610,6 +1693,7 @@ public class InteractiveMT implements PlugIn {
 		// number is 2.
 		final int minlength = (int) (radius);
 
+		final int channel = 0 ;
 		
 		new InteractiveMT(currentimp, currentPreprocessedimp, psf, minlength).run(null);
 

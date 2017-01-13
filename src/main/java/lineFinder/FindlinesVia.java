@@ -27,7 +27,7 @@ public  class FindlinesVia {
       protected LinefindingMethod MSER, Hough, MSERwHough;
 
 	public static Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> LinefindingMethod(final RandomAccessibleInterval<FloatType> source,
-			final RandomAccessibleInterval<FloatType> Preprocessedsource, final int minlength, final int framenumber, final double[] psf,  final Linefinder linefinder, final UserChoiceModel model ) {
+			final RandomAccessibleInterval<FloatType> Preprocessedsource, final int minlength, final int framenumber, final double[] psf, final Linefinder linefinder, final UserChoiceModel model ) {
 
 		
 		Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>>	PrevFrameparam = null;

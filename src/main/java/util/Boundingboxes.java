@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import com.sun.tools.javac.util.Pair;
 
 import ij.gui.EllipseRoi;
+import ij.gui.Roi;
 import labeledObjects.CommonOutput;
 import labeledObjects.LabelledImg;
 import net.imglib2.Cursor;
@@ -312,6 +313,39 @@ public static FinalInterval  CurrentroiInterval(RandomAccessibleInterval<FloatTy
 	return interval;
 	
 }
+
+public static FinalInterval CurrentroiInterval(RandomAccessibleInterval<FloatType> currentimg, Roi roi) {
+	int n = currentimg.numDimensions();
+	long[] position = new long[n];
+	long[] minVal = { currentimg.max(0), currentimg.max(1) };
+	long[] maxVal = { currentimg.min(0), currentimg.min(1) };
+	
+	Cursor<FloatType> localcursor = Views.iterable(currentimg).localizingCursor();
+
+	while (localcursor.hasNext()) {
+		localcursor.fwd();
+		int x = localcursor.getIntPosition(0);
+		int y = localcursor.getIntPosition(1);
+		if (roi.contains(x, y)){
+
+			localcursor.localize(position);
+			for (int d = 0; d < n; ++d) {
+				if (position[d] < minVal[d]) {
+					minVal[d] = position[d];
+				}
+				if (position[d] > maxVal[d]) {
+					maxVal[d] = position[d];
+				}
+
+			}
+			
+		}
+	}
+	
+	FinalInterval interval = new FinalInterval(minVal, maxVal) ;
+	
+	return interval;
+}
 	public static Pair<RandomAccessibleInterval<FloatType>, FinalInterval> CurrentLabeloffsetImagepair(RandomAccessibleInterval<IntType> Intimg,
 			RandomAccessibleInterval<FloatType> originalimg, int currentLabel) {
 		int n = originalimg.numDimensions();
@@ -511,4 +545,6 @@ public static FinalInterval  CurrentroiInterval(RandomAccessibleInterval<FloatTy
 		}
 		return Math.sqrt(distance);
 	}
+
+	
 }
