@@ -127,7 +127,8 @@ public class InteractiveMT implements PlugIn {
 	
 	float minDiversityMin = 0;
 	float minDiversityMax = 1;
-	
+
+	UserChoiceModel userChoiceModel;
 	float delta = 1f;
 	int deltaInit = 10;
 	int maxVarInit = 1;
@@ -158,13 +159,12 @@ public class InteractiveMT implements PlugIn {
 	boolean RoisViaMSER = false;
 	boolean RoisViaWatershed = false;
 	
+	boolean GaussianLines = true;
 	boolean NormalizeImage = false;
 	boolean Mediancurr = false;
 	boolean MedianAll = false;
 	boolean AutoDelta = false;
 	int channel = 0;
-	Img<FloatType> img;
-	Img<FloatType> Preprocessedimg;
 	Img<FloatType> originalimg;
 	Img<FloatType> originalPreprocessedimg;
 	int inix = 20;
@@ -195,6 +195,9 @@ public class InteractiveMT implements PlugIn {
 
 	boolean isFinished = false;
 	boolean wasCanceled = false;
+	boolean SecondOrderSpline;
+	boolean ThirdOrderSpline;
+	
 
 	public boolean isFinished() {
 		return isFinished;
@@ -207,6 +210,8 @@ public class InteractiveMT implements PlugIn {
 	public boolean getFindLinesViaMSER() {
 		return FindLinesViaMSER;
 	}
+	
+	
 
 	public boolean getRoisViaMSER(){
 		
@@ -354,8 +359,7 @@ public class InteractiveMT implements PlugIn {
 		preprocessedimp.setPosition(preprocessedimp.getChannel(), preprocessedimp.getSlice(), preprocessedimp.getFrame());
 		imp.setPosition(preprocessedimp.getChannel(), preprocessedimp.getSlice(), preprocessedimp.getFrame());
 		
-		img = ImageJFunctions.convertFloat(imp.duplicate());
-		Preprocessedimg = ImageJFunctions.convertFloat(preprocessedimp.duplicate());
+
 				
 		int z = currentframe;
 		
@@ -391,6 +395,8 @@ public class InteractiveMT implements PlugIn {
 	
 		// check if Roi changed
 		boolean roiChanged = false;
+		
+		
 		Roi roi = preprocessedimp.getRoi();
 		if (roi == null || roi.getType() != Roi.RECTANGLE) {
 			preprocessedimp.setRoi(new Rectangle(standardRectangle));
@@ -402,7 +408,7 @@ public class InteractiveMT implements PlugIn {
 		if (roiChanged || currentimg == null || currentPreprocessedimg == null || newimg == null  ||
 				change == ValueChange.FRAME || rect.getMinX() != standardRectangle.getMinX()
 				|| rect.getMaxX() != standardRectangle.getMaxX() || rect.getMinY() != standardRectangle.getMinY()
-				|| rect.getMaxY() != standardRectangle.getMaxY()) {
+				|| rect.getMaxY() != standardRectangle.getMaxY() || change == ValueChange.ALL)  {
 			standardRectangle = rect;
 			
 			long[] min = {(long)standardRectangle.getMinX(), (long)standardRectangle.getMinY()};
@@ -604,7 +610,7 @@ public class InteractiveMT implements PlugIn {
 			if (preprocessedimp.getFrame() + 1 <= stacksize) {
 				preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame() + 1);
 				imp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame());
-				IJ.log("Current Frame:" +  (preprocessedimp.getFrame() + 1) + "stacksize:" + stacksize);
+				IJ.log(" Current Frame: " +  (preprocessedimp.getFrame()) + " stacksize: " + stacksize);
 			} else {
 				IJ.log("Max frame number exceeded, moving to last frame instead" + "Stacksize: " + stacksize);
 				preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), stacksize);
@@ -613,10 +619,7 @@ public class InteractiveMT implements PlugIn {
 			}
 			currentframe = preprocessedimp.getFrame();
 			
-			if (preprocessedimp.getType() == ImagePlus.COLOR_RGB || preprocessedimp.getType() == ImagePlus.COLOR_256) {
-				IJ.log("Color images are not supported, please convert to 8, 16 or 32-bit grayscale");
-				return;
-			}
+		
 
 			Roi roi = preprocessedimp.getRoi();
 			if (roi == null) {
@@ -626,6 +629,8 @@ public class InteractiveMT implements PlugIn {
 				roi = preprocessedimp.getRoi();
 			}
 			
+			
+		
 			updatePreview(ValueChange.FRAME);
 			isStarted = true;
 
@@ -707,16 +712,15 @@ public class InteractiveMT implements PlugIn {
 			
 			
 			
-			IJ.log("Starting Chosen Line finder");
+			IJ.log("Starting Chosen Line finder from the seed image (first frame should be seeds)");
+			preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), currentframe);
+			imp.setPosition(channel, preprocessedimp.getSlice(), currentframe);
 			
-			
-			
-			
+			updatePreview(ValueChange.FRAME);
+			isStarted = true;
 
-			if (preprocessedimp.getType() == ImagePlus.COLOR_RGB || preprocessedimp.getType() == ImagePlus.COLOR_256) {
-				IJ.log("Color images are not supported, please convert to 8, 16 or 32-bit grayscale");
-				return;
-			}
+		
+			
 
 			Roi roi = preprocessedimp.getRoi();
 			if (roi == null) {
@@ -725,42 +729,46 @@ public class InteractiveMT implements PlugIn {
 				preprocessedimp.setRoi(standardRectangle);
 				roi = preprocessedimp.getRoi();
 			}
+			IJ.log("Current frame: " + currentframe);
 			updatePreview(ValueChange.ALL);
 			if (ndims == 2) {
 				Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> PrevFrameparam = null;
 				if (FindLinesViaMSER) {
-
-					LinefinderMSER newlineMser = new LinefinderMSER(img, Preprocessedimg, minlength, 0);
+					boolean dialog = DialogueModelChoice();
+					if (dialog){
+					LinefinderMSER newlineMser = new LinefinderMSER(currentimg, currentPreprocessedimg, minlength, currentframe);
 
 					Overlay overlay = newlineMser.getOverlay();
 					ImagePlus impcurr = IJ.getImage();
 					impcurr.setOverlay(overlay);
-					PrevFrameparam = FindlinesVia.LinefindingMethod(img, Preprocessedimg, minlength, 0, psf, newlineMser,
-							UserChoiceModel.Line);
-					
+					PrevFrameparam = FindlinesVia.LinefindingMethod(currentimg, currentPreprocessedimg, minlength, currentframe, psf, newlineMser,
+							userChoiceModel);
+					}
 
 				}
 				if (FindLinesViaHOUGH) {
+					boolean dialog = DialogueModelChoice();
+					if (dialog){
+					LinefinderHough newlineHough = new LinefinderHough(currentimg, currentPreprocessedimg, minlength, currentframe);
 
-					LinefinderHough newlineHough = new LinefinderHough(img, Preprocessedimg, minlength, 0);
-
-					PrevFrameparam = FindlinesVia.LinefindingMethod(img, Preprocessedimg, minlength, 0, psf, newlineHough,
-							UserChoiceModel.Line);
-
+					PrevFrameparam = FindlinesVia.LinefindingMethod(currentimg, currentPreprocessedimg, minlength, currentframe, psf, newlineHough,
+							userChoiceModel);
+					}
 				}
 
 				if (FindLinesViaMSERwHOUGH) {
-
-					LinefinderMSERwHough newlineMserwHough = new LinefinderMSERwHough(img, Preprocessedimg, minlength, 0);
+					boolean dialog = DialogueModelChoice();
+					if (dialog){
+					LinefinderMSERwHough newlineMserwHough = new LinefinderMSERwHough(currentimg, currentPreprocessedimg, minlength, currentframe);
 					Overlay overlay = newlineMserwHough.getOverlay();
 					ImagePlus impcurr = IJ.getImage();
 					impcurr.setOverlay(overlay);
-					PrevFrameparam = FindlinesVia.LinefindingMethod(img, Preprocessedimg, minlength, 0, psf,
-							newlineMserwHough, UserChoiceModel.Line);
-
+					PrevFrameparam = FindlinesVia.LinefindingMethod(currentimg, currentPreprocessedimg, minlength, currentframe, psf,
+							newlineMserwHough, userChoiceModel);
+					}
 				}
 				// Draw the detected lines
-				RandomAccessibleInterval<FloatType> gaussimg = new ArrayImgFactory<FloatType>().create(img,
+				RandomAccessibleInterval<FloatType> gaussimg = new ArrayImgFactory<FloatType>().create(currentimg,
 						new FloatType());
 				PushCurves.DrawstartLine(gaussimg, PrevFrameparam.fst, PrevFrameparam.snd, psf);
 				ImageJFunctions.show(gaussimg).setTitle("Exact-line-start");
@@ -774,31 +782,36 @@ public class InteractiveMT implements PlugIn {
 				RandomAccessibleInterval<FloatType> groundframepre = currentPreprocessedimg;
 				Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> PrevFrameparam = null;
 				if (FindLinesViaMSER) {
-					
+					boolean dialog = DialogueModelChoice();
+					if (dialog){
 
 					LinefinderInteractiveMSER newlineMser = new LinefinderInteractiveMSER(groundframe, groundframepre,
 							newtree, minlength, currentframe );
-					
 					PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength, currentframe , psf, newlineMser,
-							UserChoiceModel.Line);
-
+							userChoiceModel);
+					}
 				
 				}
 
 				if (FindLinesViaHOUGH) {
+					
+					boolean dialog = DialogueModelChoice();
+					if (dialog){
 					LinefinderHough newlineHough = new LinefinderHough(groundframe, groundframepre, minlength, currentframe );
 
 					PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength, currentframe , psf, newlineHough,
-							UserChoiceModel.Line);
-					
+							userChoiceModel);
+					}
 				}
 
 				if (FindLinesViaMSERwHOUGH) {
+					boolean dialog = DialogueModelChoice();
+					if (dialog){
 					LinefinderMSERwHough newlineMserwHough = new LinefinderMSERwHough(groundframe, groundframepre, minlength, currentframe);
 					newlineMserwHough.setDelta(delta);
 					PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength, currentframe, psf,
-							newlineMserwHough, UserChoiceModel.Line);
-
+							newlineMserwHough, userChoiceModel);
+					}
 				
 				}
 				
@@ -825,8 +838,8 @@ public class InteractiveMT implements PlugIn {
             	new Normalize();
             	IJ.log("Image Stack Intnesity Normalized between: " 
             	+ (int)minval.get() + " and " + (int)maxval.get());
-           		Normalize.normalize(Views.iterable(img), minval, maxval);
-           		Normalize.normalize(Views.iterable(Preprocessedimg), minval, maxval);
+           		Normalize.normalize(Views.iterable(originalimg), minval, maxval);
+           		Normalize.normalize(Views.iterable(originalPreprocessedimg), minval, maxval);
             	
                }
 		}
@@ -878,10 +891,10 @@ public class InteractiveMT implements PlugIn {
               	   
               	IJ.log(" Applying Median Filter to the whole stack (takes some time)"  );
               	
-              	final MedianFilterImg2D<FloatType> medfilter = new MedianFilterImg2D<FloatType>(Preprocessedimg, radius);
+              	final MedianFilterImg2D<FloatType> medfilter = new MedianFilterImg2D<FloatType>(originalPreprocessedimg, radius);
     			medfilter.process();
     			IJ.log(" Median filter sucessfully applied to the whole stack" );
-    			Preprocessedimg = medfilter.getResult();
+    			originalPreprocessedimg = medfilter.getResult();
               	
               	
                  }
@@ -1420,6 +1433,40 @@ public class InteractiveMT implements PlugIn {
 		
 	
 		
+		
+		return !gd.wasCanceled();
+	}
+	
+	
+	public boolean DialogueModelChoice(){
+
+		GenericDialog gd = new GenericDialog("Model Choice for sub-pixel Localization");
+		String[] LineModel = {"GaussianLines", "SecondOrderSpline", "ThridOrderSpline" };
+		int indexmodel = 0;
+		
+		gd.addChoice("Choose your model: ", LineModel, LineModel[indexmodel]);
+		indexmodel = gd.getNextChoiceIndex();
+		switch(indexmodel){
+		
+		case 0:
+			
+	     userChoiceModel = UserChoiceModel.Line;
+		 break;
+		 
+		case 1:
+		 userChoiceModel = UserChoiceModel.Splineordersec;	
+		 break;
+		case 2:
+		 userChoiceModel = UserChoiceModel.Splineordersec;	
+		 break;
+		 
+		 default:
+		  userChoiceModel = UserChoiceModel.Splineordersec; 
+		  break;
+		
+		}
+		
+		gd.showDialog();
 		
 		return !gd.wasCanceled();
 	}
