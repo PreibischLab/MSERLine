@@ -55,11 +55,11 @@ public class Velocitydetector {
 		new ImageJ();
 
 		// Load the stack of images
-		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("../res/super_bentHHHN.tif"),
+		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("../res/super_bent_small.tif"),
 				new ArrayImgFactory<FloatType>());
 
 		RandomAccessibleInterval<FloatType> preprocessedimg = util.ImgLib2Util
-				.openAs32Bit(new File("../res/super_bentHHHN.tif"), new ArrayImgFactory<FloatType>());
+				.openAs32Bit(new File("../res/super_bent_small.tif"), new ArrayImgFactory<FloatType>());
 		int ndims = img.numDimensions();
 
 		// Normalize the intensity of the whole stack to be between min and max
@@ -92,7 +92,7 @@ public class Velocitydetector {
 
 			ImageJFunctions.show(img);
 
-			LinefindingMethod findLinesVia = LinefindingMethod.Hough;
+			LinefindingMethod findLinesVia = LinefindingMethod.MSER;
 			Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> PrevFrameparam = null;
 			if (findLinesVia == LinefindingMethod.MSER) {
 
@@ -146,7 +146,7 @@ public class Velocitydetector {
 			 * Line finder using MSER or Hough or a combination
 			 * 
 			 */
-			LinefindingMethod findLinesVia = LinefindingMethod.Hough;
+			LinefindingMethod findLinesVia = LinefindingMethod.MSER;
 			Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> PrevFrameparam = null;
 
 			if (findLinesVia == LinefindingMethod.MSER) {
@@ -200,7 +200,7 @@ public class Velocitydetector {
 				 * Getting tracks for both the ends
 				 * 
 				 */
-				LinefindingMethod findLinesViaHF = LinefindingMethod.Hough;
+				LinefindingMethod findLinesViaHF = LinefindingMethod.MSER;
 				
 				UserChoiceModel userChoiceModelHF = UserChoiceModel.Splineordersec;
 				Pair<Pair<ArrayList<Trackproperties>, ArrayList<Trackproperties>>, Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>>> returnVector = null;

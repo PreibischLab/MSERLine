@@ -49,15 +49,20 @@ public class LinefinderInteractiveMSERwHough  implements Linefinder{
 	private int Roiindex;
 	private final int ndims;
 	private EllipseRoi ellipseroi;
+	private final double thetaPerPixel;
+	private final double rhoPerPixel;
 	public LinefinderInteractiveMSERwHough (final RandomAccessibleInterval<FloatType> source, 
 			final RandomAccessibleInterval<FloatType> Preprocessedsource,
 			final MserTree<UnsignedByteType> newtree,
-			final int minlength, final int framenumber){
+			final int minlength, final int framenumber, final double thetaPerPixel,
+			final double rhoPerPixel){
 		
 		this.newtree = newtree;
 		this.source = source;
 		this.Preprocessedsource = Preprocessedsource;
 		this.minlength = minlength;
+		this.thetaPerPixel = thetaPerPixel;
+		this.rhoPerPixel = rhoPerPixel;
 		this.framenumber = framenumber;
 		ndims = source.numDimensions();
 	}
@@ -177,7 +182,7 @@ public class LinefinderInteractiveMSERwHough  implements Linefinder{
 				double[] slopeandinterceptCI = new double[2*ndims];
 				
 				
-				HoughTransformandMser viaHough = new HoughTransformandMser(Roiindex, Roiimg);
+				HoughTransformandMser viaHough = new HoughTransformandMser(Roiindex, Roiimg, thetaPerPixel, rhoPerPixel);
 				viaHough.checkInput();
 				viaHough.process();
 				slopeandintercept = viaHough.getResult();

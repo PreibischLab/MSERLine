@@ -14,6 +14,7 @@ import ij.ImagePlus;
 import ij.gui.EllipseRoi;
 import ij.gui.Overlay;
 import labeledObjects.CommonOutput;
+import labeledObjects.CommonOutputHF;
 import labeledObjects.LabelledImg;
 import mserMethods.GetDelta;
 import net.imglib2.Cursor;
@@ -33,9 +34,8 @@ import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Util;
 import net.imglib2.view.Views;
 import peakFitter.SortListbyproperty;
-import peakFitter.SubpixelLengthPCLine;
 
-public class LinefinderMSERwHough  implements Linefinder{
+public class LinefinderInteractiveHFMSERwHough implements LinefinderHF{
 
 	private static final String BASE_ERROR_MSG = "[Line-Finder]";
 	protected String errorMessage;
@@ -44,77 +44,31 @@ public class LinefinderMSERwHough  implements Linefinder{
 	private final RandomAccessibleInterval<FloatType> Preprocessedsource;
 	private final int framenumber;
 	private final int minlength;
-	private ArrayList<CommonOutput> output;
-	public  double delta = 10;
-	public final long minSize = 1;
-	public final long maxSize = Long.MAX_VALUE;
-	public  double maxVar = 0.5;
-	public double minDiversity = 0;
-	public int maxlines = 100;
-	public final int maxdelta = 10;
-	private Overlay ov;
-	public boolean darktoBright = false;
+	private ArrayList<CommonOutputHF> output;
+	final MserTree<UnsignedByteType> newtree;
+	
+
 	private int Roiindex;
 	private final int ndims;
 	private EllipseRoi ellipseroi;
-	public LinefinderMSERwHough (final RandomAccessibleInterval<FloatType> source, 
-			final RandomAccessibleInterval<FloatType> Preprocessedsource, final int minlength, final int framenumber){
+	private final double thetaPerPixel;
+	private final double rhoPerPixel;
+	public LinefinderInteractiveHFMSERwHough (final RandomAccessibleInterval<FloatType> source, 
+			final RandomAccessibleInterval<FloatType> Preprocessedsource, 
+			final MserTree<UnsignedByteType> newtree,
+			final int minlength, final int framenumber, final double thetaPerPixel,
+			final double rhoPerPixel){
 		
+		this.newtree = newtree;
 		this.source = source;
 		this.Preprocessedsource = Preprocessedsource;
 		this.minlength = minlength;
+		this.thetaPerPixel = thetaPerPixel;
+		this.rhoPerPixel = rhoPerPixel;
 		this.framenumber = framenumber;
 		ndims = source.numDimensions();
 	}
-	public void setDelta(double delta) {
-		this.delta = delta;
-	}
 	
-	public void setDarktoBright(boolean darktoBright) {
-		this.darktoBright = darktoBright;
-	}
-	
-
-	
-	public void setMaxlines(int maxlines) {
-		this.maxlines = maxlines;
-	}
-	
-	public void setMinDiversity(double minDiversity) {
-		this.minDiversity = minDiversity;
-	}
-	
-	public void setMaxVar(double maxVar) {
-		this.maxVar = maxVar;
-	}
-	 public long getMinSize() {
-		return minSize;
-	}
-	 
-	 public double getDelta() {
-		return delta;
-	}
-	
-	public long getMaxSize() {
-		return maxSize;
-	} 
-	 
-	 public int getMaxdelta() {
-		return maxdelta;
-	}
-	 
-	 public double getMaxVar() {
-		return maxVar;
-	}
-	 
-	 public int getMaxlines() {
-		return maxlines;
-	}
-	 
-	 public double getMinDiversity() {
-		return minDiversity;
-	}
-	 
 	
 	@Override
 	public boolean checkInput() {
@@ -129,41 +83,10 @@ public class LinefinderMSERwHough  implements Linefinder{
 	@Override
 	public boolean process() {
 
-		output = new ArrayList<CommonOutput>();
-		
-        final FloatType type = source.randomAccess().get().createVariable();
-		
-
-		ov = new Overlay();
+		output = new ArrayList<CommonOutputHF>();
+		 final FloatType type = source.randomAccess().get().createVariable();
 		ArrayList<double[]> ellipselist = new ArrayList<double[]>();
 		ArrayList<double[]> meanandcovlist = new ArrayList<double[]>();
-		final Img<UnsignedByteType> newimg;
-
-		try
-		{
-		ImageJFunctions.wrap(Preprocessedsource, "curr");
-		final ImagePlus currentimp = IJ.getImage();
-		IJ.run("8-bit");
-
-		newimg = ImagePlusAdapter.wrapByte(currentimp);
-
-		}
-		catch ( final Exception e )
-		{
-			e.printStackTrace();
-			return false;
-		}
-		
-		
-		System.out.println("Determining the best delta parameter for the image:");
-		double bestdelta = GetDelta.Bestdeltaparam(newimg, delta, minSize, maxSize, maxVar, minDiversity, minlength,
-				maxlines, maxdelta, darktoBright);
-		
-		MserTree<UnsignedByteType> newtree = MserTree.buildMserTree(newimg, bestdelta, minSize, maxSize, maxVar,
-				minDiversity, darktoBright);
-		
-		
-		
 		final HashSet<Mser<UnsignedByteType>> rootset = newtree.roots();
 		
 		
@@ -209,7 +132,6 @@ public class LinefinderMSERwHough  implements Linefinder{
 	    			count++;
 				ellipseroi.setStrokeColor(Color.green);
 				
-				ov.add(ellipseroi);
 
 				Cursor<FloatType> sourcecursor = Views.iterable(Preprocessedsource).localizingCursor();
 				RandomAccess<FloatType> ranac = Roiimg.randomAccess();
@@ -252,24 +174,15 @@ public class LinefinderMSERwHough  implements Linefinder{
 
 				}
 				
-				double[] slopeandintercept = new double[ndims];
-				double[] slopeandinterceptCI = new double[2*ndims];
 				
 				
-				HoughTransformandMser viaHough = new HoughTransformandMser(Roiindex, Roiimg, 1, 1);
-				viaHough.checkInput();
-				viaHough.process();
-				slopeandintercept = viaHough.getResult();
+				
 				
 				// Obtain the slope and intercept of the line by obtaining the major axis of the ellipse (super fast and accurate)
-				for (int d = 0; d < ndims; ++d){
-					slopeandinterceptCI[d] = slopeandintercept[d];
-					slopeandinterceptCI[d + ndims ] = 0;
-				}
-					
 				
 				
-				CommonOutput currentOutput = new CommonOutput(framenumber, Roiindex, slopeandinterceptCI, Roiimg, ActualRoiimg, interval);
+				
+				CommonOutputHF currentOutput = new CommonOutputHF(framenumber, Roiindex, Roiimg, ActualRoiimg, interval);
 				
 				
 				output.add(currentOutput);
@@ -286,7 +199,7 @@ public class LinefinderMSERwHough  implements Linefinder{
 	}
 
 	@Override
-	public ArrayList<CommonOutput> getResult() {
+	public ArrayList<CommonOutputHF> getResult() {
 
 		return output;
 	}
@@ -297,10 +210,7 @@ public class LinefinderMSERwHough  implements Linefinder{
 		
 	}
 	
-	 public Overlay getOverlay() {
-			
-			return ov;
-		}
+
 	/**
 	 * Returns the slope and the intercept of the line passing through the major axis of the ellipse
 	 * 
@@ -490,6 +400,8 @@ public class LinefinderMSERwHough  implements Linefinder{
 		final EllipseRoi ellipse = new EllipseRoi(x - dx, y - dy, x + dx, y + dy, scale2 / scale1);
 		return ellipse;
 	}
+	
+	
 	@Override
 	public String getErrorMessage() {
 
@@ -502,7 +414,7 @@ public void setLogger(Logger logger) {
 	this.logger = logger;
 	
 }
-
-	
 	
 }
+
+

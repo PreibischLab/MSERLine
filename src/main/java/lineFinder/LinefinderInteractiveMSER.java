@@ -46,7 +46,6 @@ public class LinefinderInteractiveMSER  implements Linefinder{
 	private final int minlength;
 	private ArrayList<CommonOutput> output;
 
-	private Overlay ov;
 	private int Roiindex;
 	private final int ndims;
 	private EllipseRoi ellipseroi;
@@ -81,7 +80,6 @@ public class LinefinderInteractiveMSER  implements Linefinder{
         final FloatType type = Preprocessedsource.randomAccess().get().createVariable();
 		
 
-		ov = new Overlay();
 		ArrayList<double[]> ellipselist = new ArrayList<double[]>();
 		ArrayList<double[]> meanandcovlist = new ArrayList<double[]>();
 		
@@ -131,7 +129,6 @@ public class LinefinderInteractiveMSER  implements Linefinder{
 	    			count++;
 				ellipseroi.setStrokeColor(Color.green);
 				
-				ov.add(ellipseroi);
 
 				Cursor<FloatType> sourcecursor = Views.iterable(Preprocessedsource).localizingCursor();
 				RandomAccess<FloatType> ranac = Roiimg.randomAccess();
@@ -218,10 +215,7 @@ public class LinefinderInteractiveMSER  implements Linefinder{
 		
 	}
 	
-	 public Overlay getOverlay() {
-			
-			return ov;
-		}
+	
 	/**
 	 * Returns the slope and the intercept of the line passing through the major axis of the ellipse
 	 * 

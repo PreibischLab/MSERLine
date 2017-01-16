@@ -33,9 +33,13 @@ import java.util.Set;
 
 import javax.swing.border.EmptyBorder;
 
+import org.jgrapht.graph.DefaultWeightedEdge;
+import org.jgrapht.graph.SimpleWeightedGraph;
+
 import com.sun.tools.javac.util.Pair;
 
 import LineModels.UseLineModel.UserChoiceModel;
+import drawandOverlay.DisplayGraph;
 import drawandOverlay.PushCurves;
 import fiji.tool.SliceListener;
 import fiji.tool.SliceObserver;
@@ -62,6 +66,10 @@ import lineFinder.LinefinderHFHough;
 import lineFinder.LinefinderHFMSER;
 import lineFinder.LinefinderHFMSERwHough;
 import lineFinder.LinefinderHough;
+import lineFinder.LinefinderInteractiveHFHough;
+import lineFinder.LinefinderInteractiveHFMSER;
+import lineFinder.LinefinderInteractiveHFMSERwHough;
+import lineFinder.LinefinderInteractiveHough;
 import lineFinder.LinefinderInteractiveMSER;
 import lineFinder.LinefinderInteractiveMSERwHough;
 import lineFinder.LinefinderMSER;
@@ -99,10 +107,13 @@ import net.imglib2.view.Views;
 import peakFitter.SortListbyproperty;
 import preProcessing.GetLocalmaxmin;
 import preProcessing.GlobalThresholding;
+import preProcessing.Kernels;
 import preProcessing.MedianFilter2D;
 import preProcessing.MedianFilterImg2D;
 import roiFinder.Roifinder;
 import roiFinder.RoifinderMSER;
+import velocityanalyser.Trackend;
+import velocityanalyser.Trackstart;
 
 /**
  * An interactive tool for MT tracking using MSER and Hough Transform
@@ -112,30 +123,32 @@ import roiFinder.RoifinderMSER;
 
 public class InteractiveMT implements PlugIn {
 
-	
 	final int scrollbarSize = 1000;
 	final int scrollbarSizebig = 1000;
 	// steps per octave
 	public static int standardSensitivity = 4;
 	int sensitivity = standardSensitivity;
 	float deltaMin = 0;
+	float thetaPerPixelMin = new Float(0.2);
+	float rhoPerPixelMin = new Float(0.2);
 	float thresholdHoughMin = 0;
-	float thresholdHoughMax = 100;
+	float thresholdHoughMax = 250;
 	float deltaMax = 400f;
 	float maxVarMin = 0;
 	float maxVarMax = 1;
-	
+	float thetaPerPixelMax = 2;
+	float rhoPerPixelMax = 2;
+
 	boolean darktobright = false;
 	boolean displayBitimg = false;
 	boolean displayWatershedimg = false;
 	long minSize = 1;
 	long maxSize = 1000;
 	long minSizemin = 0;
-	long  minSizemax = 100;
+	long minSizemax = 100;
 	long maxSizemin = 100;
 	long maxSizemax = 10000;
-	
-	
+
 	float minDiversityMin = 0;
 	float minDiversityMax = 1;
 
@@ -143,21 +156,25 @@ public class InteractiveMT implements PlugIn {
 	float delta = 1f;
 	int deltaInit = 10;
 	int maxVarInit = 1;
+
 	int minSizeInit = 1;
 	int maxSizeInit = 100;
-	float thresholdHoughInit = 50;
-	
-   
-	public int minDiversityInit = 0;
+	float thresholdHoughInit = 100;
+	float rhoPerPixelInit = new Float(0.5);
+	float thetaPerPixelInit = new Float(0.5);
+
+	public int minDiversityInit = 1;
 	public int radius = 1;
 	public long Size = 1;
-	
-	public  float maxVar = 1;
+	public float thetaPerPixel = 1;
+	public float rhoPerPixel = 1;
+	boolean enablerhoPerPixel = false;
+	public float maxVar = 1;
 	public float minDiversity = 1;
-	public float thresholdHough = 1; 
-	
+	public float thresholdHough = 1;
+
 	Color colorDraw = null;
-	FloatType minval =  new FloatType(0);
+	FloatType minval = new FloatType(0);
 	FloatType maxval = new FloatType(1);
 	SliceObserver sliceObserver;
 	RoiListener roiListener;
@@ -168,15 +185,20 @@ public class InteractiveMT implements PlugIn {
 	boolean FindLinesViaMSERwHOUGH = false;
 	boolean ShowMser = false;
 	boolean ShowHough = false;
-	
+
 	boolean RoisViaMSER = false;
 	boolean RoisViaWatershed = false;
-	
+
 	boolean GaussianLines = true;
 	boolean NormalizeImage = false;
 	boolean Mediancurr = false;
 	boolean MedianAll = false;
 	boolean AutoDelta = false;
+	
+	ArrayList<ArrayList<Trackproperties>> Allstart = new ArrayList<ArrayList<Trackproperties>>();
+	ArrayList<ArrayList<Trackproperties>> Allend = new ArrayList<ArrayList<Trackproperties>>();
+	
+	
 	int channel = 0;
 	Img<FloatType> originalimg;
 	Img<FloatType> originalPreprocessedimg;
@@ -196,7 +218,12 @@ public class InteractiveMT implements PlugIn {
 	int stacksize;
 	int Maxlabel;
 	private int ndims;
+	Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> PrevFrameparam; 
+	Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> NewFrameparam;
+	Pair<Pair<ArrayList<Trackproperties>, ArrayList<Trackproperties>>, 
+	Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>>> returnVector;
 	ArrayList<CommonOutputHF> output;
+	
 	public Rectangle standardRectangle;
 	public FinalInterval interval;
 	RandomAccessibleInterval<UnsignedByteType> newimg;
@@ -205,15 +232,13 @@ public class InteractiveMT implements PlugIn {
 	int endStack, currentframe;
 
 	public static enum ValueChange {
-		ROI, ALL, DELTA, FindLinesVia, MAXVAR, MINDIVERSITY,
-		DARKTOBRIGHT, MINSIZE, MAXSIZE, SHOWMSER, FRAME, SHOWHOUGH, thresholdHough, DISPLAYBITIMG, DISPLAYWATERSHEDIMG;
+		ROI, ALL, DELTA, FindLinesVia, MAXVAR, MINDIVERSITY, DARKTOBRIGHT, MINSIZE, MAXSIZE, SHOWMSER, FRAME, SHOWHOUGH, thresholdHough, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, rhoPerPixel, thetaPerPixel;
 	}
 
 	boolean isFinished = false;
 	boolean wasCanceled = false;
 	boolean SecondOrderSpline;
 	boolean ThirdOrderSpline;
-	
 
 	public boolean isFinished() {
 		return isFinished;
@@ -226,29 +251,27 @@ public class InteractiveMT implements PlugIn {
 	public boolean getFindLinesViaMSER() {
 		return FindLinesViaMSER;
 	}
-	
-	
 
-	public boolean getRoisViaMSER(){
-		
+	public boolean getRoisViaMSER() {
+
 		return RoisViaMSER;
 	}
-	
-	public boolean getRoisViaWatershed(){
-		
+
+	public boolean getRoisViaWatershed() {
+
 		return RoisViaWatershed;
 	}
-	
-	public void setRoisViaMSER(final boolean RoisViaMSER){
-		
+
+	public void setRoisViaMSER(final boolean RoisViaMSER) {
+
 		this.RoisViaMSER = RoisViaMSER;
 	}
-	
-    public void setRoisViaWatershed(final boolean RoisViaWatershed){
-		
+
+	public void setRoisViaWatershed(final boolean RoisViaWatershed) {
+
 		this.RoisViaWatershed = RoisViaWatershed;
 	}
-	
+
 	public boolean getFindLinesViaHOUGH() {
 		return FindLinesViaHOUGH;
 	}
@@ -273,73 +296,92 @@ public class InteractiveMT implements PlugIn {
 		delta = value;
 		deltaInit = computeScrollbarPositionFromValue(delta, deltaMin, deltaMax, scrollbarSize);
 	}
-	
-	public double getInitialDelta(final float value){
-		
+
+	public double getInitialDelta(final float value) {
+
 		return delta;
-		
+
 	}
-	
-	
 
 	public void setInitialmaxVar(final float value) {
 		maxVar = value;
 		maxVarInit = computeScrollbarPositionFromValue(maxVar, maxVarMin, maxVarMax, scrollbarSize);
 	}
 
-     public double getInitialmaxVar(final float value){
-		
+	public double getInitialmaxVar(final float value) {
+
 		return maxVar;
-		
+
 	}
 
-     
-     public void setInitialthresholdHough(final float value) {
- 		thresholdHough = value;
- 		thresholdHoughInit = computeScrollbarPositionFromValue(thresholdHough, thresholdHoughMin, thresholdHoughMax, scrollbarSize);
- 	}
+	public void setInitialthresholdHough(final float value) {
+		thresholdHough = value;
+		thresholdHoughInit = computeScrollbarPositionFromValue(thresholdHough, thresholdHoughMin, thresholdHoughMax,
+				scrollbarSize);
+	}
 
-     
-     public double getInitialthresholdHough(final float value){
- 		
- 		return thresholdHough;
- 		
- 	}
-     
-     public void setInitialminDiversity(final float value) {
- 		minDiversity = value;
- 		minDiversityInit = computeScrollbarPositionFromValue(minDiversity, minDiversityMin, minDiversityMax, scrollbarSize);
- 	}
+	public void setInitialthetaPerPixel(final float value) {
+		thetaPerPixel = value;
+		thetaPerPixelInit = computeScrollbarPositionFromValue(thetaPerPixel, thetaPerPixelMin, thetaPerPixelMax,
+				scrollbarSize);
+	}
 
-      public double getInitialminDiversity(final float value){
- 		
- 		return minDiversity;
- 		
- 	}
-      
-      public void setInitialminSize(final int value) {
-   		minSize = value;
-   		minSizeInit = computeScrollbarPositionFromValue(minSize, minSizemin, minSizemax, scrollbarSize);
-   	}
+	public void setInitialrhoPerPixel(final float value) {
+		rhoPerPixel = value;
+		rhoPerPixelInit = computeScrollbarPositionFromValue(rhoPerPixel, rhoPerPixelMin, rhoPerPixelMax, scrollbarSize);
+	}
 
-        public double getInitialminSize(final int value){
-   		
-   		return minSize;
-   		
-   	}
-        
-        
-        public void setInitialmaxSize(final int value) {
-     		maxSize = value;
-     		maxSizeInit = computeScrollbarPositionFromValue(maxSize, maxSizemin, maxSizemax, scrollbarSize);
-     	}
+	public double getInitialthresholdHough(final float value) {
 
-          public double getInitialmaxSize(final int value){
-     		
-     		return maxSize;
-     		
-     	}
-      
+		return thresholdHough;
+
+	}
+
+	public double getInitialthetaPerPixel(final float value) {
+
+		return thetaPerPixel;
+
+	}
+
+	public double getInitialrhoPerPixel(final float value) {
+
+		return rhoPerPixel;
+
+	}
+
+	public void setInitialminDiversity(final float value) {
+		minDiversity = value;
+		minDiversityInit = computeScrollbarPositionFromValue(minDiversity, minDiversityMin, minDiversityMax,
+				scrollbarSize);
+	}
+
+	public double getInitialminDiversity(final float value) {
+
+		return minDiversity;
+
+	}
+
+	public void setInitialminSize(final int value) {
+		minSize = value;
+		minSizeInit = computeScrollbarPositionFromValue(minSize, minSizemin, minSizemax, scrollbarSize);
+	}
+
+	public double getInitialminSize(final int value) {
+
+		return minSize;
+
+	}
+
+	public void setInitialmaxSize(final int value) {
+		maxSize = value;
+		maxSizeInit = computeScrollbarPositionFromValue(maxSize, maxSizemin, maxSizemax, scrollbarSize);
+	}
+
+	public double getInitialmaxSize(final int value) {
+
+		return maxSize;
+
+	}
 
 	public InteractiveMT(final ImagePlus imp, final ImagePlus preprocessedimp, final double[] psf,
 			final int minlength) {
@@ -351,7 +393,8 @@ public class InteractiveMT implements PlugIn {
 		standardRectangle = new Rectangle(inix, iniy, imp.getWidth() - 2 * inix, imp.getHeight() - 2 * iniy);
 		originalimg = ImageJFunctions.convertFloat(imp.duplicate());
 		originalPreprocessedimg = ImageJFunctions.convertFloat(preprocessedimp.duplicate());
-
+		
+		
 
 	}
 
@@ -364,7 +407,7 @@ public class InteractiveMT implements PlugIn {
 			imp = WindowManager.getCurrentImage();
 		if (preprocessedimp == null)
 			preprocessedimp = WindowManager.getCurrentImage();
-		
+
 		if (imp.getType() == ImagePlus.COLOR_RGB || imp.getType() == ImagePlus.COLOR_256) {
 			IJ.log("Color images are not supported, please convert to 8, 16 or 32-bit grayscale");
 			return;
@@ -383,31 +426,25 @@ public class InteractiveMT implements PlugIn {
 			return;
 		}
 
-		currentframe = preprocessedimp.getFrame() - 1;
-		preprocessedimp.setPosition(preprocessedimp.getChannel(), preprocessedimp.getSlice(), preprocessedimp.getFrame());
-		imp.setPosition(preprocessedimp.getChannel(), preprocessedimp.getSlice(), preprocessedimp.getFrame());
 		
+		preprocessedimp.setPosition(preprocessedimp.getChannel(), preprocessedimp.getSlice(),
+				0);
+		imp.setPosition(preprocessedimp.getChannel(), preprocessedimp.getSlice(), 0);
+		currentframe = preprocessedimp.getFrame();
 
-				
-		int z = currentframe;
-		
-		
 		// copy the ImagePlus into an ArrayImage<FloatType> for faster access
 		displaySliders();
 		// add listener to the imageplus slice slider
-				sliceObserver = new SliceObserver(preprocessedimp, new ImagePlusListener());
-				// compute first version#
+		sliceObserver = new SliceObserver(preprocessedimp, new ImagePlusListener());
+		// compute first version#
 		updatePreview(ValueChange.ALL);
 		isStarted = true;
-		
+
 		// check whenever roi is modified to update accordingly
-				roiListener = new RoiListener();
-				preprocessedimp.getCanvas().addMouseListener(roiListener);
+		roiListener = new RoiListener();
+		preprocessedimp.getCanvas().addMouseListener(roiListener);
 
 	}
-	
-	
-	
 
 	/**
 	 * Updates the Preview with the current parameters (sigma, threshold, roi,
@@ -418,13 +455,10 @@ public class InteractiveMT implements PlugIn {
 	 */
 
 	protected void updatePreview(final ValueChange change) {
-		
-		
-	
+
 		// check if Roi changed
 		boolean roiChanged = false;
-		
-		
+
 		Roi roi = preprocessedimp.getRoi();
 		if (roi == null || roi.getType() != Roi.RECTANGLE) {
 			preprocessedimp.setRoi(new Rectangle(standardRectangle));
@@ -433,31 +467,32 @@ public class InteractiveMT implements PlugIn {
 		}
 
 		Rectangle rect = roi.getBounds();
-		if (roiChanged || currentimg == null || currentPreprocessedimg == null || newimg == null  ||
-				change == ValueChange.FRAME || rect.getMinX() != standardRectangle.getMinX()
+		if (roiChanged || currentimg == null || currentPreprocessedimg == null || newimg == null
+				|| change == ValueChange.FRAME || rect.getMinX() != standardRectangle.getMinX()
 				|| rect.getMaxX() != standardRectangle.getMaxX() || rect.getMinY() != standardRectangle.getMinY()
-				|| rect.getMaxY() != standardRectangle.getMaxY() || change == ValueChange.ALL)  {
+				|| rect.getMaxY() != standardRectangle.getMaxY() || change == ValueChange.ALL) {
 			standardRectangle = rect;
-			
-			long[] min = {(long)standardRectangle.getMinX(), (long)standardRectangle.getMinY()};
-			long[] max = {(long)standardRectangle.getMaxX(), (long)standardRectangle.getMaxY()};
+
+			long[] min = { (long) standardRectangle.getMinX(), (long) standardRectangle.getMinY() };
+			long[] max = { (long) standardRectangle.getMaxX(), (long) standardRectangle.getMaxY() };
 			interval = new FinalInterval(min, max);
-			
-			if (ndims == 2){
-				
+
+			if (ndims == 2) {
+
 				currentimg = extractImage(originalimg);
 				currentPreprocessedimg = extractImage(originalPreprocessedimg);
 				newimg = copytoByteImage(currentPreprocessedimg);
-				
+
 				roiChanged = true;
 			}
-			if (ndims > 2){
-			
-				currentimg = extractImage(Views.hyperSlice(originalimg, ndims - 1, currentframe  ));
-				currentPreprocessedimg = extractImage(Views.hyperSlice(originalPreprocessedimg, ndims - 1, currentframe  ));
+			if (ndims > 2) {
+
+				currentimg = extractImage(Views.hyperSlice(originalimg, ndims - 1, currentframe - 1));
+				currentPreprocessedimg = extractImage(
+						Views.hyperSlice(originalPreprocessedimg, ndims - 1, currentframe - 1));
 				newimg = copytoByteImage(currentPreprocessedimg);
-			
-			roiChanged = true;
+
+				roiChanged = true;
 			}
 		}
 
@@ -466,109 +501,115 @@ public class InteractiveMT implements PlugIn {
 			isComputing = false;
 			return;
 		}
-		
-			
-		
+
 		// Re-compute MSER ellipses if neccesary
-				ArrayList<EllipseRoi> Rois = new ArrayList<EllipseRoi>();
-				RoiManager roimanager = RoiManager.getInstance();
+		ArrayList<EllipseRoi> Rois = new ArrayList<EllipseRoi>();
+		RoiManager roimanager = RoiManager.getInstance();
 
-				if (roimanager == null) {
-					roimanager = new RoiManager();
-				}
-				
-				if (change == ValueChange.SHOWHOUGH){
-					
-					MouseEvent mev = new MouseEvent(preprocessedimp.getCanvas(), MouseEvent.MOUSE_RELEASED, System.currentTimeMillis(), 0, 0, 0,
-							1, false);
-					
-					if (mev != null) {
+		if (roimanager == null) {
+			roimanager = new RoiManager();
+		}
 
-						roimanager.close();
+		if (change == ValueChange.SHOWHOUGH) {
 
-						roimanager = new RoiManager();
+			MouseEvent mev = new MouseEvent(preprocessedimp.getCanvas(), MouseEvent.MOUSE_RELEASED,
+					System.currentTimeMillis(), 0, 0, 0, 1, false);
 
-						
-					}
-					
-					IJ.log("Doing watershedding on the distance transformed image ");
-		
-					
-					RandomAccessibleInterval<BitType> bitimg = new ArrayImgFactory<BitType>().create(currentPreprocessedimg, new BitType());
-					GetLocalmaxmin.ThresholdingBit(currentPreprocessedimg, bitimg, thresholdHough);
-					
-					if (displayBitimg)
-						ImageJFunctions.show(bitimg);
-					
-					WatershedDistimg WaterafterDisttransform = new WatershedDistimg(currentPreprocessedimg, bitimg);
-					WaterafterDisttransform.checkInput();
-					WaterafterDisttransform.process();
-				    intimg = WaterafterDisttransform.getResult();
-				    Maxlabel = WaterafterDisttransform.GetMaxlabelsseeded(intimg);
-				    if (displayWatershedimg)
-				    	ImageJFunctions.show(intimg);
-					
-					
-				}
-				
-				if (change == ValueChange.SHOWMSER ){
+			if (mev != null) {
 
-					
-					MouseEvent mev = new MouseEvent(preprocessedimp.getCanvas(), MouseEvent.MOUSE_RELEASED, System.currentTimeMillis(), 0, 0, 0,
-							1, false);
-					
-					if (mev != null) {
+				roimanager.close();
 
-						roimanager.close();
+				roimanager = new RoiManager();
 
-						roimanager = new RoiManager();
+			}
 
-						
-					}
-		
+			IJ.log("Doing watershedding on the distance transformed image ");
 
-					
-					IJ.log(" Computing the Component tree");
-					 newtree = MserTree.buildMserTree(newimg, delta, minSize, maxSize, maxVar,
-							minDiversity, darktobright);
-						Rois = getcurrentRois(newtree);
-						
-				
-						Overlay o = preprocessedimp.getOverlay();
+			RandomAccessibleInterval<BitType> bitimg = new ArrayImgFactory<BitType>().create(newimg, new BitType());
+			GetLocalmaxmin.ThresholdingBit(newimg, bitimg, thresholdHough);
 
-						if (o == null) {
-							o = new Overlay();
-							preprocessedimp.setOverlay(o);
-						}
+			if (displayBitimg)
+				ImageJFunctions.show(bitimg);
 
-						o.clear();
-						
-						
-						
-						
-			           for (int index = 0; index < Rois.size(); ++index) {
-							
-							EllipseRoi or = Rois.get(index);
-							
-							or.setStrokeColor(Color.red);
-							o.add(or);
-							roimanager.addRoi(or);
-						}
-						
-					
-				}
-				
+			WatershedDistimg<UnsignedByteType> WaterafterDisttransform = new WatershedDistimg<UnsignedByteType>(newimg,
+					bitimg);
+			WaterafterDisttransform.checkInput();
+			WaterafterDisttransform.process();
+			intimg = WaterafterDisttransform.getResult();
+			Maxlabel = WaterafterDisttransform.GetMaxlabelsseeded(intimg);
+			if (displayWatershedimg)
+				ImageJFunctions.show(intimg);
+
+		}
+
+		if (change == ValueChange.SHOWMSER) {
+
+			MouseEvent mev = new MouseEvent(preprocessedimp.getCanvas(), MouseEvent.MOUSE_RELEASED,
+					System.currentTimeMillis(), 0, 0, 0, 1, false);
+
+			if (mev != null) {
+
+				roimanager.close();
+
+				roimanager = new RoiManager();
+
+			}
+
+			IJ.log(" Computing the Component tree");
 			
 			
-				preprocessedimp.updateAndDraw();
+			final long Cannyradius = (long) (Math.ceil(Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1])));
+			
+			newimg = copytoByteImage(Kernels.CannyEdgeandMean(currentPreprocessedimg, Cannyradius));
+			
+			newtree = MserTree.buildMserTree(newimg, delta, minSize, maxSize, maxVar, minDiversity, darktobright);
+			Rois = getcurrentRois(newtree);
 
-				isComputing = false;
-		
-	
-	
-		
+			Overlay o = preprocessedimp.getOverlay();
+
+			if (o == null) {
+				o = new Overlay();
+				preprocessedimp.setOverlay(o);
+			}
+
+			o.clear();
+
+			for (int index = 0; index < Rois.size(); ++index) {
+
+				EllipseRoi or = Rois.get(index);
+
+				or.setStrokeColor(Color.red);
+				o.add(or);
+				roimanager.addRoi(or);
+			}
+
+		}
+
+		preprocessedimp.updateAndDraw();
+
+		isComputing = false;
+
 	}
 
+	
+	private boolean maxStack(){
+		GenericDialog gd = new GenericDialog("Choose Final Frame");
+		if (stacksize > 1) {
+			
+			gd.addNumericField("Do till frame", stacksize, 0);
+
+			assert (int) gd.getNextNumber() > 1;
+		}
+
+		gd.showDialog();
+		if (stacksize > 1) {
+			stacksize = (int) gd.getNextNumber();
+
+		}
+		return !gd.wasCanceled();
+		
+	}
+	
 	public void displaySliders() {
 
 		final Frame frame = new Frame("Find MT's and Track");
@@ -576,22 +617,20 @@ public class InteractiveMT implements PlugIn {
 		/* Instantiation */
 		final GridBagLayout layout = new GridBagLayout();
 		final GridBagConstraints c = new GridBagConstraints();
+		
+		CheckboxGroup Finders = new CheckboxGroup();
 		final Checkbox Normalize = new Checkbox("Normailze Image Intensity (recommended)", NormalizeImage);
 		final Checkbox MedFiltercur = new Checkbox("Apply Median Filter to current Frame", Mediancurr);
 		final Checkbox MedFilterAll = new Checkbox("Apply Median Filter to Stack", MedianAll);
-		CheckboxGroup Finders = new CheckboxGroup();
-		
-		
-		
 		final Label MTText = new Label("Step 1) Determine end points of MT (start from seeds) ", Label.CENTER);
-		final Button FindLinesListener = new Button("Find endpoints");
+		final Label MTTextHF = new Label("Step 2) Track both end points of MT over time ", Label.CENTER);
 		final Button MoveNext = new Button("Move next");
 		final Button JumptoFrame = new Button("Jump to frame:");
-		final Checkbox mser = new Checkbox("MSER",Finders, FindLinesViaMSER );
-		final Checkbox hough = new Checkbox("HOUGH", Finders, FindLinesViaHOUGH );
-		final Checkbox mserwhough = new Checkbox("MSERwHOUGH",Finders, FindLinesViaMSERwHOUGH );
-       
-       
+		final Button TrackEndPoints = new Button("Track EndPoints:");
+		final Checkbox mser = new Checkbox("MSER", Finders, FindLinesViaMSER);
+		final Checkbox hough = new Checkbox("HOUGH", Finders, FindLinesViaHOUGH);
+		final Checkbox mserwhough = new Checkbox("MSERwHOUGH", Finders, FindLinesViaMSERwHOUGH);
+      
 		/* Location */
 		frame.setLayout(layout);
 
@@ -600,7 +639,8 @@ public class InteractiveMT implements PlugIn {
 		c.gridy = 0;
 		c.weightx = 1;
 
-		
+	
+
 		c.insets = new Insets(10, 10, 0, 0);
 		frame.add(Normalize, c);
 		
@@ -611,27 +651,23 @@ public class InteractiveMT implements PlugIn {
 		++c.gridy;
 		c.insets = new Insets(10, 10, 0, 0);
 		frame.add(MedFilterAll, c);
-		
+	
+
 		++c.gridy;
 		frame.add(MTText, c);
-		
-		
-		
+
 		++c.gridy;
 		c.insets = new Insets(10, 10, 0, 0);
 		frame.add(mser, c);
-	
+
 		++c.gridy;
 		c.insets = new Insets(10, 10, 0, 0);
 		frame.add(hough, c);
-		
+
 		++c.gridy;
 		c.insets = new Insets(10, 10, 0, 0);
 		frame.add(mserwhough, c);
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 355);
-		frame.add(FindLinesListener, c);
-
+		
 		++c.gridy;
 		c.insets = new Insets(10, 10, 0, 355);
 		frame.add(MoveNext, c);
@@ -640,40 +676,45 @@ public class InteractiveMT implements PlugIn {
 		c.insets = new Insets(10, 10, 0, 355);
 		frame.add(JumptoFrame, c);
 		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		frame.add(MTTextHF, c);
 		
-		
-		
-		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 355);
+		frame.add(TrackEndPoints, c);
+
 		Normalize.addItemListener(new NormalizeListener());
 		MedFiltercur.addItemListener(new MediancurrListener() );
 		MedFilterAll.addItemListener(new MedianAllListener() );
-		FindLinesListener.addActionListener(new FindLinesListener());
+		
 		mser.addItemListener(new MserListener());
 		hough.addItemListener(new HoughListener());
 		mserwhough.addItemListener(new MserwHoughListener());
 		MoveNext.addActionListener(new moveNextListener());
 		JumptoFrame.addActionListener(new moveToFrameListener());
-		
+		TrackEndPoints.addActionListener(new TrackendsListener());
+
 		frame.addWindowListener(new FrameListener(frame));
 
 		frame.setVisible(true);
 		MTText.setFont(MTText.getFont().deriveFont(Font.BOLD));
-	
+		MTTextHF.setFont(MTTextHF.getFont().deriveFont(Font.BOLD));
 	}
-	
+
 	protected class moveNextListener implements ActionListener {
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
-		
+
 			// add listener to the imageplus slice slider
 			sliceObserver = new SliceObserver(preprocessedimp, new ImagePlusListener());
-			
+
 			preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame());
 			imp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame());
 			if (preprocessedimp.getFrame() + 1 <= stacksize) {
 				preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame() + 1);
 				imp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame());
-				IJ.log(" Current Frame: " +  (preprocessedimp.getFrame()) + " stacksize: " + stacksize);
+				IJ.log(" Current Frame: " + (preprocessedimp.getFrame()) + " stacksize: " + stacksize);
 			} else {
 				IJ.log("Max frame number exceeded, moving to last frame instead" + "Stacksize: " + stacksize);
 				preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), stacksize);
@@ -681,8 +722,6 @@ public class InteractiveMT implements PlugIn {
 				currentframe = stacksize;
 			}
 			currentframe = preprocessedimp.getFrame();
-			
-		
 
 			Roi roi = preprocessedimp.getRoi();
 			if (roi == null) {
@@ -691,19 +730,19 @@ public class InteractiveMT implements PlugIn {
 				preprocessedimp.setRoi(standardRectangle);
 				roi = preprocessedimp.getRoi();
 			}
-			
-			
-		
+
 			updatePreview(ValueChange.FRAME);
 			isStarted = true;
-
+			final long Cannyradius = (long) (Math.ceil(Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1])));
+			
+		//	newimg = copytoByteImage(Kernels.CannyEdgeandMean(currentPreprocessedimg, Cannyradius));
 			// check whenever roi is modified to update accordingly
 			roiListener = new RoiListener();
 			preprocessedimp.getCanvas().addMouseListener(roiListener);
-			
-			
+
 		}
-		}
+	}
+
 	private boolean moveDialogue() {
 		GenericDialog gd = new GenericDialog("Choose Frame");
 
@@ -719,29 +758,29 @@ public class InteractiveMT implements PlugIn {
 		}
 		return !gd.wasCanceled();
 	}
-	
+
 	protected class moveToFrameListener implements ActionListener {
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
-		
+
 			boolean dialog = moveDialogue();
 			if (dialog) {
 				// add listener to the imageplus slice slider
 				sliceObserver = new SliceObserver(imp, new ImagePlusListener());
 				imp.setPosition(channel, imp.getSlice(), imp.getFrame());
 
-
 				if (currentframe <= stacksize) {
 					preprocessedimp.setPosition(channel, imp.getSlice(), currentframe);
 					imp.setPosition(channel, imp.getSlice(), currentframe);
 				} else {
 					IJ.log("Max frame number exceeded, moving to last frame instead");
-					preprocessedimp.setPosition(channel, imp.getSlice(),stacksize);
-					imp.setPosition(channel, imp.getSlice(),stacksize);
+					preprocessedimp.setPosition(channel, imp.getSlice(), stacksize);
+					imp.setPosition(channel, imp.getSlice(), stacksize);
 					currentframe = stacksize;
 				}
 
-				if (preprocessedimp.getType() == ImagePlus.COLOR_RGB || preprocessedimp.getType() == ImagePlus.COLOR_256) {
+				if (preprocessedimp.getType() == ImagePlus.COLOR_RGB
+						|| preprocessedimp.getType() == ImagePlus.COLOR_256) {
 					IJ.log("Color images are not supported, please convert to 8, 16 or 32-bit grayscale");
 					return;
 				}
@@ -757,33 +796,30 @@ public class InteractiveMT implements PlugIn {
 			}
 			updatePreview(ValueChange.FRAME);
 			isStarted = true;
-
+			final long Cannyradius = (long) (Math.ceil(Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1])));
+			
+		//	newimg = copytoByteImage(Kernels.CannyEdgeandMean(currentPreprocessedimg, Cannyradius));
 			// check whenever roi is modified to update accordingly
 			roiListener = new RoiListener();
 			preprocessedimp.getCanvas().addMouseListener(roiListener);
-			
+
 		}
-		}
-	
+	}
+
 	protected class FindLinesListener implements ActionListener {
-		
+
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
 
 			// add listener to the imageplus slice slider
 			sliceObserver = new SliceObserver(preprocessedimp, new ImagePlusListener());
-			
-			
-			
+
 			IJ.log("Starting Chosen Line finder from the seed image (first frame should be seeds)");
 			preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), currentframe);
 			imp.setPosition(channel, preprocessedimp.getSlice(), currentframe);
-			
+
 			updatePreview(ValueChange.FRAME);
 			isStarted = true;
-
-		
-			
 
 			Roi roi = preprocessedimp.getRoi();
 			if (roi == null) {
@@ -794,36 +830,44 @@ public class InteractiveMT implements PlugIn {
 			}
 			IJ.log("Current frame: " + currentframe);
 			updatePreview(ValueChange.ALL);
+			final long Cannyradius = (long) (Math.ceil(Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1])));
+			
+			//newimg = copytoByteImage(Kernels.CannyEdgeandMean(currentPreprocessedimg, Cannyradius));
+			
 			if (ndims == 2) {
-				Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> PrevFrameparam = null;
 				if (FindLinesViaMSER) {
 					boolean dialog = DialogueModelChoice();
-					if (dialog){
-					LinefinderInteractiveMSER newlineMser = new LinefinderInteractiveMSER(currentimg, currentPreprocessedimg, newtree,
-							minlength, currentframe);
+					if (dialog) {
 
-					PrevFrameparam = FindlinesVia.LinefindingMethod(currentimg, currentPreprocessedimg, minlength, currentframe, psf, newlineMser,
-							userChoiceModel);
+						updatePreview(ValueChange.SHOWMSER);
+						LinefinderInteractiveMSER newlineMser = new LinefinderInteractiveMSER(currentimg,
+								currentPreprocessedimg, newtree, minlength, currentframe);
+
+						PrevFrameparam = FindlinesVia.LinefindingMethod(currentimg, currentPreprocessedimg, minlength,
+								currentframe, psf, newlineMser, userChoiceModel);
 					}
 
 				}
 				if (FindLinesViaHOUGH) {
 					boolean dialog = DialogueModelChoice();
-					if (dialog){
-					LinefinderHough newlineHough = new LinefinderHough(currentimg, currentPreprocessedimg, minlength, currentframe);
+					if (dialog) {
+						
+						LinefinderInteractiveHough newlineHough = new LinefinderInteractiveHough(currentimg,
+								currentPreprocessedimg, intimg, Maxlabel, thetaPerPixel, rhoPerPixel, currentframe);
 
-					PrevFrameparam = FindlinesVia.LinefindingMethod(currentimg, currentPreprocessedimg, minlength, currentframe, psf, newlineHough,
-							userChoiceModel);
+						PrevFrameparam = FindlinesVia.LinefindingMethod(currentimg, currentPreprocessedimg, minlength,
+								currentframe, psf, newlineHough, userChoiceModel);
 					}
 				}
 
 				if (FindLinesViaMSERwHOUGH) {
 					boolean dialog = DialogueModelChoice();
-					if (dialog){
-					LinefinderInteractiveMSERwHough newlineMserwHough = new LinefinderInteractiveMSERwHough(currentimg, currentPreprocessedimg, newtree,
-							minlength, currentframe);
-					PrevFrameparam = FindlinesVia.LinefindingMethod(currentimg, currentPreprocessedimg, minlength, currentframe, psf,
-							newlineMserwHough, userChoiceModel);
+					if (dialog) {
+						updatePreview(ValueChange.SHOWMSER);
+						LinefinderInteractiveMSERwHough newlineMserwHough = new LinefinderInteractiveMSERwHough(
+								currentimg, currentPreprocessedimg, newtree, minlength, currentframe, thetaPerPixel, rhoPerPixel);
+						PrevFrameparam = FindlinesVia.LinefindingMethod(currentimg, currentPreprocessedimg, minlength,
+								currentframe, psf, newlineMserwHough, userChoiceModel);
 					}
 				}
 				// Draw the detected lines
@@ -832,152 +876,283 @@ public class InteractiveMT implements PlugIn {
 				PushCurves.DrawstartLine(gaussimg, PrevFrameparam.fst, PrevFrameparam.snd, psf);
 				ImageJFunctions.show(gaussimg).setTitle("Exact-line-start");
 
-			} 
-			
-			
+			}
+
 			if (ndims > 2) {
-				
+
 				RandomAccessibleInterval<FloatType> groundframe = currentimg;
 				RandomAccessibleInterval<FloatType> groundframepre = currentPreprocessedimg;
-				Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> PrevFrameparam = null;
 				if (FindLinesViaMSER) {
 					boolean dialog = DialogueModelChoice();
-					if (dialog){
-
-					LinefinderInteractiveMSER newlineMser = new LinefinderInteractiveMSER(groundframe, groundframepre,
-							newtree, minlength, currentframe );
-					PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength, currentframe , psf, newlineMser,
-							userChoiceModel);
+					if (dialog) {
+						updatePreview(ValueChange.SHOWMSER);
+						LinefinderInteractiveMSER newlineMser = new LinefinderInteractiveMSER(groundframe,
+								groundframepre, newtree, minlength, currentframe);
+						PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength,
+								currentframe, psf, newlineMser, userChoiceModel);
 					}
-				
+
 				}
 
 				if (FindLinesViaHOUGH) {
-					
-					boolean dialog = DialogueModelChoice();
-					if (dialog){
-					LinefinderHough newlineHough = new LinefinderHough(groundframe, groundframepre, minlength, currentframe );
 
-					PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength, currentframe , psf, newlineHough,
-							userChoiceModel);
+					boolean dialog = DialogueModelChoice();
+					if (dialog) {
+
+						LinefinderInteractiveHough newlineHough = new LinefinderInteractiveHough(groundframe,
+								groundframepre, intimg, Maxlabel, thetaPerPixel, rhoPerPixel, currentframe);
+
+						PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength,
+								currentframe, psf, newlineHough, userChoiceModel);
 					}
 				}
 
 				if (FindLinesViaMSERwHOUGH) {
 					boolean dialog = DialogueModelChoice();
-					if (dialog){
-					LinefinderMSERwHough newlineMserwHough = new LinefinderMSERwHough(groundframe, groundframepre, minlength, currentframe);
-					newlineMserwHough.setDelta(delta);
-					PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength, currentframe, psf,
-							newlineMserwHough, userChoiceModel);
+					if (dialog) {
+						updatePreview(ValueChange.SHOWMSER);
+						LinefinderInteractiveMSERwHough newlineMserwHough = new LinefinderInteractiveMSERwHough(groundframe, groundframepre,
+								newtree, minlength, currentframe, thetaPerPixel, rhoPerPixel);
+						PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength,
+								currentframe, psf, newlineMserwHough, userChoiceModel);
 					}
-				
+
 				}
-				
-			
+
+			}
+
 		}
-		
 	}
-	}
+
+	 protected class NormalizeListener implements ItemListener{
+
+			@Override
+			public void itemStateChanged(ItemEvent arg0) {
+	              
+	               if (arg0.getStateChange() == ItemEvent.DESELECTED)
+	            	   NormalizeImage = false;
+	               else if (arg0.getStateChange() == ItemEvent.SELECTED){
+	            	   
+	            	   NormalizeImage = true;
+	            	   
+	            	  
+	            	DialogueNormalize();
+	            	   
+	            	new Normalize();
+	            	IJ.log("Image Stack Intensity Normalized between: " 
+	            	+ (int)minval.get() + " and " + (int)maxval.get());
+	           		Normalize.normalize(Views.iterable(originalimg), minval, maxval);
+	           		Normalize.normalize(Views.iterable(originalPreprocessedimg), minval, maxval);
+	            	
+	               }
+			}
+	    	
+	    	
+	    }
+	    
+	    protected class MediancurrListener implements ItemListener{
+
+	  		@Override
+	  		public void itemStateChanged(ItemEvent arg0) {
+	                
+	                 if (arg0.getStateChange() == ItemEvent.DESELECTED)
+	              	   Mediancurr = false;
+	                 else if (arg0.getStateChange() == ItemEvent.SELECTED){
+	              	   
+	              	  Mediancurr = true;
+	              	   
+	              	  
+	              	DialogueMedian();
+	              	   
+	              	IJ.log(" Applying Median Filter to current Image" );
+	              	
+	              	final MedianFilter2D<FloatType> medfilter = new MedianFilter2D<FloatType>(currentPreprocessedimg, radius);
+	    			medfilter.process();
+	    			IJ.log(" Median filter sucessfully applied to current Image" );
+	    		   currentPreprocessedimg = medfilter.getResult();
+	              	
+	              	
+	                 }
+	  		}
+	      	
+	      	
+	      }
+	    
+	    protected class MedianAllListener implements ItemListener{
+
+	  		@Override
+	  		public void itemStateChanged(ItemEvent arg0) {
+	                
+	                 if (arg0.getStateChange() == ItemEvent.DESELECTED)
+	              	   MedianAll = false;
+	                 else if (arg0.getStateChange() == ItemEvent.SELECTED){
+	              	   
+	              	  MedianAll = true;
+	              	   
+	              	  
+	              	DialogueMedian();
+	              	   
+	              	IJ.log(" Applying Median Filter to the whole stack (takes some time)"  );
+	              	
+	              	final MedianFilterImg2D<FloatType> medfilter = new MedianFilterImg2D<FloatType>(originalPreprocessedimg, radius);
+	    			medfilter.process();
+	    			IJ.log(" Median filter sucessfully applied to the whole stack" );
+	    			originalPreprocessedimg = medfilter.getResult();
+	              	
+	              	
+	                 }
+	  		}
+	      	
+	      	
+	      }
+	    
 	
-    protected class NormalizeListener implements ItemListener{
+	protected class TrackendsListener implements ActionListener {
 
 		@Override
-		public void itemStateChanged(ItemEvent arg0) {
-              
-               if (arg0.getStateChange() == ItemEvent.DESELECTED)
-            	   NormalizeImage = false;
-               else if (arg0.getStateChange() == ItemEvent.SELECTED){
-            	   
-            	   NormalizeImage = true;
-            	   
-            	  
-            	DialogueNormalize();
-            	   
-            	new Normalize();
-            	IJ.log("Image Stack Intensity Normalized between: " 
-            	+ (int)minval.get() + " and " + (int)maxval.get());
-           		Normalize.normalize(Views.iterable(originalimg), minval, maxval);
-           		Normalize.normalize(Views.iterable(originalPreprocessedimg), minval, maxval);
-            	
-               }
+		public void actionPerformed(final ActionEvent arg0) {
+
+			// add listener to the imageplus slice slider
+			sliceObserver = new SliceObserver(preprocessedimp, new ImagePlusListener());
+
+			preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame());
+			imp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame());
+
+			int next = imp.getFrame();
+			 maxStack();
+			for (int index = next; index <= stacksize; ++index) {
+			
+				
+				currentframe = index;
+				preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), currentframe);
+				imp.setPosition(channel, preprocessedimp.getSlice(), currentframe);
+				
+				
+			updatePreview(ValueChange.FRAME);
+			isStarted = true;
+
+			Roi roi = preprocessedimp.getRoi();
+			if (roi == null) {
+				// IJ.log( "A rectangular ROI is required to define the area..."
+				// );
+				preprocessedimp.setRoi(standardRectangle);
+				roi = preprocessedimp.getRoi();
+			}
+			IJ.log("Current frame: " + currentframe);
+			final long Cannyradius = (long) (Math.ceil(Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1])));
+		
+			//newimg = copytoByteImage(Kernels.CannyEdgeandMean(currentPreprocessedimg, Cannyradius));
+			boolean dialog;
+			
+
+			if (ndims > 2) {
+
+				RandomAccessibleInterval<FloatType> groundframe = currentimg;
+				RandomAccessibleInterval<FloatType> groundframepre = currentPreprocessedimg;
+				if (FindLinesViaMSER) {
+					if (index <= 1)
+						dialog = DialogueModelChoice();
+					
+						else dialog = false;
+					updatePreview(ValueChange.SHOWMSER);
+
+						LinefinderInteractiveHFMSER newlineMser = new LinefinderInteractiveHFMSER(groundframe,
+								groundframepre, newtree, minlength, currentframe);
+
+						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
+								minlength, currentframe, psf, newlineMser, userChoiceModel);
+						
+
+				}
+
+				if (FindLinesViaHOUGH) {
+
+					if (index <= 1)
+						dialog = DialogueModelChoice();
+						else dialog = false;
+
+					updatePreview(ValueChange.SHOWHOUGH);
+						LinefinderInteractiveHFHough newlineHough = new LinefinderInteractiveHFHough(groundframe,
+								groundframepre, intimg, Maxlabel, thetaPerPixel, rhoPerPixel, currentframe);
+
+						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
+								minlength, currentframe, psf, newlineHough, userChoiceModel);
+					
+				}
+
+				if (FindLinesViaMSERwHOUGH) {
+					if (index <= 1)
+						dialog = DialogueModelChoice();
+						else dialog = false;
+					updatePreview(ValueChange.SHOWMSER);
+						LinefinderInteractiveHFMSERwHough newlineMserwHough = new LinefinderInteractiveHFMSERwHough(
+								groundframe, groundframepre, newtree, minlength, currentframe, thetaPerPixel, rhoPerPixel);
+						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
+								minlength, currentframe, psf, newlineMserwHough, userChoiceModel);
+						
+						
+
+				}
+
+			}
+			
+
+			 NewFrameparam = returnVector.snd;
+
+			ArrayList<Trackproperties> startStateVectors = returnVector.fst.fst;
+			ArrayList<Trackproperties> endStateVectors = returnVector.fst.snd;
+
+			PrevFrameparam = NewFrameparam;
+
+			Allstart.add(startStateVectors);
+			Allend.add(endStateVectors);
+			
+			}
+			
+		
+
+			ImagePlus impstartsec = ImageJFunctions.show(originalimg);
+			ImagePlus impendsec = ImageJFunctions.show(originalPreprocessedimg);
+
+			final Trackstart trackerstart = new Trackstart(Allstart,stacksize);
+			final Trackend trackerend = new Trackend(Allend, stacksize);
+			trackerstart.process();
+			SimpleWeightedGraph<double[], DefaultWeightedEdge> graphstart = trackerstart.getResult();
+			DisplayGraph displaygraphtrackstart = new DisplayGraph(impstartsec, graphstart);
+			displaygraphtrackstart.getImp();
+			impstartsec.draw();
+
+			trackerend.process();
+			SimpleWeightedGraph<double[], DefaultWeightedEdge> graphend = trackerend.getResult();
+			DisplayGraph displaygraphtrackend = new DisplayGraph(impendsec, graphend);
+			displaygraphtrackend.getImp();
+			impendsec.draw();
+			
+			
+			
 		}
-    	
-    	
-    }
-    
-    protected class MediancurrListener implements ItemListener{
+	}
 
-  		@Override
-  		public void itemStateChanged(ItemEvent arg0) {
-                
-                 if (arg0.getStateChange() == ItemEvent.DESELECTED)
-              	   Mediancurr = false;
-                 else if (arg0.getStateChange() == ItemEvent.SELECTED){
-              	   
-              	  Mediancurr = true;
-              	   
-              	  
-              	DialogueMedian();
-              	   
-              	IJ.log(" Applying Median Filter to current Image" );
-              	
-              	final MedianFilter2D<FloatType> medfilter = new MedianFilter2D<FloatType>(currentPreprocessedimg, radius);
-    			medfilter.process();
-    			IJ.log(" Median filter sucessfully applied to current Image" );
-    		   currentPreprocessedimg = medfilter.getResult();
-              	
-              	
-                 }
-  		}
-      	
-      	
-      }
-    
-    protected class MedianAllListener implements ItemListener{
-
-  		@Override
-  		public void itemStateChanged(ItemEvent arg0) {
-                
-                 if (arg0.getStateChange() == ItemEvent.DESELECTED)
-              	   MedianAll = false;
-                 else if (arg0.getStateChange() == ItemEvent.SELECTED){
-              	   
-              	  MedianAll = true;
-              	   
-              	  
-              	DialogueMedian();
-              	   
-              	IJ.log(" Applying Median Filter to the whole stack (takes some time)"  );
-              	
-              	final MedianFilterImg2D<FloatType> medfilter = new MedianFilterImg2D<FloatType>(originalPreprocessedimg, radius);
-    			medfilter.process();
-    			IJ.log(" Median filter sucessfully applied to the whole stack" );
-    			originalPreprocessedimg = medfilter.getResult();
-              	
-              	
-                 }
-  		}
-      	
-      	
-      }
-    
 	
+	
+	
+
+	
+
 	protected class MserListener implements ItemListener {
 		@Override
 		public void itemStateChanged(final ItemEvent arg0) {
 			boolean oldState = FindLinesViaMSER;
 
 			if (arg0.getStateChange() == ItemEvent.DESELECTED)
-				FindLinesViaMSER= false;
-			else if (arg0.getStateChange() == ItemEvent.SELECTED){
-			
+				FindLinesViaMSER = false;
+			else if (arg0.getStateChange() == ItemEvent.SELECTED) {
+
 				FindLinesViaMSER = true;
 				FindLinesViaHOUGH = false;
-				FindLinesViaMSERwHOUGH= false;
+				FindLinesViaMSERwHOUGH = false;
 				DisplayMSER();
-				
-				
+
 			}
 
 			if (FindLinesViaMSER != oldState) {
@@ -988,24 +1163,19 @@ public class InteractiveMT implements PlugIn {
 			}
 		}
 	}
-	
-	
-	
-	
-	
+
 	protected class HoughListener implements ItemListener {
 		@Override
 		public void itemStateChanged(final ItemEvent arg0) {
 			boolean oldState = FindLinesViaHOUGH;
 
 			if (arg0.getStateChange() == ItemEvent.DESELECTED)
-				FindLinesViaHOUGH= false;
-			else if (arg0.getStateChange() == ItemEvent.SELECTED){
-			
-				
+				FindLinesViaHOUGH = false;
+			else if (arg0.getStateChange() == ItemEvent.SELECTED) {
+
 				FindLinesViaHOUGH = true;
-				FindLinesViaMSER= false;
-				FindLinesViaMSERwHOUGH= false;
+				FindLinesViaMSER = false;
+				FindLinesViaMSERwHOUGH = false;
 				DisplayHough();
 			}
 
@@ -1017,21 +1187,21 @@ public class InteractiveMT implements PlugIn {
 			}
 		}
 	}
-	
+
 	protected class MserwHoughListener implements ItemListener {
 		@Override
 		public void itemStateChanged(final ItemEvent arg0) {
 			boolean oldState = FindLinesViaMSERwHOUGH;
 
 			if (arg0.getStateChange() == ItemEvent.DESELECTED)
-				FindLinesViaMSERwHOUGH= false;
-			else if (arg0.getStateChange() == ItemEvent.SELECTED){
-			
-				
+				FindLinesViaMSERwHOUGH = false;
+			else if (arg0.getStateChange() == ItemEvent.SELECTED) {
+
 				FindLinesViaMSERwHOUGH = true;
-				FindLinesViaMSER= false;
-				FindLinesViaHOUGH= false;
-				DisplayMSER();
+				FindLinesViaMSER = false;
+				FindLinesViaHOUGH = false;
+				DisplayMSERwHough();
+				
 			}
 
 			if (FindLinesViaMSERwHOUGH != oldState) {
@@ -1042,10 +1212,9 @@ public class InteractiveMT implements PlugIn {
 			}
 		}
 	}
-	
-	
-	private void DisplayHough(){
-		
+
+	private void DisplayHough() {
+
 		// Create dialog
 		final Frame frame = new Frame("Interactive Hough");
 		frame.setSize(550, 550);
@@ -1053,16 +1222,38 @@ public class InteractiveMT implements PlugIn {
 		/* Instantiation */
 		final GridBagLayout layout = new GridBagLayout();
 		final GridBagConstraints c = new GridBagConstraints();
-		final Label exthresholdText = new Label("threshold = threshold to create Bitimg for watershedding." ,Label.CENTER);
-		//IJ.log("Determining the initial threshold for the image");
-		//thresholdHoughInit = GlobalThresholding.AutomaticThresholding(currentPreprocessedimg);
-		final Scrollbar threshold = new Scrollbar(Scrollbar.HORIZONTAL, (int)thresholdHoughInit, 10, 0, 10 + scrollbarSize);
-		this.thresholdHough = computeValueFromScrollbarPosition((int) thresholdHoughInit, thresholdHoughMin, thresholdHoughMax, scrollbarSize);
+		final Label exthresholdText = new Label("threshold = threshold to create Bitimg for watershedding.",
+				Label.CENTER);
+		final Label exthetaText = new Label("thetaPerPixel = Pixel Size in theta direction for Hough space.",
+				Label.CENTER);
+		final Label exrhoText = new Label("rhoPerPixel = Pixel Size in rho direction for Hough space.",
+				Label.CENTER);
+		
+		// IJ.log("Determining the initial threshold for the image");
+		// thresholdHoughInit =
+		// GlobalThresholding.AutomaticThresholding(currentPreprocessedimg);
+		final Scrollbar threshold = new Scrollbar(Scrollbar.HORIZONTAL, (int) thresholdHoughInit, 10, 0,
+				10 + scrollbarSize);
+		this.thresholdHough = computeValueFromScrollbarPosition((int) thresholdHoughInit, thresholdHoughMin,
+				thresholdHoughMax, scrollbarSize);
+
+		final Scrollbar thetaSize = new Scrollbar(Scrollbar.HORIZONTAL, (int) thetaPerPixelInit, 10, 0,
+				10 + scrollbarSize);
+		this.thetaPerPixel = computeValueFromScrollbarPosition((int) thetaPerPixelInit, thetaPerPixelMin,
+				thetaPerPixelMax, scrollbarSize);
+
+		final Scrollbar rhoSize = new Scrollbar(Scrollbar.HORIZONTAL, (int) rhoPerPixelInit, 10, 0, 10 + scrollbarSize);
+		this.rhoPerPixel = computeValueFromScrollbarPosition((int) rhoPerPixelInit, rhoPerPixelMin, rhoPerPixelMax,
+				scrollbarSize);
+
 		final Checkbox displayBit = new Checkbox("Display Bitimage ", displayBitimg);
 		final Checkbox displayWatershed = new Checkbox("Display Watershedimage ", displayWatershedimg);
-		final Label thresholdText = new Label("thresholdBitimg = " , Label.CENTER);
+		final Label thresholdText = new Label("thresholdValue = ", Label.CENTER);
+		final Label thetaText = new Label("Size of Hough Space in Theta = ", Label.CENTER);
+		final Label rhoText = new Label("Size of Hough Space in Rho = ", Label.CENTER);
 		final Button Dowatershed = new Button("Do watershedding");
-		 final Button button = new Button( "Done" );
+		final Button FindLinesListener = new Button("Find endpoints");
+		final Button button = new Button("Done");
 		/* Location */
 		frame.setLayout(layout);
 
@@ -1071,46 +1262,77 @@ public class InteractiveMT implements PlugIn {
 		c.gridy = 0;
 		c.weightx = 4;
 		c.weighty = 1.5;
-		
+
 		frame.add(exthresholdText, c);
 		++c.gridy;
 		
+		frame.add(exthetaText, c);
+		++c.gridy;
+		
+		frame.add(exrhoText, c);
+		++c.gridy;
 		
 		frame.add(thresholdText, c);
-		
 		++c.gridy;
-		frame.add(threshold, c);
 		
+		frame.add(threshold, c);
+		++c.gridy;
+
+		
+
+		frame.add(thetaText, c);
+		++c.gridy;
+		frame.add(thetaSize, c);
+		++c.gridy;
+
+		frame.add(rhoText, c);
+
+		++c.gridy;
+
+		frame.add(rhoSize, c);
+
 		++c.gridy;
 		c.insets = new Insets(10, 175, 0, 175);
 		frame.add(displayBit, c);
-		
+
 		++c.gridy;
 		c.insets = new Insets(10, 175, 0, 175);
 		frame.add(displayWatershed, c);
 		++c.gridy;
 		c.insets = new Insets(10, 175, 0, 175);
 		frame.add(Dowatershed, c);
-		  ++c.gridy;
-		    c.insets = new Insets(10,150,0,150);
-		    frame.add( button, c );
+		++c.gridy;
 		
-		 button.addActionListener( new FinishedButtonListener( frame, false ) );
-		threshold.addAdjustmentListener(
-				new thresholdHoughListener(thresholdText, thresholdHoughMin, thresholdHoughMax, scrollbarSize, threshold));
-		threshold.addAdjustmentListener(new DeltaListener(thresholdText, thresholdHoughMin, thresholdHoughMax, scrollbarSize, threshold));
+		c.insets = new Insets(10, 175, 0, 175);
+		frame.add(FindLinesListener, c);
+		++c.gridy;
+		c.insets = new Insets(10, 175, 0, 175);
+		frame.add(button, c);
+
+		button.addActionListener(new FinishedButtonListener(frame, false));
+		threshold.addAdjustmentListener(new thresholdHoughListener(thresholdText, thresholdHoughMin, thresholdHoughMax,
+				scrollbarSize, threshold));
+
+		thetaSize.addAdjustmentListener(
+				new thetaSizeHoughListener(thetaText, rhoText, thetaPerPixelMin, thetaPerPixelMax, scrollbarSize, thetaSize, rhoSize));
+
+		rhoSize.addAdjustmentListener(
+				new rhoSizeHoughListener(rhoText, rhoPerPixelMin, rhoPerPixelMax, scrollbarSize, rhoSize));
+
 		displayBit.addItemListener(new ShowBitimgListener());
 		displayWatershed.addItemListener(new ShowwatershedimgListener());
 		Dowatershed.addActionListener(new DowatershedListener());
+		FindLinesListener.addActionListener(new FindLinesListener());
 		frame.addWindowListener(new FrameListener(frame));
 
 		frame.setVisible(true);
-		
+
 		originalColor = threshold.getBackground();
-		
+
 	}
-	private void DisplayMSER(){
-		
+
+	private void DisplayMSER() {
+
 		// Create dialog
 		final Frame frame = new Frame("Interactive Mser");
 		frame.setSize(550, 550);
@@ -1118,201 +1340,386 @@ public class InteractiveMT implements PlugIn {
 		/* Instantiation */
 		final GridBagLayout layout = new GridBagLayout();
 		final GridBagConstraints c = new GridBagConstraints();
+
+		final Label exdeltaText = new Label("delta = stepsize of thresholds.", Label.CENTER);
+		final Label exmaxVarText = new Label("maxVar = maximum instability score of the region. ", Label.CENTER);
+		final Label exminDiversityText = new Label("minDiversity = minimum diversity of adjacent regions. ",
+				Label.CENTER);
+		final Label exminSizeText = new Label("MinSize = mimimum size of accepted region. ", Label.CENTER);
+		final Label exmaxSizeText = new Label("MaxSize = maximum size of accepted region. ", Label.CENTER);
+
+		final Scrollbar delta = new Scrollbar(Scrollbar.HORIZONTAL, deltaInit, 10, 0, 10 + scrollbarSize);
+		final Scrollbar maxVar = new Scrollbar(Scrollbar.HORIZONTAL, maxVarInit, 10, 0, 10 + scrollbarSize);
+		final Scrollbar minDiversity = new Scrollbar(Scrollbar.HORIZONTAL, minDiversityInit, 10, 0, 10 + scrollbarSize);
+		final Scrollbar minSize = new Scrollbar(Scrollbar.HORIZONTAL, minSizeInit, 10, 0, 10 + scrollbarSize);
+		final Scrollbar maxSize = new Scrollbar(Scrollbar.HORIZONTAL, maxSizeInit, 10, 0, 10 + scrollbarSize);
+		final Button ComputeTree = new Button("Compute Tree and display");
+		final Button FindLinesListener = new Button("Find endpoints");
+		this.maxVar = computeValueFromScrollbarPosition(maxVarInit, maxVarMin, maxVarMax, scrollbarSize);
+		this.delta = computeValueFromScrollbarPosition(deltaInit, deltaMin, deltaMax, scrollbarSize);
+		this.minDiversity = computeValueFromScrollbarPosition(minDiversityInit, minDiversityMin, minDiversityMax,
+				scrollbarSize);
+		this.minSize = (int) computeValueFromScrollbarPosition(minSizeInit, minSizemin, minSizemax, scrollbarSize);
+		this.maxSize = (int) computeValueFromScrollbarPosition(maxSizeInit, maxSizemin, maxSizemax, scrollbarSize);
+
+		final Checkbox min = new Checkbox("Look for Minima ", darktobright);
+
+		final Label deltaText = new Label("delta = ", Label.CENTER);
+		final Label maxVarText = new Label("maxVar = ", Label.CENTER);
+		final Label minDiversityText = new Label("minDiversity = ", Label.CENTER);
+		final Label minSizeText = new Label("MinSize = ", Label.CENTER);
+		final Label maxSizeText = new Label("MaxSize = ", Label.CENTER);
+		final Button button = new Button("Done");
+		/* Location */
+		frame.setLayout(layout);
+
+		c.fill = GridBagConstraints.HORIZONTAL;
+		c.gridx = 0;
+		c.gridy = 0;
+		c.weightx = 4;
+		c.weighty = 1.5;
+
+		frame.add(exdeltaText, c);
+		++c.gridy;
+
+		frame.add(exmaxVarText, c);
+		++c.gridy;
+
+		frame.add(exminDiversityText, c);
+		++c.gridy;
+
+		frame.add(exminSizeText, c);
+		++c.gridy;
+
+		frame.add(exmaxSizeText, c);
+		++c.gridy;
+
+		frame.add(deltaText, c);
+
+		++c.gridy;
+		frame.add(delta, c);
+
+		++c.gridy;
+
+		frame.add(maxVarText, c);
+
+		++c.gridy;
+		frame.add(maxVar, c);
+
+		++c.gridy;
+
+		frame.add(minDiversityText, c);
+
+		++c.gridy;
+		frame.add(minDiversity, c);
+
+		++c.gridy;
+
+		frame.add(minSizeText, c);
+
+		++c.gridy;
+		frame.add(minSize, c);
+
+		++c.gridy;
+
+		frame.add(maxSizeText, c);
+
+		++c.gridy;
+		frame.add(maxSize, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 175, 0, 175);
+		frame.add(min, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 175, 0, 175);
+		frame.add(ComputeTree, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 180, 0, 180);
+		frame.add(FindLinesListener, c);
 		
-		
-		final Label exdeltaText = new Label("delta = stepsize of thresholds." ,Label.CENTER);
-		final Label exmaxVarText = new Label("maxVar = maximum instability score of the region. " , Label.CENTER);
-		final Label exminDiversityText = new Label("minDiversity = minimum diversity of adjacent regions. " , Label.CENTER);
-		final Label exminSizeText = new Label("MinSize = mimimum size of accepted region. " , Label.CENTER);
-		final Label exmaxSizeText = new Label("MaxSize = maximum size of accepted region. " , Label.CENTER);
-		
-		
-				final Scrollbar delta = new Scrollbar(Scrollbar.HORIZONTAL, deltaInit, 10, 0, 10 + scrollbarSize);
-				final Scrollbar maxVar = new Scrollbar(Scrollbar.HORIZONTAL, maxVarInit, 10, 0, 10 + scrollbarSize);
-				final Scrollbar minDiversity = new Scrollbar(Scrollbar.HORIZONTAL, minDiversityInit, 10, 0, 10 + scrollbarSize);
-				final Scrollbar minSize= new Scrollbar(Scrollbar.HORIZONTAL, minSizeInit, 10, 0, 10 + scrollbarSize);
-				final Scrollbar maxSize = new Scrollbar(Scrollbar.HORIZONTAL, maxSizeInit, 10, 0, 10 + scrollbarSize);
-				final Button ComputeTree = new Button("Compute Tree and display");
-				
-				this.maxVar = computeValueFromScrollbarPosition(maxVarInit, maxVarMin, maxVarMax, scrollbarSize);
-				this.delta = computeValueFromScrollbarPosition(deltaInit, deltaMin, deltaMax, scrollbarSize);
-				this.minDiversity = computeValueFromScrollbarPosition(minDiversityInit, minDiversityMin, minDiversityMax, scrollbarSize);
-				this.minSize = (int)computeValueFromScrollbarPosition(minSizeInit, minSizemin, minSizemax, scrollbarSize);
-				this.maxSize = (int)computeValueFromScrollbarPosition(maxSizeInit, maxSizemin, maxSizemax, scrollbarSize);
-				
-				final Checkbox min = new Checkbox("Look for Minima ", darktobright);
-				
+		++c.gridy;
+		c.insets = new Insets(10, 180, 0, 180);
+		frame.add(button, c);
 
-				
-				final Label deltaText = new Label("delta = " , Label.CENTER);
-				final Label maxVarText = new Label("maxVar = " , Label.CENTER);
-				final Label minDiversityText = new Label("minDiversity = " , Label.CENTER);
-				final Label minSizeText = new Label("MinSize = ", Label.CENTER);
-				final Label maxSizeText = new Label("MaxSize = " , Label.CENTER);
-				 final Button button = new Button( "Done" );
-				/* Location */
-				frame.setLayout(layout);
+		delta.addAdjustmentListener(new DeltaListener(deltaText, deltaMin, deltaMax, scrollbarSize, delta));
 
-				c.fill = GridBagConstraints.HORIZONTAL;
-				c.gridx = 0;
-				c.gridy = 0;
-				c.weightx = 4;
-				c.weighty = 1.5;
-				
-				frame.add(exdeltaText, c);
-				++c.gridy;
+		maxVar.addAdjustmentListener(new maxVarListener(maxVarText, maxVarMin, maxVarMax, scrollbarSize, maxVar));
 
-				frame.add(exmaxVarText, c);
-				++c.gridy;
+		minDiversity.addAdjustmentListener(new minDiversityListener(minDiversityText, minDiversityMin, minDiversityMax,
+				scrollbarSize, minDiversity));
 
-				frame.add(exminDiversityText, c);
-				++c.gridy;
+		minSize.addAdjustmentListener(new minSizeListener(minSizeText, minSizemin, minSizemax, scrollbarSize, minSize));
 
-				frame.add(exminSizeText, c);
-				++c.gridy;
+		maxSize.addAdjustmentListener(new maxSizeListener(maxSizeText, maxSizemin, maxSizemax, scrollbarSize, maxSize));
+		button.addActionListener(new FinishedButtonListener(frame, false));
 
-				frame.add(exmaxSizeText, c);
-				++c.gridy;
-				
-				frame.add(deltaText, c);
-				
-				++c.gridy;
-				frame.add(delta, c);
-				
-				++c.gridy;
-				
-               frame.add(maxVarText, c);
-				
-				++c.gridy;
-				frame.add(maxVar, c);
-				
-				++c.gridy;
-				
-	            frame.add(minDiversityText, c);
-					
-				++c.gridy;
-				frame.add(minDiversity, c);
-				
-	        
-				
-				
-				++c.gridy;
-					
-		        frame.add(minSizeText, c);
-						
-			    ++c.gridy;
-			    frame.add(minSize, c);
-			    
-			    ++c.gridy;
-				
-		        frame.add(maxSizeText, c);
-						
-			    ++c.gridy;
-			    frame.add(maxSize, c);
-			    
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				frame.add(min, c);
+		delta.addAdjustmentListener(new DeltaListener(deltaText, deltaMin, deltaMax, scrollbarSize, delta));
+		maxVar.addAdjustmentListener(new maxVarListener(maxVarText, maxVarMin, maxVarMax, scrollbarSize, maxVar));
+		minDiversity.addAdjustmentListener(new minDiversityListener(minDiversityText, minDiversityMin, minDiversityMax,
+				scrollbarSize, minDiversity));
+		minSize.addAdjustmentListener(new minSizeListener(minSizeText, minSizemin, minSizemax, scrollbarSize, minSize));
+		maxSize.addAdjustmentListener(new maxSizeListener(maxSizeText, maxSizemin, maxSizemax, scrollbarSize, maxSize));
+		min.addItemListener(new DarktobrightListener());
+		ComputeTree.addActionListener(new ComputeTreeListener());
+		FindLinesListener.addActionListener(new FindLinesListener());
+		frame.addWindowListener(new FrameListener(frame));
 
-			
-				
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				frame.add(ComputeTree, c);
-				
-				  ++c.gridy;
-				    c.insets = new Insets(10,150,0,150);
-				    frame.add( button, c );
-				
-				delta.addAdjustmentListener(
-						new DeltaListener(deltaText, deltaMin, deltaMax, scrollbarSize, delta));
-				
-				
-				
-				
-				maxVar.addAdjustmentListener(
-						new maxVarListener(maxVarText, maxVarMin, maxVarMax, scrollbarSize, maxVar));
-				
-				
-				
-			
-				
-				minDiversity.addAdjustmentListener(
-						new minDiversityListener(minDiversityText, minDiversityMin, minDiversityMax, scrollbarSize, minDiversity));
-				
-				
-		
-				
-			
-				
-				minSize.addAdjustmentListener(
-						new minSizeListener(minSizeText, minSizemin, minSizemax, scrollbarSize, minSize));
-				
-				
-				
-				
-				maxSize.addAdjustmentListener(
-						new maxSizeListener(maxSizeText, maxSizemin, maxSizemax, scrollbarSize, maxSize));
-				  button.addActionListener( new FinishedButtonListener( frame, false ) );
-				
-				delta.addAdjustmentListener(new DeltaListener(deltaText, deltaMin, deltaMax, scrollbarSize, delta));
-				maxVar.addAdjustmentListener(new maxVarListener(maxVarText, maxVarMin, maxVarMax, scrollbarSize, maxVar));
-				minDiversity.addAdjustmentListener(new minDiversityListener(minDiversityText, minDiversityMin, minDiversityMax, scrollbarSize, minDiversity));
-				minSize.addAdjustmentListener(new minSizeListener(minSizeText, minSizemin, minSizemax, scrollbarSize, minSize));
-				maxSize.addAdjustmentListener(new maxSizeListener(maxSizeText, maxSizemin, maxSizemax, scrollbarSize, maxSize));
-				min.addItemListener(new DarktobrightListener());
-				ComputeTree.addActionListener(new ComputeTreeListener());
-				frame.addWindowListener(new FrameListener(frame));
+		frame.setVisible(true);
 
-				frame.setVisible(true);
+		originalColor = delta.getBackground();
 
-				originalColor = delta.getBackground();
-				
-			
-		
 	}
-	protected class FinishedButtonListener implements ActionListener
-	{
+
+	
+	private void DisplayMSERwHough() {
+
+		// Create dialog
+		final Frame frame = new Frame("Interactive Mser with Hough");
+		frame.setSize(750, 750);
+		frame.setLayout(new BorderLayout());
+		/* Instantiation */
+		final GridBagLayout layout = new GridBagLayout();
+		final GridBagConstraints c = new GridBagConstraints();
+		
+		final Label exthetaText = new Label("thetaPerPixel = Pixel Size in theta direction for Hough space.",
+				Label.CENTER);
+		final Label exrhoText = new Label("rhoPerPixel = Pixel Size in rho direction for Hough space.",
+				Label.CENTER);
+		
+	    final Checkbox rhoEnable = new Checkbox( "Enable Manual Adjustment of rhoPerPixel", enablerhoPerPixel );
+
+
+		final Scrollbar thetaSize = new Scrollbar(Scrollbar.HORIZONTAL, (int) thetaPerPixelInit, 10, 0,
+				10 + scrollbarSize);
+		this.thetaPerPixel = computeValueFromScrollbarPosition((int) thetaPerPixelInit, thetaPerPixelMin,
+				thetaPerPixelMax, scrollbarSize);
+
+		final Scrollbar rhoSize = new Scrollbar(Scrollbar.HORIZONTAL, (int) rhoPerPixelInit, 10, 0, 10 + scrollbarSize);
+		this.rhoPerPixel = computeValueFromScrollbarPosition((int) rhoPerPixelInit, rhoPerPixelMin, rhoPerPixelMax,
+				scrollbarSize);
+
+		
+		final Label thetaText = new Label("Size of Hough Space in Theta = ", Label.CENTER);
+		final Label rhoText = new Label("Size of Hough Space in Rho = ", Label.CENTER);
+		final Button FindLinesListener = new Button("Find endpoints");
+		final Button button = new Button("Done");
+	
+		
+		
+		final Label exdeltaText = new Label("delta = stepsize of thresholds.", Label.CENTER);
+		
+		final Label exmaxVarText = new Label("maxVar = maximum instability score of the region. ", Label.CENTER);
+		final Label exminDiversityText = new Label("minDiversity = minimum diversity of adjacent regions. ",
+				Label.CENTER);
+		final Label exminSizeText = new Label("MinSize = mimimum size of accepted region. ", Label.CENTER);
+		final Label exmaxSizeText = new Label("MaxSize = maximum size of accepted region. ", Label.CENTER);
+
+		final Scrollbar delta = new Scrollbar(Scrollbar.HORIZONTAL, deltaInit, 10, 0, 10 + scrollbarSize);
+		final Scrollbar maxVar = new Scrollbar(Scrollbar.HORIZONTAL, maxVarInit, 10, 0, 10 + scrollbarSize);
+		final Scrollbar minDiversity = new Scrollbar(Scrollbar.HORIZONTAL, minDiversityInit, 10, 0, 10 + scrollbarSize);
+		final Scrollbar minSize = new Scrollbar(Scrollbar.HORIZONTAL, minSizeInit, 10, 0, 10 + scrollbarSize);
+		final Scrollbar maxSize = new Scrollbar(Scrollbar.HORIZONTAL, maxSizeInit, 10, 0, 10 + scrollbarSize);
+		final Button ComputeTree = new Button("Compute Tree and display");
+
+		final Label HoughText = new Label("Now determine the Hough space parameters.", Label.CENTER);
+		
+		this.maxVar = computeValueFromScrollbarPosition(maxVarInit, maxVarMin, maxVarMax, scrollbarSize);
+		this.delta = computeValueFromScrollbarPosition(deltaInit, deltaMin, deltaMax, scrollbarSize);
+		this.minDiversity = computeValueFromScrollbarPosition(minDiversityInit, minDiversityMin, minDiversityMax,
+				scrollbarSize);
+		this.minSize = (int) computeValueFromScrollbarPosition(minSizeInit, minSizemin, minSizemax, scrollbarSize);
+		this.maxSize = (int) computeValueFromScrollbarPosition(maxSizeInit, maxSizemin, maxSizemax, scrollbarSize);
+
+		final Checkbox min = new Checkbox("Look for Minima ", darktobright);
+
+		final Label deltaText = new Label("delta = ", Label.CENTER);
+		final Label maxVarText = new Label("maxVar = ", Label.CENTER);
+		final Label minDiversityText = new Label("minDiversity = ", Label.CENTER);
+		final Label minSizeText = new Label("MinSize = ", Label.CENTER);
+		final Label maxSizeText = new Label("MaxSize = ", Label.CENTER);
+		/* Location */
+		frame.setLayout(layout);
+
+		c.fill = GridBagConstraints.HORIZONTAL;
+		c.gridx = 0;
+		c.gridy = 0;
+		c.weightx = 4;
+		c.weighty = 1.5;
+
+		frame.add(exdeltaText, c);
+		++c.gridy;
+
+		frame.add(exmaxVarText, c);
+		++c.gridy;
+
+		frame.add(exminDiversityText, c);
+		++c.gridy;
+
+		frame.add(exminSizeText, c);
+		++c.gridy;
+
+		frame.add(exmaxSizeText, c);
+		++c.gridy;
+
+		
+		frame.add(deltaText, c);
+
+		++c.gridy;
+		frame.add(delta, c);
+
+		++c.gridy;
+
+		frame.add(maxVarText, c);
+
+		++c.gridy;
+		frame.add(maxVar, c);
+
+		++c.gridy;
+
+		frame.add(minDiversityText, c);
+
+		++c.gridy;
+		frame.add(minDiversity, c);
+
+		++c.gridy;
+
+		frame.add(minSizeText, c);
+
+		++c.gridy;
+		frame.add(minSize, c);
+
+		++c.gridy;
+
+		frame.add(maxSizeText, c);
+
+		++c.gridy;
+		frame.add(maxSize, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 175, 0, 175);
+		frame.add(min, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 175, 0, 175);
+		
+		frame.add(ComputeTree, c);
+		++c.gridy;
+		
+		frame.add(HoughText, c);
+		++c.gridy;
+		
+		
+		frame.add(exthetaText, c);
+		++c.gridy;
+		
+		frame.add(exrhoText, c);
+		
+		
+		++c.gridy;
+		frame.add(thetaText, c);
+		++c.gridy;
+		frame.add(thetaSize, c);
+		++c.gridy;
+
+		frame.add(rhoText, c);
+
+		++c.gridy;
+
+		frame.add(rhoSize, c);
+		
+		++c.gridy;
+		 c.insets = new Insets(0,175,0,175);
+		frame.add(rhoEnable, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 175, 0, 175);
+		frame.add(FindLinesListener, c);
+	
+		
+		++c.gridy;
+		c.insets = new Insets(10, 175, 0, 175);
+		frame.add(button, c);
+
+		delta.addAdjustmentListener(new DeltaListener(deltaText, deltaMin, deltaMax, scrollbarSize, delta));
+
+		maxVar.addAdjustmentListener(new maxVarListener(maxVarText, maxVarMin, maxVarMax, scrollbarSize, maxVar));
+
+		minDiversity.addAdjustmentListener(new minDiversityListener(minDiversityText, minDiversityMin, minDiversityMax,
+				scrollbarSize, minDiversity));
+
+		minSize.addAdjustmentListener(new minSizeListener(minSizeText, minSizemin, minSizemax, scrollbarSize, minSize));
+
+		maxSize.addAdjustmentListener(new maxSizeListener(maxSizeText, maxSizemin, maxSizemax, scrollbarSize, maxSize));
+		button.addActionListener(new FinishedButtonListener(frame, false));
+
+		delta.addAdjustmentListener(new DeltaListener(deltaText, deltaMin, deltaMax, scrollbarSize, delta));
+		maxVar.addAdjustmentListener(new maxVarListener(maxVarText, maxVarMin, maxVarMax, scrollbarSize, maxVar));
+		minDiversity.addAdjustmentListener(new minDiversityListener(minDiversityText, minDiversityMin, minDiversityMax,
+				scrollbarSize, minDiversity));
+		minSize.addAdjustmentListener(new minSizeListener(minSizeText, minSizemin, minSizemax, scrollbarSize, minSize));
+		maxSize.addAdjustmentListener(new maxSizeListener(maxSizeText, maxSizemin, maxSizemax, scrollbarSize, maxSize));
+		min.addItemListener(new DarktobrightListener());
+
+		
+		
+		FindLinesListener.addActionListener(new FindLinesListener());
+
+		thetaSize.addAdjustmentListener(
+				new thetaSizeHoughListener(thetaText, rhoText, thetaPerPixelMin, thetaPerPixelMax, scrollbarSize, thetaSize, rhoSize));
+
+		rhoSize.addAdjustmentListener(
+				new rhoSizeHoughListener(rhoText, rhoPerPixelMin, rhoPerPixelMax, scrollbarSize, rhoSize));
+
+		ComputeTree.addActionListener(new ComputeTreeListener());
+		
+		frame.addWindowListener(new FrameListener(frame));
+
+		frame.setVisible(true);
+
+		originalColor = delta.getBackground();
+
+	}
+
+	
+	
+	protected class FinishedButtonListener implements ActionListener {
 		final Frame parent;
 		final boolean cancel;
-		
-		public FinishedButtonListener( Frame parent, final boolean cancel )
-		{
+
+		public FinishedButtonListener(Frame parent, final boolean cancel) {
 			this.parent = parent;
 			this.cancel = cancel;
 		}
-		
+
 		@Override
-		public void actionPerformed( final ActionEvent arg0 ) 
-		{
+		public void actionPerformed(final ActionEvent arg0) {
 			wasCanceled = cancel;
-			close( parent, sliceObserver);
+			close(parent, sliceObserver, roiListener);
 		}
 	}
+
 	protected class ComputeTreeListener implements ActionListener {
-	
 
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
 			ShowMser = true;
 			updatePreview(ValueChange.SHOWMSER);
-			
+
 		}
 	}
-	
+
 	protected class DowatershedListener implements ActionListener {
-		
 
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
 			ShowHough = true;
 			updatePreview(ValueChange.SHOWHOUGH);
-			
+
 		}
 	}
-	
-	
-	
+
 	protected class DarktobrightListener implements ItemListener {
 		@Override
 		public void itemStateChanged(final ItemEvent arg0) {
@@ -1331,7 +1738,7 @@ public class InteractiveMT implements PlugIn {
 			}
 		}
 	}
-	
+
 	protected class ShowBitimgListener implements ItemListener {
 		@Override
 		public void itemStateChanged(final ItemEvent arg0) {
@@ -1350,8 +1757,7 @@ public class InteractiveMT implements PlugIn {
 			}
 		}
 	}
-	
-	
+
 	protected class ShowwatershedimgListener implements ItemListener {
 		@Override
 		public void itemStateChanged(final ItemEvent arg0) {
@@ -1370,8 +1776,7 @@ public class InteractiveMT implements PlugIn {
 			}
 		}
 	}
-	
-	
+
 	protected class FrameListener extends WindowAdapter {
 		final Frame parent;
 
@@ -1385,6 +1790,99 @@ public class InteractiveMT implements PlugIn {
 			close(parent, sliceObserver, preprocessedimp, roiListener);
 		}
 	}
+
+	protected class thetaSizeHoughListener implements AdjustmentListener {
+		final Label label;
+		final Label rholabel;
+		final float min, max;
+		final int scrollbarSize;
+
+		final Scrollbar thetaScrollbar;
+		final Scrollbar rhoScrollbar;
+
+		public thetaSizeHoughListener(final Label label, final Label rholabel, final float min, final float max, final int scrollbarSize,
+				final Scrollbar thetaScrollbar, final Scrollbar rhoScrollbar) {
+			this.label = label;
+			this.rholabel = rholabel;
+			this.min = min;
+			this.max = max;
+			this.scrollbarSize = scrollbarSize;
+			this.thetaScrollbar = thetaScrollbar;
+			this.rhoScrollbar = rhoScrollbar;
+
+		}
+
+		@Override
+		public void adjustmentValueChanged(final AdjustmentEvent event) {
+			thetaPerPixel = computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
+
+			
+			if (!enablerhoPerPixel)
+			{
+				rhoPerPixel = thetaPerPixel;
+				rholabel.setText("rhoPerPixel = " + rhoPerPixel);
+		        rhoScrollbar.setValue(computeScrollbarPositionFromValue(rhoPerPixel, min, max, scrollbarSize));
+				
+			}
+			
+			
+			thetaScrollbar.setValue(computeScrollbarPositionFromValue(thetaPerPixel, min, max, scrollbarSize));
+
+			label.setText("thetaPerPixel = " + thetaPerPixel);
+
+			// if ( !event.getValueIsAdjusting() )
+			{
+				while (isComputing) {
+					SimpleMultiThreading.threadWait(10);
+				}
+				updatePreview(ValueChange.thetaPerPixel);
+			}
+		}
+	}
+
+	protected class rhoSizeHoughListener implements AdjustmentListener {
+		final Label label;
+		final float min, max;
+		final int scrollbarSize;
+
+		final Scrollbar rhoScrollbar;
+
+		public rhoSizeHoughListener(final Label label, final float min, final float max, final int scrollbarSize,
+				final Scrollbar rhoScrollbar) {
+			this.label = label;
+			this.min = min;
+			this.max = max;
+			this.scrollbarSize = scrollbarSize;
+
+			this.rhoScrollbar = rhoScrollbar;
+
+		}
+
+		@Override
+		public void adjustmentValueChanged(final AdjustmentEvent event) {
+			
+			
+			
+			rhoPerPixel = computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
+
+			rhoScrollbar.setValue(computeScrollbarPositionFromValue(rhoPerPixel, min, max, scrollbarSize));
+
+			label.setText("rhoPerPixel = " + rhoPerPixel);
+
+			// if ( !event.getValueIsAdjusting() )
+			{
+				while (isComputing) {
+					SimpleMultiThreading.threadWait(10);
+				}
+				updatePreview(ValueChange.rhoPerPixel);
+			}
+		
+	
+		
+		
+		}
+	}
+
 	protected class thresholdHoughListener implements AdjustmentListener {
 		final Label label;
 		final float min, max;
@@ -1400,15 +1898,14 @@ public class InteractiveMT implements PlugIn {
 			this.scrollbarSize = scrollbarSize;
 
 			this.thresholdScrollbar = thresholdScrollbar;
-			
+
 		}
+
 		@Override
 		public void adjustmentValueChanged(final AdjustmentEvent event) {
 			thresholdHough = computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
 
-			
-				thresholdScrollbar.setValue(computeScrollbarPositionFromValue(thresholdHough, min, max, scrollbarSize));
-			
+			thresholdScrollbar.setValue(computeScrollbarPositionFromValue(thresholdHough, min, max, scrollbarSize));
 
 			label.setText("thresholdBitimg = " + thresholdHough);
 
@@ -1421,7 +1918,7 @@ public class InteractiveMT implements PlugIn {
 			}
 		}
 	}
-	
+
 	protected class DeltaListener implements AdjustmentListener {
 		final Label label;
 		final float min, max;
@@ -1437,16 +1934,14 @@ public class InteractiveMT implements PlugIn {
 			this.scrollbarSize = scrollbarSize;
 
 			this.deltaScrollbar = deltaScrollbar;
-			
+
 		}
-		
+
 		@Override
 		public void adjustmentValueChanged(final AdjustmentEvent event) {
 			delta = computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
 
-			
-				deltaScrollbar.setValue(computeScrollbarPositionFromValue(delta, min, max, scrollbarSize));
-			
+			deltaScrollbar.setValue(computeScrollbarPositionFromValue(delta, min, max, scrollbarSize));
 
 			label.setText("Delta = " + delta);
 
@@ -1459,7 +1954,7 @@ public class InteractiveMT implements PlugIn {
 			}
 		}
 	}
-	
+
 	protected class minSizeListener implements AdjustmentListener {
 		final Label label;
 		final float min, max;
@@ -1475,16 +1970,14 @@ public class InteractiveMT implements PlugIn {
 			this.scrollbarSize = scrollbarSize;
 
 			this.minsizeScrollbar = minsizeScrollbar;
-			
+
 		}
-		
+
 		@Override
 		public void adjustmentValueChanged(final AdjustmentEvent event) {
 			minSize = (int) computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
 
-			
-				minsizeScrollbar.setValue(computeScrollbarPositionFromValue(minSize, min, max, scrollbarSize));
-			
+			minsizeScrollbar.setValue(computeScrollbarPositionFromValue(minSize, min, max, scrollbarSize));
 
 			label.setText("MinSize = " + minSize);
 
@@ -1497,7 +1990,7 @@ public class InteractiveMT implements PlugIn {
 			}
 		}
 	}
-	
+
 	protected class maxSizeListener implements AdjustmentListener {
 		final Label label;
 		final float min, max;
@@ -1513,16 +2006,14 @@ public class InteractiveMT implements PlugIn {
 			this.scrollbarSize = scrollbarSize;
 
 			this.maxsizeScrollbar = maxsizeScrollbar;
-			
+
 		}
-		
+
 		@Override
 		public void adjustmentValueChanged(final AdjustmentEvent event) {
 			maxSize = (int) computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
 
-			
-				maxsizeScrollbar.setValue(computeScrollbarPositionFromValue(maxSize, min, max, scrollbarSize));
-			
+			maxsizeScrollbar.setValue(computeScrollbarPositionFromValue(maxSize, min, max, scrollbarSize));
 
 			label.setText("MaxSize = " + maxSize);
 
@@ -1535,8 +2026,7 @@ public class InteractiveMT implements PlugIn {
 			}
 		}
 	}
-	
-	
+
 	protected class maxVarListener implements AdjustmentListener {
 		final Label label;
 		final float min, max;
@@ -1551,16 +2041,14 @@ public class InteractiveMT implements PlugIn {
 			this.max = max;
 			this.scrollbarSize = scrollbarSize;
 			this.maxVarScrollbar = maxVarScrollbar;
-			
+
 		}
-		
+
 		@Override
 		public void adjustmentValueChanged(final AdjustmentEvent event) {
 			maxVar = (computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize));
 
-			
-				maxVarScrollbar.setValue(computeScrollbarPositionFromValue((float)maxVar, min, max, scrollbarSize));
-			
+			maxVarScrollbar.setValue(computeScrollbarPositionFromValue((float) maxVar, min, max, scrollbarSize));
 
 			label.setText("MaxVar = " + maxVar);
 
@@ -1573,7 +2061,7 @@ public class InteractiveMT implements PlugIn {
 			}
 		}
 	}
-	
+
 	protected class minDiversityListener implements AdjustmentListener {
 		final Label label;
 		final float min, max;
@@ -1588,16 +2076,15 @@ public class InteractiveMT implements PlugIn {
 			this.max = max;
 			this.scrollbarSize = scrollbarSize;
 			this.minDiversityScrollbar = minDiversityScrollbar;
-			
+
 		}
-		
+
 		@Override
 		public void adjustmentValueChanged(final AdjustmentEvent event) {
 			minDiversity = (computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize));
 
-			
-				minDiversityScrollbar.setValue(computeScrollbarPositionFromValue((float)minDiversity, min, max, scrollbarSize));
-			
+			minDiversityScrollbar
+					.setValue(computeScrollbarPositionFromValue((float) minDiversity, min, max, scrollbarSize));
 
 			label.setText("MinDiversity = " + minDiversity);
 
@@ -1610,18 +2097,16 @@ public class InteractiveMT implements PlugIn {
 			}
 		}
 	}
-	
-	
-	public  ArrayList<EllipseRoi> getcurrentRois( MserTree<UnsignedByteType> newtree){
-		
+
+	public ArrayList<EllipseRoi> getcurrentRois(MserTree<UnsignedByteType> newtree) {
+
 		final HashSet<Mser<UnsignedByteType>> rootset = newtree.roots();
-		
+
 		ArrayList<EllipseRoi> Allrois = new ArrayList<EllipseRoi>();
 		final Iterator<Mser<UnsignedByteType>> rootsetiterator = rootset.iterator();
-		
+
 		AllmeanCovar = new ArrayList<double[]>();
-		
-		
+
 		while (rootsetiterator.hasNext()) {
 
 			Mser<UnsignedByteType> rootmser = rootsetiterator.next();
@@ -1634,131 +2119,103 @@ public class InteractiveMT implements PlugIn {
 
 			}
 		}
-		
-		// We do this so the ROI remains attached the the same label and is not changed if the program is run again
-	       SortListbyproperty.sortpointList(AllmeanCovar);
-			for (int index = 0; index < AllmeanCovar.size(); ++index) {
-				
-			
-				
-				final double[] mean = { AllmeanCovar.get(index)[0], AllmeanCovar.get(index)[1] };
-				final double[] covar = { AllmeanCovar.get(index)[2], AllmeanCovar.get(index)[3],
-						AllmeanCovar.get(index)[4] };
-				
-				
-				EllipseRoi roi = createEllipse(mean, covar, 3);
-		        Allrois.add(roi);
-		        
-			}
-			
-			return Allrois;
-		
+
+		// We do this so the ROI remains attached the the same label and is not
+		// changed if the program is run again
+		SortListbyproperty.sortpointList(AllmeanCovar);
+		for (int index = 0; index < AllmeanCovar.size(); ++index) {
+
+			final double[] mean = { AllmeanCovar.get(index)[0], AllmeanCovar.get(index)[1] };
+			final double[] covar = { AllmeanCovar.get(index)[2], AllmeanCovar.get(index)[3],
+					AllmeanCovar.get(index)[4] };
+
+			EllipseRoi roi = createEllipse(mean, covar, 3);
+			Allrois.add(roi);
+
+		}
+
+		return Allrois;
+
 	}
-	
+
 	public boolean DialogueNormalize() {
 		// Create dialog
 		GenericDialog gd = new GenericDialog("Image Intensity Normalization");
 		gd.addNumericField(" Minimum Value for Intensity Normalization: ", minval.get(), 0);
 		gd.addNumericField(" Maximum Value for Intensity Normalization: ", maxval.get(), 0);
 		gd.showDialog();
-		minval = new FloatType((int)gd.getNextNumber());
-		maxval = new FloatType((int)gd.getNextNumber());
-		
-	
-		
-		
+		minval = new FloatType((int) gd.getNextNumber());
+		maxval = new FloatType((int) gd.getNextNumber());
+
 		return !gd.wasCanceled();
 	}
-	
-	
-	public boolean DialogueModelChoice(){
+
+	public boolean DialogueModelChoice() {
 
 		GenericDialog gd = new GenericDialog("Model Choice for sub-pixel Localization");
-		String[] LineModel = {"GaussianLines", "SecondOrderSpline", "ThridOrderSpline" };
+		String[] LineModel = { "GaussianLines", "SecondOrderSpline", "ThridOrderSpline" };
 		int indexmodel = 0;
-		
+
 		gd.addChoice("Choose your model: ", LineModel, LineModel[indexmodel]);
-		indexmodel = gd.getNextChoiceIndex();
-		switch(indexmodel){
-		
-		case 0:
-			
-	     userChoiceModel = UserChoiceModel.Line;
-		 break;
-		 
-		case 1:
-		 userChoiceModel = UserChoiceModel.Splineordersec;	
-		 break;
-		case 2:
-		 userChoiceModel = UserChoiceModel.Splineordersec;	
-		 break;
-		 
-		 default:
-		  userChoiceModel = UserChoiceModel.Splineordersec; 
-		  break;
-		
-		}
-		
 		gd.showDialog();
+		indexmodel = gd.getNextChoiceIndex();
 		
-		return !gd.wasCanceled();
-	}
+            if (indexmodel == 0)
+			userChoiceModel = UserChoiceModel.Line;
+            if (indexmodel == 1)
+			userChoiceModel = UserChoiceModel.Splineordersec;
+            if (indexmodel == 2)
+			userChoiceModel = UserChoiceModel.Splineordersec;
 
 	
+
+		return !gd.wasCanceled();  
+	}
+
 	public boolean DialogueMedian() {
 		// Create dialog
 		GenericDialog gd = new GenericDialog("Choose the radius of the filter");
 		gd.addNumericField("Radius:", radius, 0);
 		gd.showDialog();
-		radius = ((int)gd.getNextNumber());
-		
-	
-		
-		
+		radius = ((int) gd.getNextNumber());
+
 		return !gd.wasCanceled();
 	}
-	
+
 	protected RandomAccessibleInterval<FloatType> extractImage(final RandomAccessibleInterval<FloatType> intervalView) {
-		
+
 		final FloatType type = intervalView.randomAccess().get().createVariable();
 		final ImgFactory<FloatType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(intervalView, type);
-		final RandomAccessibleInterval<FloatType> img = factory.create(intervalView,
-				type);
-		
-		
+		final RandomAccessibleInterval<FloatType> img = factory.create(intervalView, type);
+
 		final long[] location = new long[intervalView.numDimensions()];
 
 		if (location.length > 2)
 			location[2] = (preprocessedimp.getCurrentSlice() - 1) / preprocessedimp.getNChannels();
 
 		final Cursor<FloatType> cursor = Views.iterable(intervalView).localizingCursor();
-		final RandomAccess<FloatType> positionable =  img.randomAccess();
-		
+		final RandomAccess<FloatType> positionable = img.randomAccess();
+
 		while (cursor.hasNext()) {
 			cursor.fwd();
-			
+
 			cursor.localize(location);
-			
-			if (location[0] >= interval.realMin(0) && location[0] <= interval.realMax(0) 
-					&& location[1] >= interval.realMin(1) && location[1] <= interval.realMax(1) ){
-			
-			positionable.setPosition(location);
-			positionable.get().set(cursor.get());
-			
+
+			if (location[0] >= interval.realMin(0) && location[0] <= interval.realMax(0)
+					&& location[1] >= interval.realMin(1) && location[1] <= interval.realMax(1)) {
+
+				positionable.setPosition(location);
+				positionable.get().set(cursor.get());
+
 			}
-			
-			
+
 		}
-		
-		
-		
+
 		return img;
 	}
-	
-	
-	
-	
-	protected final void close(final Frame parent, final SliceObserver sliceObserver, final ImagePlus imp, RoiListener roiListener) {
+
+	protected final void close(final Frame parent, final SliceObserver sliceObserver, final ImagePlus imp,
+			RoiListener roiListener) {
 		if (parent != null)
 			parent.dispose();
 
@@ -1768,21 +2225,24 @@ public class InteractiveMT implements PlugIn {
 		if (imp != null) {
 			if (roiListener != null)
 				imp.getCanvas().removeMouseListener(roiListener);
+			if (imp.getOverlay()!=null){
 			imp.getOverlay().clear();
 			imp.updateAndDraw();
+			}
 		}
 
 		isFinished = true;
 	}
-	
-	protected final void close(final Frame parent, final SliceObserver sliceObserver) {
+
+	protected final void close(final Frame parent, final SliceObserver sliceObserver, RoiListener roiListener) {
 		if (parent != null)
 			parent.dispose();
 
 		if (sliceObserver != null)
 			sliceObserver.unregister();
-
-		
+		if (roiListener != null)
+			imp.getCanvas().removeMouseListener(roiListener);
+			//imp.getOverlay().clear();
 
 		isFinished = true;
 	}
@@ -1824,8 +2284,6 @@ public class InteractiveMT implements PlugIn {
 		}
 
 	}
-	
-	
 
 	protected static float computeValueFromScrollbarPosition(final int scrollbarPosition, final float min,
 			final float max, final int scrollbarSize) {
@@ -1837,7 +2295,6 @@ public class InteractiveMT implements PlugIn {
 		return Util.round(((sigma - min) / (max - min)) * scrollbarSize);
 	}
 
-	
 	public static FloatImagePlus<net.imglib2.type.numeric.real.FloatType> createImgLib2(final List<float[]> img,
 			final int w, final int h) {
 		final ImagePlus imp;
@@ -1853,6 +2310,7 @@ public class InteractiveMT implements PlugIn {
 
 		return ImagePlusAdapter.wrapFloat(imp);
 	}
+
 	protected class ImagePlusListener implements SliceListener {
 		@Override
 		public void sliceChanged(ImagePlus arg0) {
@@ -1865,80 +2323,79 @@ public class InteractiveMT implements PlugIn {
 			}
 		}
 	}
-	
+
 	/**
-     * Generic, type-agnostic method to create an identical copy of an Img
-     *
-     * @param input - the Img to copy
-     * @return - the copy of the Img
-     */
-    public < T extends Type< T > > Img< T > copyImage( final Img< T > input )
-    {
-        // create a new Image with the same properties
-        // note that the input provides the size for the new image as it implements
-        // the Interval interface
-        Img< T > output = input.factory().create( input, input.firstElement() );
- 
-        // create a cursor for both images
-        Cursor< T > cursorInput = input.cursor();
-        Cursor< T > cursorOutput = output.cursor();
- 
-        // iterate over the input
-        while ( cursorInput.hasNext())
-        {
-            // move both cursors forward by one pixel
-            cursorInput.fwd();
-            cursorOutput.fwd();
- 
-            // set the value of this pixel of the output image to the same as the input,
-            // every Type supports T.set( T type )
-            cursorOutput.get().set( cursorInput.get() );
-        }
- 
-        // return the copy
-        return output;
-    }
+	 * Generic, type-agnostic method to create an identical copy of an Img
+	 *
+	 * @param input
+	 *            - the Img to copy
+	 * @return - the copy of the Img
+	 */
+	public <T extends Type<T>> Img<T> copyImage(final Img<T> input) {
+		// create a new Image with the same properties
+		// note that the input provides the size for the new image as it
+		// implements
+		// the Interval interface
+		Img<T> output = input.factory().create(input, input.firstElement());
+
+		// create a cursor for both images
+		Cursor<T> cursorInput = input.cursor();
+		Cursor<T> cursorOutput = output.cursor();
+
+		// iterate over the input
+		while (cursorInput.hasNext()) {
+			// move both cursors forward by one pixel
+			cursorInput.fwd();
+			cursorOutput.fwd();
+
+			// set the value of this pixel of the output image to the same as
+			// the input,
+			// every Type supports T.set( T type )
+			cursorOutput.get().set(cursorInput.get());
+		}
+
+		// return the copy
+		return output;
+	}
+
 	/**
-     * Generic, type-agnostic method to create an identical copy of an Img
-     *
-     * @param currentPreprocessedimg2 - the Img to copy
-     * @return - the copy of the Img
-     */
-    public Img< UnsignedByteType > copytoByteImage( final RandomAccessibleInterval<FloatType> input)
-    {
-        // create a new Image with the same properties
-        // note that the input provides the size for the new image as it implements
-        // the Interval interface
- 
-    	
-    	Normalize.normalize(Views.iterable(input), new FloatType(0), new FloatType(255));
-        final UnsignedByteType type = new UnsignedByteType();
+	 * Generic, type-agnostic method to create an identical copy of an Img
+	 *
+	 * @param currentPreprocessedimg2
+	 *            - the Img to copy
+	 * @return - the copy of the Img
+	 */
+	public Img<UnsignedByteType> copytoByteImage(final RandomAccessibleInterval<FloatType> input) {
+		// create a new Image with the same properties
+		// note that the input provides the size for the new image as it
+		// implements
+		// the Interval interface
+
+		Normalize.normalize(Views.iterable(input), new FloatType(0), new FloatType(255));
+		final UnsignedByteType type = new UnsignedByteType();
 		final ImgFactory<UnsignedByteType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(input, type);
-		final Img<UnsignedByteType> output = factory.create(input,
-				type);
-        // create a cursor for both images
-        Cursor< FloatType > cursorInput =Views.iterable(input).cursor();
-        Cursor< UnsignedByteType > cursorOutput = output.cursor();
- 
-        // iterate over the input
-        while ( cursorInput.hasNext())
-        {
-            // move both cursors forward by one pixel
-            cursorInput.fwd();
-            cursorOutput.fwd();
- 
-            // set the value of this pixel of the output image to the same as the input,
-            // every Type supports T.set( T type )
-            cursorOutput.get().set( (int) cursorInput.get().get() );
-        }
- 
-        // return the copy
-        return output;
-    }
-    
-    
-    
-    /**
+		final Img<UnsignedByteType> output = factory.create(input, type);
+		// create a cursor for both images
+		Cursor<FloatType> cursorInput = Views.iterable(input).cursor();
+		Cursor<UnsignedByteType> cursorOutput = output.cursor();
+
+		// iterate over the input
+		while (cursorInput.hasNext()) {
+			// move both cursors forward by one pixel
+			cursorInput.fwd();
+			cursorOutput.fwd();
+
+			// set the value of this pixel of the output image to the same as
+			// the input,
+			// every Type supports T.set( T type )
+			cursorOutput.get().set((int) cursorInput.get().get());
+		}
+
+		// return the copy
+		return output;
+	}
+
+	/**
 	 * 2D correlated Gaussian
 	 * 
 	 * @param mean
@@ -1948,7 +2405,6 @@ public class InteractiveMT implements PlugIn {
 	 * @return ImageJ roi
 	 */
 	public EllipseRoi createEllipse(final double[] mean, final double[] cov, final double nsigmas) {
-		
 
 		final double a = cov[0];
 		final double b = cov[1];
@@ -1957,15 +2413,14 @@ public class InteractiveMT implements PlugIn {
 		final double scale1 = Math.sqrt(0.5 * (a + c + d)) * nsigmas;
 		final double scale2 = Math.sqrt(0.5 * (a + c - d)) * nsigmas;
 		final double theta = 0.5 * Math.atan2((2 * b), (a - c));
-		final double x = mean[0]  ;
-		final double y = mean[1] ;
+		final double x = mean[0];
+		final double y = mean[1];
 		final double dx = scale1 * Math.cos(theta);
 		final double dy = scale1 * Math.sin(theta);
 		final EllipseRoi ellipse = new EllipseRoi(x - dx, y - dy, x + dx, y + dy, scale2 / scale1);
 		return ellipse;
 	}
-	
-	
+
 	public static void main(String[] args) {
 		new ImageJ();
 
@@ -1985,8 +2440,8 @@ public class InteractiveMT implements PlugIn {
 		// number is 2.
 		final int minlength = (int) (radius);
 
-		final int channel = 0 ;
-		
+		final int channel = 0;
+
 		new InteractiveMT(currentimp, currentPreprocessedimp, psf, minlength).run(null);
 
 	}

@@ -33,6 +33,8 @@ public class HoughTransformandMser extends BenchmarkAlgorithm implements OutputA
 	private final RandomAccessibleInterval<FloatType> source;
 	private final int label;
 	private double[] slopeandintercept;
+	private final double thetaPerPixel;
+	private final double rhoPerPixel;
 	public RandomAccessibleInterval<FloatType> houghimg;
 	/**
 	 * Instantiate a new Hough Transform object that does Hough Transform on 2D
@@ -46,10 +48,13 @@ public class HoughTransformandMser extends BenchmarkAlgorithm implements OutputA
 	 * 
 	 */
 
-	public HoughTransformandMser(final int label, final RandomAccessibleInterval<FloatType> source) {
+	public HoughTransformandMser(final int label, final RandomAccessibleInterval<FloatType> source,
+			final double thetaPerPixel, final double rhoPerPixel) {
 
 		this.source = source;
 		this.label = label;
+		this.thetaPerPixel = thetaPerPixel;
+		this.rhoPerPixel = rhoPerPixel;
 		
 
 	}
@@ -99,8 +104,7 @@ public class HoughTransformandMser extends BenchmarkAlgorithm implements OutputA
 					.sqrt((source.dimension(0) * source.dimension(0) + source.dimension(1) * source.dimension(1)));
 			int minRho = (int) -Math.round(size);
 			int maxRho = -minRho;
-			double thetaPerPixel = 1;
-			double rhoPerPixel = 1;
+			
 			double[] min = { mintheta, minRho };
 			double[] max = { maxtheta, maxRho };
 			int pixelsTheta = (int) Math.round((maxtheta - mintheta) / thetaPerPixel);

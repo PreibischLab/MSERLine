@@ -45,6 +45,7 @@ import net.imglib2.Interval;
 import net.imglib2.type.Type;
 import net.imglib2.type.logic.BitType;
 import net.imglib2.type.numeric.integer.IntType;
+import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
 import net.imglib2.util.RealSum;
@@ -842,6 +843,42 @@ public class GetLocalmaxmin {
 		}
 
 		return SubpixelMinlist;
+	}
+
+	public static void ThresholdingBit(RandomAccessibleInterval<UnsignedByteType> img,
+			RandomAccessibleInterval<BitType> imgout, float thresholdHough) {
+
+		final double[] backpos = new double[imgout.numDimensions()];
+		final Cursor<UnsignedByteType> bound = Views.iterable(img).localizingCursor();
+
+		final RandomAccess<BitType> outbound = imgout.randomAccess();
+
+		while (bound.hasNext()) {
+
+			bound.fwd();
+
+			outbound.setPosition(bound);
+			if (bound.get().get() > 0){
+				
+             if (bound.get().get()> thresholdHough){
+
+				bound.localize(backpos);
+
+				outbound.get().setReal(255);
+
+			}
+
+			else {
+
+				outbound.get().setZero();
+
+			}
+        
+			}
+
+		}
+		
+		
 	}
 
 	

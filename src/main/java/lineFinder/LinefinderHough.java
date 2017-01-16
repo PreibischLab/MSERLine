@@ -81,7 +81,7 @@ public class LinefinderHough implements Linefinder {
 		RandomAccessibleInterval<BitType> bitimg = new ArrayImgFactory<BitType>().create(Preprocessedsource, new BitType());
 		GetLocalmaxmin.ThresholdingBit(Preprocessedsource, bitimg, ThresholdValue);
 		
-		WatershedDistimg WaterafterDisttransform = new WatershedDistimg(Preprocessedsource, bitimg);
+		WatershedDistimg<FloatType> WaterafterDisttransform = new WatershedDistimg<FloatType>(Preprocessedsource, bitimg);
 		WaterafterDisttransform.checkInput();
 		WaterafterDisttransform.process();
 	    intimg = WaterafterDisttransform.getResult();

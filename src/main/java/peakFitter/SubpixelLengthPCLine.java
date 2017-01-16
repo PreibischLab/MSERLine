@@ -514,7 +514,14 @@ public ArrayList<Indexedlength> getEndPoints(){
 
 						UserChoiceFunction = new GaussianLinedsHF();
 					}
-				 
+					if (model == UserChoiceModel.Splineordersec) {
+
+						UserChoiceFunction = new GaussianLineds();
+					}
+					if (model == UserChoiceModel.Splineordersecfixedds) {
+
+						UserChoiceFunction = new GaussianLineds();
+					}
 					
 				
 				if (inicutoffdistance > minlength) {

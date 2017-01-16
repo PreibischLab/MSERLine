@@ -20,17 +20,20 @@ import net.imglib2.labeling.LabelingROIStrategy;
 import net.imglib2.labeling.NativeImgLabeling;
 import net.imglib2.neighborsearch.NearestNeighborSearchOnKDTree;
 import net.imglib2.roi.labeling.ImgLabeling;
+import net.imglib2.type.NativeType;
 import net.imglib2.type.logic.BitType;
+import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Util;
 import net.imglib2.view.Views;
 @SuppressWarnings("deprecation")
-public class WatershedDistimg extends BenchmarkAlgorithm
+public class WatershedDistimg <T extends NativeType<T>> extends BenchmarkAlgorithm
 implements OutputAlgorithm <RandomAccessibleInterval<IntType>> {
 	
 	private static final String BASE_ERROR_MSG = "[WatershedDistimg] ";
-	private final RandomAccessibleInterval<FloatType> source;
+	private final RandomAccessibleInterval<T> source;
+	
 	private final RandomAccessibleInterval<BitType> bitimg;
 	private RandomAccessibleInterval<IntType> watershedimage;
 	RandomAccessibleInterval<FloatType> distimg;
@@ -43,12 +46,13 @@ implements OutputAlgorithm <RandomAccessibleInterval<IntType>> {
 	 * @param bitimg
 	 *              The image used to compute distance transform and seeds for watershedding.
 	 */
-	public WatershedDistimg(final RandomAccessibleInterval<FloatType> source, final RandomAccessibleInterval<BitType> bitimg){
+	public WatershedDistimg(final RandomAccessibleInterval<T> source, final RandomAccessibleInterval<BitType> bitimg){
 		
 		this.source = source;
 		this.bitimg = bitimg;
 	}
 	
+
 	
 	@Override
 	public boolean checkInput() {
@@ -64,9 +68,9 @@ implements OutputAlgorithm <RandomAccessibleInterval<IntType>> {
 	public boolean process() {
 
 		// Perform the distance transform
-		final FloatType type = source.randomAccess().get().createVariable();
-		final ImgFactory<FloatType> factory = Util.getArrayOrCellImgFactory(source, type);
-		distimg = factory.create(source, type);
+		final T type = source.randomAccess().get().createVariable();
+		final ImgFactory<FloatType> factory = Util.getArrayOrCellImgFactory(source, new FloatType());
+		distimg = factory.create(source, new FloatType());
 
 		DistanceTransformImage(source, distimg);
 		
@@ -113,7 +117,7 @@ implements OutputAlgorithm <RandomAccessibleInterval<IntType>> {
 	 *            the negative of the distance, gives black on white background.
 	 */
 
-	private void DistanceTransformImage(RandomAccessibleInterval<FloatType> inputimg,
+	private void DistanceTransformImage(RandomAccessibleInterval<T> inputimg,
 			RandomAccessibleInterval<FloatType> outimg) {
 		int n = inputimg.numDimensions();
 
@@ -156,7 +160,8 @@ implements OutputAlgorithm <RandomAccessibleInterval<IntType>> {
 
 				// get the distance (the previous call could return that, this
 				// for generality that it is two calls)
-
+ 
+				
 				ranac.get().setReal(search.getDistance());
 
 			} else {
@@ -167,7 +172,7 @@ implements OutputAlgorithm <RandomAccessibleInterval<IntType>> {
 
 	}
 
-	private NativeImgLabeling<Integer, IntType> PrepareSeedImage(RandomAccessibleInterval<FloatType> inputimg) {
+	private NativeImgLabeling<Integer, IntType> PrepareSeedImage(RandomAccessibleInterval<T> inputimg) {
 
 		// New Labeling type
 		final ImgLabeling<Integer, IntType> seedLabeling = new ImgLabeling<Integer, IntType>(

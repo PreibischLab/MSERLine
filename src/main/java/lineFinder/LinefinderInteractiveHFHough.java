@@ -4,29 +4,15 @@ import java.util.ArrayList;
 
 import com.sun.tools.javac.util.Pair;
 
-import drawandOverlay.HoughPushCurves;
-import drawandOverlay.OverlayLines;
 import graphconstructs.Logger;
-import houghandWatershed.WatershedDistimg;
-import labeledObjects.CommonOutput;
 import labeledObjects.CommonOutputHF;
 import net.imglib2.FinalInterval;
-import net.imglib2.Point;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.algorithm.BenchmarkAlgorithm;
-import net.imglib2.algorithm.OutputAlgorithm;
-import net.imglib2.algorithm.localextrema.RefinedPeak;
-import net.imglib2.img.array.ArrayImgFactory;
-import net.imglib2.img.display.imagej.ImageJFunctions;
-import net.imglib2.type.logic.BitType;
 import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.real.FloatType;
-import preProcessing.GetLocalmaxmin;
-import preProcessing.GlobalThresholding;
-import preProcessing.Kernels;
 import util.Boundingboxes;
 
-public class LinefinderHFHough implements LinefinderHF {
+public class LinefinderInteractiveHFHough implements LinefinderHF {
 	
 	
 	private static final String BASE_ERROR_MSG = "[Line-Finder]";
@@ -34,9 +20,9 @@ public class LinefinderHFHough implements LinefinderHF {
 	protected Logger logger = Logger.DEFAULT_LOGGER;
 	private final RandomAccessibleInterval<FloatType> source;
 	private final RandomAccessibleInterval<FloatType> Preprocessedsource;
-	private RandomAccessibleInterval<IntType> intimg;
+	
+	private final RandomAccessibleInterval<IntType> intimg;
 	private final int framenumber;
-	private final int minlength;
 	private ArrayList<CommonOutputHF> output;
 	private final int ndims;
 	private  int Maxlabel;
@@ -48,16 +34,22 @@ public class LinefinderHFHough implements LinefinderHF {
 	// lines,allowing a few more degrees
 
 	public int maxtheta = 240;
-	public double thetaPerPixel = 1;
-	public double rhoPerPixel = 1;
+	private final double thetaPerPixel;
+	private final double rhoPerPixel;
 	
 	
-	public LinefinderHFHough (final RandomAccessibleInterval<FloatType> source, 
-			final RandomAccessibleInterval<FloatType> Preprocessedsource, final int minlength, final int framenumber){
+	public LinefinderInteractiveHFHough (final RandomAccessibleInterval<FloatType> source, 
+			final RandomAccessibleInterval<FloatType> Preprocessedsource, 
+			final RandomAccessibleInterval<IntType> intimg,
+			final int MaxLabel, final double thetaPerPixel, final double rhoPerPixel,
+			final int framenumber){
 		
 		this.source = source;
 		this.Preprocessedsource = Preprocessedsource;
-		this.minlength = minlength;
+		this.intimg = intimg;
+		this.Maxlabel = MaxLabel;
+		this.thetaPerPixel = thetaPerPixel;
+		this.rhoPerPixel = rhoPerPixel;
 		this.framenumber = framenumber;
 		ndims = source.numDimensions();
 		
@@ -77,16 +69,7 @@ public class LinefinderHFHough implements LinefinderHF {
 	@Override
 	public boolean process() {
 		output = new ArrayList<CommonOutputHF>();
-		// Create the Bit image for distance transform and seed image for watershedding
-		final Float ThresholdValue = GlobalThresholding.AutomaticThresholding(Preprocessedsource);
-		RandomAccessibleInterval<BitType> bitimg = new ArrayImgFactory<BitType>().create(Preprocessedsource, new BitType());
-		GetLocalmaxmin.ThresholdingBit(Preprocessedsource, bitimg, ThresholdValue);
 		
-		WatershedDistimg<FloatType> WaterafterDisttransform = new WatershedDistimg<FloatType>(Preprocessedsource, bitimg);
-		WaterafterDisttransform.checkInput();
-		WaterafterDisttransform.process();
-	    intimg = WaterafterDisttransform.getResult();
-		Maxlabel = WaterafterDisttransform.GetMaxlabelsseeded(intimg);
 		int count = 0;
 		for (int label = 1; label < Maxlabel ; label++) {
 
