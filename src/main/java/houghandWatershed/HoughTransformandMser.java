@@ -11,6 +11,7 @@ import net.imglib2.algorithm.BenchmarkAlgorithm;
 import net.imglib2.algorithm.OutputAlgorithm;
 import net.imglib2.algorithm.localextrema.RefinedPeak;
 import net.imglib2.img.array.ArrayImgFactory;
+import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.real.FloatType;
 import preProcessing.GetLocalmaxmin;
 import preProcessing.GlobalThresholding;
@@ -32,7 +33,7 @@ public class HoughTransformandMser extends BenchmarkAlgorithm implements OutputA
 	private final RandomAccessibleInterval<FloatType> source;
 	private final int label;
 	private double[] slopeandintercept;
-
+	public RandomAccessibleInterval<FloatType> houghimg;
 	/**
 	 * Instantiate a new Hough Transform object that does Hough Transform on 2D
 	 * images or slices of a 3D image.
@@ -40,13 +41,8 @@ public class HoughTransformandMser extends BenchmarkAlgorithm implements OutputA
 	 * @param source
 	 *            the source 2D image on which the Hough transform has to be
 	 *            done
-	 * @param bitimg
-	 *            the bitimg of the source to be used for doing the distance
-	 *            transform and watershedding, created using user defined
-	 *            threshold
-	 * @param minlength
-	 *            the minimum length of the lines to be detected this is done to
-	 *            avoid dots which appear in microscopy images.
+	 * @param label
+	 *            the label attached to the Hough image region.
 	 * 
 	 */
 
@@ -61,6 +57,11 @@ public class HoughTransformandMser extends BenchmarkAlgorithm implements OutputA
 	public double[] getslopeandintercept() {
 
 		return slopeandintercept;
+	}
+	
+	public RandomAccessibleInterval<FloatType> getHoughimage(){
+		
+		return houghimg;
 	}
 
 	@Override
@@ -107,13 +108,13 @@ public class HoughTransformandMser extends BenchmarkAlgorithm implements OutputA
 
 			double ratio = (max[0] - min[0]) / (max[1] - min[1]);
 			FinalInterval interval = new FinalInterval(new long[] { pixelsTheta, (long) (pixelsRho * ratio) });
-			final RandomAccessibleInterval<FloatType> houghimage = new ArrayImgFactory<FloatType>().create(interval,
+			 houghimg = new ArrayImgFactory<FloatType>().create(interval,
 					new FloatType());
 
-			HoughPushCurves.Houghspace(source, houghimage, min, max, ThresholdValue);
+			HoughPushCurves.Houghspace(source, houghimg, min, max, ThresholdValue);
 
-			for (int d = 0; d < houghimage.numDimensions(); ++d)
-				sizes[d] = houghimage.dimension(d);
+			for (int d = 0; d < houghimg.numDimensions(); ++d)
+				sizes[d] = houghimg.dimension(d);
 
 			// Define Arraylist to get the slope and the intercept of the
 			// Hough
@@ -122,7 +123,7 @@ public class HoughTransformandMser extends BenchmarkAlgorithm implements OutputA
 					source.numDimensions());
 
 			// Get the list of all the detections
-			SubpixelMinlist = GetLocalmaxmin.HoughspaceMaxima(houghimage, interval, sizes, thetaPerPixel, rhoPerPixel);
+			SubpixelMinlist = GetLocalmaxmin.HoughspaceMaxima(houghimg, interval, sizes, thetaPerPixel, rhoPerPixel);
 
 			// Reduce the number of detections by picking One line per
 			// Label,

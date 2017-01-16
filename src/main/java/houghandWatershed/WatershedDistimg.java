@@ -33,6 +33,7 @@ implements OutputAlgorithm <RandomAccessibleInterval<IntType>> {
 	private final RandomAccessibleInterval<FloatType> source;
 	private final RandomAccessibleInterval<BitType> bitimg;
 	private RandomAccessibleInterval<IntType> watershedimage;
+	RandomAccessibleInterval<FloatType> distimg;
 	/**
 	 * Do watershedding after doing distance transformation on the biimg
 	 * provided by the user using a user set threshold value.
@@ -65,7 +66,7 @@ implements OutputAlgorithm <RandomAccessibleInterval<IntType>> {
 		// Perform the distance transform
 		final FloatType type = source.randomAccess().get().createVariable();
 		final ImgFactory<FloatType> factory = Util.getArrayOrCellImgFactory(source, type);
-		final RandomAccessibleInterval<FloatType> distimg = factory.create(source, type);
+		distimg = factory.create(source, type);
 
 		DistanceTransformImage(source, distimg);
 		
@@ -90,6 +91,11 @@ implements OutputAlgorithm <RandomAccessibleInterval<IntType>> {
 		
 		return watershedimage;
 	}
+    public RandomAccessibleInterval<FloatType> getDistanceTransformedimg() {
+		
+		return distimg;
+	}
+	
 
 	/***
 	 * 

@@ -95,11 +95,11 @@ public static Float AutomaticThresholdingSec(RandomAccessibleInterval<FloatType>
 		while (cursor.hasNext()) {
 			cursor.fwd();
 
-			if (cursor.get().get() < Threshold) {
+			if (cursor.get().get() > 0 && cursor.get().get() < Threshold) {
 				Point newpointA = new Point(n);
 				newpointA.setPosition(cursor);
 				listA.add(newpointA, cursor.get().copy());
-			} else {
+			} else if (cursor.get().get() > 0 && cursor.get().get() >= Threshold )  {
 				Point newpointB = new Point(n);
 				newpointB.setPosition(cursor);
 				listB.add(newpointB, cursor.get().copy());

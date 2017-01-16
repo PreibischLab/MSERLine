@@ -120,8 +120,8 @@ public class GetLocalmaxmin {
 			bound.fwd();
 
 			outbound.setPosition(bound);
+			if (bound.get().get() > 0){
         if (bound.get().get()>ThresholdValue){
-//			if (bound.get().compareTo(ThresholdValue) > 0) {
 
 				bound.localize(backpos);
 
@@ -133,6 +133,8 @@ public class GetLocalmaxmin {
 
 				outbound.get().setZero();
 
+			}
+        
 			}
 
 		}
