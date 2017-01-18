@@ -288,7 +288,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 				int pointonline = (int) (outcursor.getIntPosition(1) - slope * outcursor.getIntPosition(0) 
        					- intercept) ;
        	      
-       	       if (Math.abs(pointonline) < 2){
+       	      
 				if (outcursor.getDoublePosition(0) <= minVal[0]
 						&& outcursor.get().get() / maxintensityline > Intensityratio) {
 					minVal[0] = outcursor.getDoublePosition(0);
@@ -301,7 +301,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					maxVal[1] = outcursor.getDoublePosition(1);
 				}
        	       }
-			}
+			
 			final double[] MinandMax = new double[2 * ndims + 3];
 
 			for (int d = 0; d < ndims; ++d) {
@@ -540,12 +540,9 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 		else {
 
-			final double[] inistartpos = { LMparam[0], LMparam[1] };
-			final double[] iniendpos = { LMparam[2], LMparam[3] };
+		
 			final double[] inipos = iniparam.currentpos;
-			double inicutoffdistance = Distance(inistartpos, iniendpos);
-
-			final long radius = (long) (Math.min(psf[0], psf[1]));
+		
 			RandomAccessibleInterval<FloatType> currentimg = imgs.get(label).Actualroi;
 
 			FinalInterval interval = imgs.get(label).interval;
@@ -1139,11 +1136,11 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					
 					
 					for (int d = 0; d < ndims; ++d) {
-						if (Double.isNaN(startfit[d])) {
+					//	if (Double.isNaN(startfit[d])) {
 							System.out.println("Mask fits fail, returning LM solver results!");
 							startfit[d] = startpos[d];
 
-						}
+					//	}
 					}
 					
 					if (Math.abs(startpos[0] - startfit[0]) >= cutoffdistance || Math.abs(startpos[1] - startfit[1]) >= cutoffdistance){
@@ -1152,13 +1149,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						startfit[d] = startpos[d];
 						}
 					}
-					for (int d = 0; d < ndims; ++d) {
-						if (Double.isNaN(startfit[d])) {
-							System.out.println("Mask fits fail, returning LM solver results!");
-							startfit[d] = startpos[d];
-
-						}
-					}
+				
 					System.out.println("Curvature: " + Curvature);
 
 					Indexedlength PointofInterest = new Indexedlength(label, seedLabel, framenumber, ds, lineIntensity,
@@ -1168,19 +1159,6 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 							+ " New Ylm: " + endpos[1]);
 					System.out.println("Number of Gaussians used: " + (numgaussians ) + " " + ds );
 				
-					FileWriter writer;
-					try {
-						writer = new FileWriter("../res/Houghdsparams-movingstartSNR10.txt", true);
-						writer.write(framenumber + " " +  ds + " " + dx + " "
-								+dy + " " + numgaussians );
-						writer.write("\r\n");
-					
-					
-					writer.close();
-					} catch (IOException e) {
-
-						e.printStackTrace();
-					}
 					
 						
 					return PointofInterest;
@@ -1224,11 +1202,11 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 				
 
 					for (int d = 0; d < ndims; ++d) {
-						if (Double.isNaN(endfit[d])) {
-							System.out.println("Mask fits fail, returning LM solver results!");
+				//		if (Double.isNaN(endfit[d])) {
+					//		System.out.println("Mask fits fail, returning LM solver results!");
 							endfit[d] = endpos[d];
 
-						}
+				//		}
 						
 						
 					}
@@ -1249,18 +1227,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 							+ " New Ylm: " + endpos[1]);
 					System.out.println("Number of Gaussians used: " + (numgaussians ) + " " + ds);
 					
-					FileWriter writer;
-					try {
-						writer = new FileWriter("../res/Houghdsparams-movingendSNR10.txt", true);
-						writer.write(framenumber + " " +  ds + " " + dx + " "
-								+ dy +  " " + numgaussians);
-						writer.write("\r\n");
 					
-					
-					writer.close();
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
 					
 					return PointofInterest;
 
@@ -1314,7 +1281,6 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 				
 				intranac.setPosition(fixedpoint);
 				finallabel = intranac.get().get();
-System.out.println(finallabel);
 
 				return finallabel;
 				

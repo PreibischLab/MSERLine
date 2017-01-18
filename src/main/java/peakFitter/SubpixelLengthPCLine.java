@@ -524,7 +524,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 					}
 					
 				
-				if (inicutoffdistance > minlength) {
+				
 					try {
 						LevenbergMarquardtSolverLine.solve(X, finalparamstart, fixed_param, I, UserChoiceFunction, lambda,
 								termepsilon, maxiter);
@@ -603,10 +603,8 @@ public ArrayList<Indexedlength> getEndPoints(){
 						endparam[d] = endfit[d];
 					}
 					
-					
-					if (Math.abs(Math.sqrt(Maskdist)) - Math.sqrt(LMdist) >= cutoffdistance){
-					if (Math.abs(startpos[0] - startfit[0]) >= cutoffdistance / 2 && Math.abs(startpos[1] - startfit[1]) >= cutoffdistance / 2
-							|| Math.abs(endpos[0] - endfit[0]) >= cutoffdistance / 2 && Math.abs(endpos[1] - endfit[1]) >= cutoffdistance / 2 ){
+					if (Math.abs(endpos[0] - endfit[0]) >= cutoffdistance || Math.abs(endpos[1] - endfit[1]) >= cutoffdistance){
+
 						System.out.println("Mask fits fail, both cords move far, returning LM solver results!");
 
 						for (int d = 0; d < ndims; ++d) {
@@ -615,21 +613,11 @@ public ArrayList<Indexedlength> getEndPoints(){
 							endparam[d] = endpos[d];
 						}
 						}
-					if (Math.abs(startpos[0] - startfit[0]) >= cutoffdistance || Math.abs(startpos[1] - startfit[1]) >= cutoffdistance 
-							|| Math.abs(endpos[0] - endfit[0]) >= cutoffdistance  || Math.abs(endpos[1] - endfit[1]) >= cutoffdistance  ){
-						System.out.println("Mask fits fail, one cord moves too much, returning LM solver results!");
-						for (int d = 0; d < ndims; ++d) {
-							
-							startparam[d] = startpos[d];
-							endparam[d] = endpos[d];
-						}
-						
-					}
+				
 					
 					
 					
 					
-					}
 
 					for (int d = 0; d < ndims; ++d) {
 						if (Double.isNaN(startfit[d]) || Double.isNaN(endfit[d])) {
@@ -727,10 +715,8 @@ public ArrayList<Indexedlength> getEndPoints(){
 							endparam[d] = endfit[d];
 						}
 						
-						
-						if (Math.abs(Math.sqrt(Maskdist)) - Math.sqrt(LMdist) >= cutoffdistance){
-						if (Math.abs(startpos[0] - startfit[0]) >= cutoffdistance / 2 && Math.abs(startpos[1] - startfit[1]) >= cutoffdistance / 2
-								|| Math.abs(endpos[0] - endfit[0]) >= cutoffdistance / 2 && Math.abs(endpos[1] - endfit[1]) >= cutoffdistance / 2 ){
+						if (Math.abs(endpos[0] - endfit[0]) >= cutoffdistance || Math.abs(endpos[1] - endfit[1]) >= cutoffdistance){
+
 							System.out.println("Mask fits fail, both cords move far, returning LM solver results!");
 
 							for (int d = 0; d < ndims; ++d) {
@@ -739,21 +725,11 @@ public ArrayList<Indexedlength> getEndPoints(){
 								endparam[d] = endpos[d];
 							}
 							}
-						if (Math.abs(startpos[0] - startfit[0]) >= cutoffdistance || Math.abs(startpos[1] - startfit[1]) >= cutoffdistance 
-								|| Math.abs(endpos[0] - endfit[0]) >= cutoffdistance  || Math.abs(endpos[1] - endfit[1]) >= cutoffdistance  ){
-							System.out.println("Mask fits fail, one cord moves too much, returning LM solver results!");
-							for (int d = 0; d < ndims; ++d) {
-								
-								startparam[d] = startpos[d];
-								endparam[d] = endpos[d];
-							}
-							
-						}
 						
 						
 						
 						
-						}
+						
 
 						for (int d = 0; d < ndims; ++d) {
 							if (Double.isNaN(startfit[d]) || Double.isNaN(endfit[d])) {
@@ -853,9 +829,9 @@ public ArrayList<Indexedlength> getEndPoints(){
 					}
 					
 					
-					if (Math.abs(Math.sqrt(Maskdist)) - Math.sqrt(LMdist) >= cutoffdistance){
-					if (Math.abs(startpos[0] - startfit[0]) >= cutoffdistance / 2 && Math.abs(startpos[1] - startfit[1]) >= cutoffdistance / 2
-							|| Math.abs(endpos[0] - endfit[0]) >= cutoffdistance / 2 && Math.abs(endpos[1] - endfit[1]) >= cutoffdistance / 2 ){
+					
+					if (Math.abs(endpos[0] - endfit[0]) >= cutoffdistance || Math.abs(endpos[1] - endfit[1]) >= cutoffdistance){
+                       {
 						System.out.println("Mask fits fail, both cords move far, returning LM solver results!");
 
 						for (int d = 0; d < ndims; ++d) {
@@ -863,18 +839,9 @@ public ArrayList<Indexedlength> getEndPoints(){
 							startparam[d] = startpos[d];
 							endparam[d] = endpos[d];
 						}
-						}
-					if (Math.abs(startpos[0] - startfit[0]) >= cutoffdistance || Math.abs(startpos[1] - startfit[1]) >= cutoffdistance 
-							|| Math.abs(endpos[0] - endfit[0]) >= cutoffdistance  || Math.abs(endpos[1] - endfit[1]) >= cutoffdistance  ){
-						System.out.println("Mask fits fail, one cord moves too much, returning LM solver results!");
-						for (int d = 0; d < ndims; ++d) {
-							
-							startparam[d] = startpos[d];
-							endparam[d] = endpos[d];
-						}
 						
-					}
-					
+				
+                       }
 					
 					
 					
@@ -913,12 +880,10 @@ public ArrayList<Indexedlength> getEndPoints(){
 					return pair;
 					}
 
-				}
-
-				else
-					return null;
+			
 
 			}
+			
 			}
 			
 			else 

@@ -906,6 +906,7 @@ public class InteractiveMT implements PlugIn {
 				RandomAccessibleInterval<FloatType> gaussimg = new ArrayImgFactory<FloatType>().create(currentimg,
 						new FloatType());
 				PushCurves.DrawstartLine(gaussimg, PrevFrameparam.fst, PrevFrameparam.snd, psf);
+				
 				ImageJFunctions.show(gaussimg).setTitle("Exact-line-start");
 
 			}
@@ -976,7 +977,7 @@ public class InteractiveMT implements PlugIn {
 	           		Normalize.normalize(Views.iterable(originalimg), minval, maxval);
 	           		Normalize.normalize(Views.iterable(originalPreprocessedimg), minval, maxval);
 	            	
-	           		ImageJFunctions.show(originalPreprocessedimg);
+	           		//ImageJFunctions.show(originalPreprocessedimg);
 	           		
 	               }
 			}
@@ -1023,7 +1024,7 @@ public class InteractiveMT implements PlugIn {
 	    			medfilter.process();
 	    			IJ.log(" Median filter sucessfully applied to current Image" );
 	    		   originalPreprocessedimg = medfilter.getResult();
-	    		   ImageJFunctions.show(originalPreprocessedimg);
+	    		 //  ImageJFunctions.show(originalPreprocessedimg);
 	              	
 	                 }
 	  		}
@@ -1051,7 +1052,7 @@ public class InteractiveMT implements PlugIn {
 	    			medfilter.process();
 	    			IJ.log(" Median filter sucessfully applied to the whole stack" );
 	    			originalPreprocessedimg = medfilter.getResult();
-	    			ImageJFunctions.show(originalPreprocessedimg);
+	    		//	ImageJFunctions.show(originalPreprocessedimg);
 	              	
 	                 }
 	  		}
@@ -2816,7 +2817,7 @@ public class InteractiveMT implements PlugIn {
 		double maxint = GetLocalmaxmin.computeMaxIntensity(img);
 		double minint = GetLocalmaxmin.computeMinIntensity(img);
 		
-		totalimg = Views.interval(Views.extendRandom(img, 0, 0.1), intervalView);
+		totalimg = Views.interval(Views.extendBorder(img), intervalView);
 		
 		return totalimg;
 	}
@@ -3031,8 +3032,8 @@ public class InteractiveMT implements PlugIn {
 	public static void main(String[] args) {
 		new ImageJ();
 // MT2012017
-		ImagePlus imp = new Opener().openImage("/Users/varunkapoor/res/super_bent_small.tif");
-		ImagePlus Preprocessedimp = new Opener().openImage("/Users/varunkapoor/res/super_bent_small.tif");
+		ImagePlus imp = new Opener().openImage("/Users/varunkapoor/res/MT2012017.tif");
+		ImagePlus Preprocessedimp = new Opener().openImage("/Users/varunkapoor/res/BGMT2012017.tif");
 		imp.show();
 		Preprocessedimp.show();
 		final double[] psf = { 1.65, 1.47 };

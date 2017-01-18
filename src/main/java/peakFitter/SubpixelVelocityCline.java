@@ -48,7 +48,7 @@ implements OutputAlgorithm<ArrayList<Indexedlength>> {
 	 public double termepsilon = 1e-1;
 	//Mask fits iteration param
 	 int iterations = 500;
-	public double cutoffdistance = 10;
+	public double cutoffdistance = 20;
 	public boolean halfgaussian = false;
 	public double Intensityratio = 0.5;
 	
@@ -356,7 +356,7 @@ implements OutputAlgorithm<ArrayList<Indexedlength>> {
 				final long radius = (long) ( Math.min(psf[0], psf[1]));
 				// LM solver part
 				final double[] safeparam = finalparamstart.clone();
-				if (inicutoffdistance >  radius) {
+				
 					try {
 						LevenbergMarquardtSolverLine.solve(X, finalparamstart, fixed_param, I, new GaussianLineds(), lambda,
 								termepsilon, maxiter);
@@ -481,9 +481,7 @@ implements OutputAlgorithm<ArrayList<Indexedlength>> {
 
 				
 					
-				} 
-				else
-					return null;
+			
 			}
 
 		}
