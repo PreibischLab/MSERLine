@@ -40,6 +40,8 @@ import com.sun.tools.javac.util.Pair;
 
 import LineModels.UseLineModel.UserChoiceModel;
 import drawandOverlay.DisplayGraph;
+import drawandOverlay.DisplaysubGraphend;
+import drawandOverlay.DisplaysubGraphstart;
 import drawandOverlay.PushCurves;
 import fiji.tool.SliceListener;
 import fiji.tool.SliceObserver;
@@ -61,6 +63,7 @@ import ij.process.FloatProcessor;
 import labeledObjects.CommonOutput;
 import labeledObjects.CommonOutputHF;
 import labeledObjects.Indexedlength;
+import labeledObjects.Subgraphs;
 import lineFinder.FindlinesVia;
 import lineFinder.LinefinderHFHough;
 import lineFinder.LinefinderHFMSER;
@@ -202,8 +205,8 @@ public class InteractiveMT implements PlugIn {
 	
 	
 	int channel = 0;
-	Img<FloatType> originalimg;
-	Img<FloatType> originalPreprocessedimg;
+	RandomAccessibleInterval<FloatType> originalimg;
+	RandomAccessibleInterval<FloatType> originalPreprocessedimg;
 	int inix = 20;
 	int iniy = 20;
 	MserTree<UnsignedByteType> newtree;
@@ -478,17 +481,17 @@ public class InteractiveMT implements PlugIn {
 			long[] min = { (long) standardRectangle.getMinX(), (long) standardRectangle.getMinY() };
 			long[] max = { (long) standardRectangle.getMaxX(), (long) standardRectangle.getMaxY() };
 			interval = new FinalInterval(min, max);
-			final long Cannyradius = (long) (Math.ceil(Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1])));
+			final long Cannyradius = (long) ( 2 * Math.ceil(Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1])));
 			if (ndims == 2) {
 
 				currentimg = extractImage(originalimg);
 				currentPreprocessedimg = extractImage(originalPreprocessedimg);
 				
-			
-				if (Canny)
+				
 				newimg = copytoByteImage(Kernels.CannyEdgeandMean(currentPreprocessedimg, Cannyradius));
-				else
-				newimg = copytoByteImage(currentPreprocessedimg);
+			  //  newimg = copytoByteImage(currentPreprocessedimg);
+				
+				
 
 				roiChanged = true;
 			}
@@ -497,13 +500,11 @@ public class InteractiveMT implements PlugIn {
 				currentimg = extractImage(Views.hyperSlice(originalimg, ndims - 1, currentframe - 1));
 				currentPreprocessedimg = extractImage(
 						Views.hyperSlice(originalPreprocessedimg, ndims - 1, currentframe - 1));
+			
 				
-				if (Canny)
 					newimg = copytoByteImage(Kernels.CannyEdgeandMean(currentPreprocessedimg, Cannyradius));
-					else
-					newimg = copytoByteImage(currentPreprocessedimg);
+					// newimg = copytoByteImage(currentPreprocessedimg);
 				
-
 				roiChanged = true;
 			}
 		}
@@ -569,7 +570,6 @@ public class InteractiveMT implements PlugIn {
 
 			IJ.log(" Computing the Component tree");
 			
-			ImageJFunctions.show(newimg);
 			newtree = MserTree.buildMserTree(newimg, delta, minSize, maxSize, maxVar, minDiversity, darktobright);
 			Rois = getcurrentRois(newtree);
 
@@ -630,11 +630,11 @@ public class InteractiveMT implements PlugIn {
 		final Checkbox Normalize = new Checkbox("Normailze Image Intensity (recommended)", NormalizeImage);
 		final Checkbox MedFiltercur = new Checkbox("Apply Median Filter to current Frame", Mediancurr);
 		final Checkbox MedFilterAll = new Checkbox("Apply Median Filter to Stack", MedianAll);
-		final Checkbox CannyDeriv = new Checkbox("Apply Edge detector", Canny);
+		
 		final Label MTText = new Label("Step 1) Determine end points of MT (start from seeds) ", Label.CENTER);
 		final Label MTTextHF = new Label("Step 2) Track both end points of MT over time ", Label.CENTER);
-		final Button MoveNext = new Button("Determine these parameters for higher frames");
-		final Button JumptoFrame = new Button("Jump to frame:");
+		final Button MoveNext = new Button("Determine these parameters for red channel (take first image)");
+		final Button JumptoFrame = new Button("Determine these parameters for red channel (take user chosen image)");
 		final Button TrackEndPoints = new Button("Track EndPoints");
 		final Button SkipframeandTrackEndPoints = new Button("Skip first few frames and Track EndPoints");
 		
@@ -664,9 +664,6 @@ public class InteractiveMT implements PlugIn {
 		frame.add(MedFilterAll, c);
 	
 
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 0);
-		frame.add(CannyDeriv, c);
 		
 		++c.gridy;
 		frame.add(MTText, c);
@@ -684,11 +681,11 @@ public class InteractiveMT implements PlugIn {
 		frame.add(mserwhough, c);
 		
 		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 235);
+		c.insets = new Insets(10, 10, 0, 95);
 		frame.add(MoveNext, c);
 
 		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 355);
+		c.insets = new Insets(10, 10, 0, 75);
 		frame.add(JumptoFrame, c);
 		
 		++c.gridy;
@@ -706,7 +703,7 @@ public class InteractiveMT implements PlugIn {
 		Normalize.addItemListener(new NormalizeListener());
 		MedFiltercur.addItemListener(new MediancurrListener() );
 		MedFilterAll.addItemListener(new MedianAllListener() );
-		CannyDeriv.addItemListener(new CannyListener() );
+		
 		
 		mser.addItemListener(new MserListener());
 		hough.addItemListener(new HoughListener());
@@ -866,7 +863,7 @@ public class InteractiveMT implements PlugIn {
 				roi = preprocessedimp.getRoi();
 			}
 			IJ.log("Current frame: " + currentframe);
-			updatePreview(ValueChange.ALL);
+		//	updatePreview(ValueChange.ALL);
 	
 			
 			if (ndims == 2) {
@@ -979,6 +976,8 @@ public class InteractiveMT implements PlugIn {
 	           		Normalize.normalize(Views.iterable(originalimg), minval, maxval);
 	           		Normalize.normalize(Views.iterable(originalPreprocessedimg), minval, maxval);
 	            	
+	           		ImageJFunctions.show(originalPreprocessedimg);
+	           		
 	               }
 			}
 	    	
@@ -1020,11 +1019,11 @@ public class InteractiveMT implements PlugIn {
 	              	   
 	              	IJ.log(" Applying Median Filter to current Image" );
 	              	
-	              	final MedianFilter2D<FloatType> medfilter = new MedianFilter2D<FloatType>(currentPreprocessedimg, radius);
+	              	final MedianFilter2D<FloatType> medfilter = new MedianFilter2D<FloatType>(originalPreprocessedimg, radius);
 	    			medfilter.process();
 	    			IJ.log(" Median filter sucessfully applied to current Image" );
-	    		   currentPreprocessedimg = medfilter.getResult();
-	              	
+	    		   originalPreprocessedimg = medfilter.getResult();
+	    		   ImageJFunctions.show(originalPreprocessedimg);
 	              	
 	                 }
 	  		}
@@ -1048,11 +1047,11 @@ public class InteractiveMT implements PlugIn {
 	              	   
 	              	IJ.log(" Applying Median Filter to the whole stack (takes some time)"  );
 	              	
-	              	final MedianFilterImg2D<FloatType> medfilter = new MedianFilterImg2D<FloatType>(originalPreprocessedimg, radius);
+	              	final MedianFilter2D<FloatType> medfilter = new MedianFilter2D<FloatType>(originalPreprocessedimg, radius);
 	    			medfilter.process();
 	    			IJ.log(" Median filter sucessfully applied to the whole stack" );
 	    			originalPreprocessedimg = medfilter.getResult();
-	              	
+	    			ImageJFunctions.show(originalPreprocessedimg);
 	              	
 	                 }
 	  		}
@@ -1060,9 +1059,6 @@ public class InteractiveMT implements PlugIn {
 	      	
 	      }
 	    
-//	    final long Cannyradius = (long) (Math.ceil(Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1])));
-		
-	//	newimg = copytoByteImage(Kernels.CannyEdgeandMean(currentPreprocessedimg, Cannyradius));
 	protected class SkipFramesandTrackendsListener implements ActionListener {
 
 		@Override
@@ -1125,7 +1121,6 @@ public class InteractiveMT implements PlugIn {
 			}
 			IJ.log("Current frame: " + currentframe);
 		
-			//newimg = copytoByteImage(Kernels.CannyEdgeandMean(currentPreprocessedimg, Cannyradius));
 			boolean dialog;
 			boolean dialogupdate;
 			
@@ -1202,7 +1197,9 @@ public class InteractiveMT implements PlugIn {
 			
 			}
 			
-		
+
+			ImagePlus impstart = ImageJFunctions.show(originalimg);
+			ImagePlus impend = ImageJFunctions.show(originalPreprocessedimg);
 
 			ImagePlus impstartsec = ImageJFunctions.show(originalimg);
 			ImagePlus impendsec = ImageJFunctions.show(originalPreprocessedimg);
@@ -1211,12 +1208,24 @@ public class InteractiveMT implements PlugIn {
 			final Trackend trackerend = new Trackend(Allend, stacksize - next);
 			trackerstart.process();
 			SimpleWeightedGraph<double[], DefaultWeightedEdge> graphstart = trackerstart.getResult();
+			ArrayList<Subgraphs> subgraphstart = trackerstart.getFramedgraph();
+			
+			DisplaysubGraphstart displaytrackstart = new DisplaysubGraphstart(impstart, subgraphstart, next);
+			displaytrackstart.getImp();
+			impstart.draw();
+			
 			DisplayGraph displaygraphtrackstart = new DisplayGraph(impstartsec, graphstart);
 			displaygraphtrackstart.getImp();
 			impstartsec.draw();
 
 			trackerend.process();
 			SimpleWeightedGraph<double[], DefaultWeightedEdge> graphend = trackerend.getResult();
+			ArrayList<Subgraphs> subgraphend = trackerend.getFramedgraph();
+			
+			DisplaysubGraphend displaytrackend = new DisplaysubGraphend(impend, subgraphend, next);
+			displaytrackend.getImp();
+			impend.draw();
+			
 			DisplayGraph displaygraphtrackend = new DisplayGraph(impendsec, graphend);
 			displaygraphtrackend.getImp();
 			impendsec.draw();
@@ -2800,18 +2809,14 @@ public class InteractiveMT implements PlugIn {
 		if (location.length > 2)
 			location[2] = (preprocessedimp.getCurrentSlice() - 1) / preprocessedimp.getNChannels();
 		
-		long[] min = {(long) standardRectangle.getMinX() , (long) standardRectangle.getMinY()};
-		
-		long[] max = {(long) standardRectangle.getMaxX(), (long) standardRectangle.getMaxY()};
-		
-		FinalInterval interval =Intervals.createMinMax(min[0], min[1], max[0], max[1]);
+	
 		
 		final RandomAccessibleInterval<FloatType> img = Views.interval( intervalView, interval );
 		
 		double maxint = GetLocalmaxmin.computeMaxIntensity(img);
 		double minint = GetLocalmaxmin.computeMinIntensity(img);
 		
-		totalimg = Views.interval(Views.extendRandom(img, -0.02, -0.01), intervalView);
+		totalimg = Views.interval(Views.extendRandom(img, 0, 0.1), intervalView);
 		
 		return totalimg;
 	}
@@ -2972,8 +2977,8 @@ public class InteractiveMT implements PlugIn {
 		// note that the input provides the size for the new image as it
 		// implements
 		// the Interval interface
-
-		Normalize.normalize(Views.iterable(input), new FloatType(0), new FloatType(255));
+		final RandomAccessibleInterval<FloatType> img = Views.interval( input, interval );
+		Normalize.normalize(Views.iterable(img), new FloatType(0), new FloatType(255));
 		final UnsignedByteType type = new UnsignedByteType();
 		final ImgFactory<UnsignedByteType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(input, type);
 		final Img<UnsignedByteType> output = factory.create(input, type);
@@ -3025,7 +3030,7 @@ public class InteractiveMT implements PlugIn {
 
 	public static void main(String[] args) {
 		new ImageJ();
-
+// MT2012017
 		ImagePlus imp = new Opener().openImage("/Users/varunkapoor/res/super_bent_small.tif");
 		ImagePlus Preprocessedimp = new Opener().openImage("/Users/varunkapoor/res/super_bent_small.tif");
 		imp.show();

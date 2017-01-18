@@ -20,17 +20,30 @@ public class DisplaysubGraphstart {
 	private final ImagePlus imp;
 	private final ArrayList<Subgraphs> subgraph;
     private final int ndims;
+    private final int frame;
 	
 	public DisplaysubGraphstart(final ImagePlus imp, final ArrayList<Subgraphs> subgraph){
 		
 		this.imp = imp;
 		this.subgraph = subgraph;
 		ndims = imp.getNDimensions();
-		
+		this.frame = 0;
 
 		// add listener to the imageplus slice slider
 				SliceObserver sliceObserver = new SliceObserver( imp, new ImagePlusListener() );
 	}
+	
+	public DisplaysubGraphstart(final ImagePlus imp, final ArrayList<Subgraphs> subgraph, int frame){
+		
+		this.imp = imp;
+		this.subgraph = subgraph;
+		ndims = imp.getNDimensions();
+		this.frame = frame;
+
+		// add listener to the imageplus slice slider
+				SliceObserver sliceObserver = new SliceObserver( imp, new ImagePlusListener() );
+	}
+	
 	
 public ImagePlus getImp() { return this.imp; } 
 	
@@ -41,8 +54,7 @@ public ImagePlus getImp() { return this.imp; }
 		public void sliceChanged(ImagePlus arg0)
 		{
 			
-			
-			int maxSlice = subgraph.get(subgraph.size() - 1).Currentframe + 1;
+			int maxFrame = frame + subgraph.get(subgraph.size() - 1).Currentframe + 1;
 			
 			imp.show();
 			
@@ -57,10 +69,12 @@ public ImagePlus getImp() { return this.imp; }
 
 			o.clear();
 			
-			int currentSlice = getImp().getCurrentSlice();
+			int currentFrame = arg0.getCurrentSlice();
+
+			System.out.println(currentFrame + " " + frame + " " + maxFrame);
 			for (int index = 0; index < subgraph.size(); ++index){
 			
-				if (currentSlice == subgraph.get(index).Previousframe + 1 && currentSlice < maxSlice){
+				if (currentFrame  == frame + subgraph.get(index).Previousframe + 1 && currentFrame< maxFrame){
 					for (DefaultWeightedEdge e : subgraph.get(index).subgraph.edgeSet()){
 						double[] startedge = subgraph.get(index).subgraph.getEdgeSource(e);
 						double[] targetedge = subgraph.get(index).subgraph.getEdgeTarget(e);
@@ -81,9 +95,9 @@ public ImagePlus getImp() { return this.imp; }
 			
 			
 			final FileSaver savestart = new FileSaver(imp);
-			savestart.saveAsJpeg("Movingend_subgraph"+arg0.getCurrentSlice());
+			savestart.saveAsJpeg("Movingend_subgraph"+arg0.getFrame());
 			
-			System.out.println( arg0.getCurrentSlice() );
+			System.out.println( arg0.getFrame() );
 		}		
 	}
 	
