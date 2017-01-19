@@ -47,14 +47,14 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 	private ArrayList<Trackproperties> startinframe;
 	private ArrayList<Trackproperties> endinframe;
 	private final double[] psf;
-
+    private final boolean DoMask;
 	// LM solver iteration params
 	public int maxiter = 200;
 	public double lambda = 1e-4;
 	public double termepsilon = 1e-2;
 	// Mask fits iteration param
 	public int iterations = 300;
-	public double cutoffdistance = 15;
+	public double cutoffdistance = 10;
 	public boolean halfgaussian = false;
 	public double Intensityratio = 0.5;
 	private final UserChoiceModel model;
@@ -105,7 +105,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 	public SubpixelVelocityPCLine(final RandomAccessibleInterval<FloatType> source, final LinefinderHF linefinder,
 			final ArrayList<Indexedlength> PrevFrameparamstart, final ArrayList<Indexedlength> PrevFrameparamend,
-			final double[] psf, final int framenumber, final UserChoiceModel model) {
+			final double[] psf, final int framenumber, final UserChoiceModel model, final boolean DoMask) {
 
 		linefinder.checkInput();
 		linefinder.process();
@@ -117,6 +117,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 		this.framenumber = framenumber;
 		this.ndims = source.numDimensions();
 		this.model = model;
+		this.DoMask = DoMask;
 		assert (PrevFrameparamend.size() == PrevFrameparamstart.size());
 	}
 
@@ -285,8 +286,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 				// To get the min and max co-rodinates along the line so we
 				// have starting points to
 				// move on the line smoothly
-				int pointonline = (int) (outcursor.getIntPosition(1) - slope * outcursor.getIntPosition(0) 
-       					- intercept) ;
+			
        	      
        	      
 				if (outcursor.getDoublePosition(0) <= minVal[0]
@@ -657,9 +657,13 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						
 						sigmas+=psf[d] * psf[d];
 					}
-					sigmas = Math.min(psf[0], psf[1]);
-					final int numgaussians = (int) Math.min(Math.round(sigmas /  ds), 6);
-					double[] startfit = new double[ndims];
+					final int numgaussians = (int) Math.max(Math.round(Math.sqrt(sigmas) /  ds), 2);
+					
+					
+					double[] startfit = startpos;
+					
+					if (DoMask){
+					
 					try {
 						startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
 								iterations, dxvector, newslope, newintercept, maxintensityline, halfgaussian,
@@ -668,10 +672,6 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						e.printStackTrace();
 					}
 
-					final double LMdist = sqDistance(startfit, startpos);
-
-					
-						
 					
 				
 					if (Math.abs(startpos[0] - startfit[0]) >= cutoffdistance || Math.abs(startpos[1] - startfit[1]) >= cutoffdistance){
@@ -686,6 +686,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 							startfit[d] = startpos[d];
 
 						}
+					}
 					}
 					Indexedlength PointofInterest = new Indexedlength(label, seedLabel, framenumber, LMparam[2 * ndims],
 							LMparam[2 * ndims + 1], LMparam[2 * ndims + 2], startfit, iniparam.fixedpos, newslope,
@@ -708,9 +709,11 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						
 						sigmas+=psf[d] * psf[d];
 					}
-					sigmas = Math.min(psf[0], psf[1]);
-					final int numgaussians = (int) Math.min(Math.round(sigmas /  ds), 6);
-					double[] endfit = new double[ndims];
+					final int numgaussians = (int) Math.max(Math.round(Math.sqrt(sigmas) /  ds), 2);
+					double[] endfit = endpos;
+					
+					if (DoMask){
+					
 					try {
 						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
 								dxvector, newslope, newintercept, maxintensityline, halfgaussian, EndfitMSER.EndfitMSER,
@@ -719,10 +722,6 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						e.printStackTrace();
 					}
 
-					final double LMdist = sqDistance(endfit, endpos);
-				
-						
-					
 
 					for (int d = 0; d < ndims; ++d) {
 						if (Double.isNaN(endfit[d])) {
@@ -738,6 +737,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						for (int d = 0; d < ndims; ++d) {
 						endfit[d] = endpos[d];
 						}
+					}
 					}
 					Indexedlength PointofInterest = new Indexedlength(label, seedLabel, framenumber, LMparam[2 * ndims],
 							LMparam[2 * ndims + 1], LMparam[2 * ndims + 2], endfit, iniparam.fixedpos, newslope,
@@ -765,9 +765,10 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						
 						sigmas+=psf[d] * psf[d];
 					}
-					sigmas = Math.min(psf[0], psf[1]);
-					final int numgaussians = (int) Math.min(Math.round(sigmas /  ds), 6);
-					double[] startfit = new double[ndims];
+					final int numgaussians = (int) Math.max(Math.round(Math.sqrt(sigmas) /  ds), 2);
+					double[] startfit = startpos;
+					
+					if (DoMask){
 					try {
 						startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
 								iterations, dxvector, newslope, newintercept, maxintensityline, halfgaussian,
@@ -776,9 +777,6 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						e.printStackTrace();
 					}
 
-					final double LMdist = sqDistance(startfit, startpos);
-
-					
 				
 					if (Math.abs(startpos[0] - startfit[0]) >= cutoffdistance || Math.abs(startpos[1] - startfit[1]) >= cutoffdistance){
 						System.out.println("Mask fits fail, returning LM solver results!");
@@ -792,6 +790,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 							startfit[d] = startpos[d];
 
 						}
+					}
 					}
 					Indexedlength PointofInterest = new Indexedlength(label, seedLabel, framenumber, ds,
 							LMparam[2 * ndims], LMparam[2 * ndims + 1], startfit, iniparam.fixedpos, newslope,
@@ -814,9 +813,10 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						
 						sigmas+=psf[d] * psf[d];
 					}
-					sigmas = Math.min(psf[0], psf[1]);
-					final int numgaussians = (int) Math.min(Math.round(sigmas /  ds), 6);
-					double[] endfit = new double[ndims];
+					final int numgaussians = (int) Math.max(Math.round(Math.sqrt(sigmas) /  ds), 2);
+					double[] endfit = endpos;
+					
+					if (DoMask){
 					try {
 						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
 								dxvector, newslope, newintercept, maxintensityline, halfgaussian, EndfitMSER.EndfitMSER,
@@ -825,10 +825,6 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						e.printStackTrace();
 					}
 
-					final double LMdist = sqDistance(endfit, endpos);
-					
-					
-						
 					
 
 					if (Math.abs(endpos[0] - endfit[0]) >= cutoffdistance || Math.abs(endpos[1] - endfit[1]) >= cutoffdistance){
@@ -843,6 +839,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 							endfit[d] = endpos[d];
 
 						}
+					}
 					}
 					Indexedlength PointofInterest = new Indexedlength(label, seedLabel, framenumber, ds,
 							LMparam[2 * ndims], LMparam[2 * ndims + 1], endfit, iniparam.fixedpos, newslope,
@@ -866,15 +863,19 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					double dx = ds / Math.sqrt(1 + newslope * newslope);
 					double dy = newslope * dx;
 					double[] dxvector = { dx, dy };
-					double[] startfit = new double[ndims];
+					
+					double[] startfit = startpos;
+					
 					double sigmas = 0;
 					 
 					for (int d  = 0; d < ndims; ++d){
 						
 						sigmas+=psf[d] * psf[d];
 					}
-					sigmas = Math.min(psf[0], psf[1]);
-					final int numgaussians = (int) Math.min(Math.round(sigmas /  ds), 6);
+					final int numgaussians = (int) Math.max(Math.round(Math.sqrt(sigmas) /  ds), 2);
+					
+					if (DoMask){
+					
 					try {
 						startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
 								iterations, dxvector, newslope, newintercept, maxintensityline, halfgaussian,
@@ -882,10 +883,6 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
-
-					final double LMdist = sqDistance(startfit, startpos);
-					
-					
 
 				
 					
@@ -901,6 +898,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 							startfit[d] = startpos[d];
 
 						}
+					}
 					}
 					Indexedlength PointofInterest = new Indexedlength(label, seedLabel, framenumber, ds, lineIntensity,
 							background, startfit, iniparam.fixedpos, newslope, newintercept, iniparam.originalslope,
@@ -924,9 +922,10 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						
 						sigmas+=psf[d] * psf[d];
 					}
-					sigmas = Math.min(psf[0], psf[1]);
-					final int numgaussians = (int) Math.min(Math.round(sigmas /  ds), 6);
-					double[] endfit = new double[ndims];
+					final int numgaussians = (int) Math.max(Math.round(Math.sqrt(sigmas) /  ds), 2);
+					double[] endfit = endpos;
+					
+					if (DoMask){
 					try {
 						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
 								dxvector, newslope, newintercept, maxintensityline, halfgaussian, EndfitMSER.EndfitMSER,
@@ -935,11 +934,6 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						e.printStackTrace();
 					}
 
-					final double LMdist = sqDistance(endfit, endpos);
-					
-						
-				
-					
 					
 					for (int d = 0; d < ndims; ++d) {
 						if (Double.isNaN(endfit[d])) {
@@ -955,7 +949,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						endfit[d] = endpos[d];
 						}
 					}
-					
+					}
 					Indexedlength PointofInterest = new Indexedlength(label, seedLabel, framenumber, ds, lineIntensity,
 							background, endfit, iniparam.fixedpos, newslope, newintercept, iniparam.originalslope,
 							iniparam.originalintercept, iniparam.originalds);
@@ -974,7 +968,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					final double ds = fixed_param[ndims + 2];
 					final double lineIntensity = LMparam[2 * ndims + 1];
 					final double background = LMparam[2 * ndims + 2];
-					double[] startfit = new double[ndims];
+					double[] startfit = startpos;
 
 					final double newslope = (startpos[1] - endpos[1])/ (startpos[0] - endpos[0]) - Curvature * (startpos[0] + endpos[0]);
 
@@ -989,9 +983,10 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						sigmas+=psf[d] * psf[d];
 					}
 
-					sigmas = Math.min(psf[0], psf[1]);
-					final int numgaussians = (int) Math.min(Math.round(sigmas /  ds), 6);
+					final int numgaussians = (int) Math.max(Math.round(Math.sqrt(sigmas) /  ds), 2);
 
+					if (DoMask){
+					
 					try {
 						startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
 								iterations, dxvector, currentslope, currentintercept, maxintensityline, halfgaussian,
@@ -1017,6 +1012,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 							startfit[d] = startpos[d];
 
 						}
+					}
 					}
 					System.out.println("Curvature: " + Curvature);
 
@@ -1041,7 +1037,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					final double lineIntensity = LMparam[2 * ndims + 1];
 					final double background = LMparam[2 * ndims + 2];
 					System.out.println("Curvature: " + Curvature);
-					double[] endfit = new double[ndims];
+					double[] endfit = endpos;
 					// + 2 * Curvature * endpos[0]
 					final double newslope = (endpos[1] - startpos[1])/ (endpos[0] - startpos[0]) - Curvature * (endpos[0] + startpos[0]);
 
@@ -1055,9 +1051,11 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						
 						sigmas+=psf[d] * psf[d];
 					}
-					sigmas = Math.min(psf[0], psf[1]);
-					final int numgaussians = (int) Math.min(Math.round(sigmas /  ds), 6);
+					
+					final int numgaussians = (int) Math.max(Math.round(Math.sqrt(sigmas) /  ds), 2);
 				
+					if (DoMask){
+					
 					try {
 						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
 								dxvector, currentslope, currentintercept, maxintensityline, halfgaussian,
@@ -1066,10 +1064,6 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						e.printStackTrace();
 					}
 
-					final double LMdist = sqDistance(endfit, endpos);
-				
-					
-					
 					
 					if (Math.abs(endpos[0] - endfit[0]) >= cutoffdistance || Math.abs(endpos[1] - endfit[1]) >= cutoffdistance){
 						System.out.println("Mask fits fail, returning LM solver results!");
@@ -1083,6 +1077,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 							endfit[d] = endpos[d];
 
 						}
+					}
 					}
 					Indexedlength PointofInterest = new Indexedlength(label, seedLabel, framenumber, ds, lineIntensity,
 							background, endfit, iniparam.fixedpos, currentslope, currentintercept,
@@ -1107,10 +1102,10 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					final double ds = Math.abs(LMparam[2 * ndims]);
 					final double lineIntensity = LMparam[2 * ndims + 2];
 					final double background = LMparam[2 * ndims + 3];
-					double[] startfit = new double[ndims];
+					double[] startfit = startpos;
 					final double newslope = (startpos[1] - endpos[1])/ (startpos[0] - endpos[0]) - Curvature * (startpos[0] + endpos[0]);
 
-					//+ 2 * Curvature * startpos[0]
+
 					double dx = ds / Math.sqrt(1 + (newslope + 2 * Curvature * startpos[0]) * (newslope + 2 * Curvature * startpos[0]) );
 					double dy = (newslope + 2 * Curvature * startpos[0]) * dx;
 					double[] dxvector = { dx, dy };
@@ -1120,9 +1115,11 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						
 						sigmas+=psf[d] * psf[d];
 					}
-				sigmas = Math.min(psf[0], psf[1]);
-				final int numgaussians = (int) Math.max(Math.round(sigmas /  ds), 2);
+				
+				final int numgaussians = (int) Math.max(Math.round(Math.sqrt(sigmas) /  ds), 2);
 
+				if (DoMask){
+				
 					try {
 						startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
 								iterations, dxvector, currentslope, currentintercept, maxintensityline, halfgaussian,
@@ -1131,16 +1128,14 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						e.printStackTrace();
 					}
 
-					final double LMdist = sqDistance(startfit, startpos);
-					
 					
 					
 					for (int d = 0; d < ndims; ++d) {
-					//	if (Double.isNaN(startfit[d])) {
+						if (Double.isNaN(startfit[d])) {
 							System.out.println("Mask fits fail, returning LM solver results!");
 							startfit[d] = startpos[d];
 
-					//	}
+						}
 					}
 					
 					if (Math.abs(startpos[0] - startfit[0]) >= cutoffdistance || Math.abs(startpos[1] - startfit[1]) >= cutoffdistance){
@@ -1149,7 +1144,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						startfit[d] = startpos[d];
 						}
 					}
-				
+				}
 					System.out.println("Curvature: " + Curvature);
 
 					Indexedlength PointofInterest = new Indexedlength(label, seedLabel, framenumber, ds, lineIntensity,
@@ -1174,8 +1169,8 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					final double background = LMparam[2 * ndims + 3];
 					System.out.println("Curvature: " + Curvature);
 					final double newslope = (endpos[1] - startpos[1])/ (endpos[0] - startpos[0]) - Curvature * (endpos[0] + startpos[0]);
-					double[] endfit = new double[ndims];
-					// + 2 * Curvature * endpos[0]
+					double[] endfit = endpos;
+
 					double dx = ds / Math.sqrt(1 + (newslope + 2 * Curvature * endpos[0]) * (newslope + 2 * Curvature * endpos[0]));
 					double dy = (newslope + 2 * Curvature * endpos[0]) * dx;
 					double[] dxvector = { dx, dy };
@@ -1185,9 +1180,11 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						
 						sigmas+=psf[d] * psf[d];
 					}
-					sigmas = Math.min(psf[0], psf[1]);
-					final int numgaussians = (int) Math.max(Math.round(sigmas /  ds), 2);
+					
+					final int numgaussians = (int) Math.max(Math.round(Math.sqrt(sigmas) /  ds), 2);
 				
+					if (DoMask){
+					
 					try {
 						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
 								dxvector, currentslope, currentintercept, maxintensityline, halfgaussian,
@@ -1196,20 +1193,17 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						e.printStackTrace();
 					}
 
-					final double LMdist = sqDistance(endfit, endpos);
-					
-				
-				
 
 					for (int d = 0; d < ndims; ++d) {
-				//		if (Double.isNaN(endfit[d])) {
-					//		System.out.println("Mask fits fail, returning LM solver results!");
+						if (Double.isNaN(endfit[d])) {
+						System.out.println("Mask fits fail, returning LM solver results!");
 							endfit[d] = endpos[d];
 
-				//		}
+						}
 						
 						
 					}
+					
 					
 				
 					
@@ -1218,6 +1212,8 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						for (int d = 0; d < ndims; ++d) {
 						endfit[d] = endpos[d];
 						}
+					}
+					
 					}
 
 					Indexedlength PointofInterest = new Indexedlength(label, seedLabel, framenumber, ds, lineIntensity,

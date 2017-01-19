@@ -27,14 +27,16 @@ public  class FindlinesVia {
       protected LinefindingMethod MSER, Hough, MSERwHough;
 
 	public static Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> LinefindingMethod(final RandomAccessibleInterval<FloatType> source,
-			final RandomAccessibleInterval<FloatType> Preprocessedsource, final int minlength, final int framenumber, final double[] psf, final Linefinder linefinder, final UserChoiceModel model ) {
+			final RandomAccessibleInterval<FloatType> Preprocessedsource, final int minlength, 
+			final int framenumber, final double[] psf, final Linefinder linefinder, final UserChoiceModel model, 
+			final boolean DoMask ) {
 
 		
 		Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>>	PrevFrameparam = null;
 		
 
 			
-			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(source, linefinder, psf, minlength, model, 0);
+			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(source, linefinder, psf, minlength, model, 0, DoMask);
 			MTline.checkInput();
 			MTline.process();
 			PrevFrameparam = MTline.getResult();
@@ -46,14 +48,15 @@ public  class FindlinesVia {
 	public static Pair<Pair<ArrayList<Trackproperties>, ArrayList<Trackproperties>>, Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>>> 
 	LinefindingMethodHF(final RandomAccessibleInterval<FloatType> source,
 			final RandomAccessibleInterval<FloatType> Preprocessedsource,Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam,
-			final int minlength, final int framenumber, final double[] psf,  final LinefinderHF linefinder, final UserChoiceModel model ) {
+			final int minlength, final int framenumber, final double[] psf,  final LinefinderHF linefinder, final UserChoiceModel model,
+			final boolean DoMask) {
 
 		Pair<Pair<ArrayList<Trackproperties>, ArrayList<Trackproperties>>,Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>>> returnVector = null;
 		
 		
 
 			final SubpixelVelocityPCLine growthtracker = new SubpixelVelocityPCLine(source, linefinder,
-					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber, model);
+					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber, model, DoMask);
 			growthtracker.checkInput();
 			growthtracker.process();
 			

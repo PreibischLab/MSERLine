@@ -48,6 +48,7 @@ implements OutputAlgorithm<Pair<ArrayList<Indexedlength>, ArrayList<Indexedlengt
 	private final double[] psf;
 	private final int minlength;
 	private final int framenumber;
+	private final boolean DoMask;
 	private final UserChoiceModel model;
 	// LM solver iteration params
 	public int maxiter = 500;
@@ -55,7 +56,7 @@ implements OutputAlgorithm<Pair<ArrayList<Indexedlength>, ArrayList<Indexedlengt
 	public double termepsilon = 1e-1;
 	//Mask fits iteration param
 	public int iterations = 500;
-	public double cutoffdistance = 20;
+	public double cutoffdistance = 10;
 	public boolean halfgaussian = false;
     public double Intensityratio = 0.5;
     
@@ -163,11 +164,11 @@ implements OutputAlgorithm<Pair<ArrayList<Indexedlength>, ArrayList<Indexedlengt
 	
 	public SubpixelLengthPCLine( final RandomAccessibleInterval<FloatType> source, 
 			             final Linefinder finder,
-			           
 			             final double[] psf,
 			             final int minlength,
 			             final UserChoiceModel model,
-			             final int framenumber){
+			             final int framenumber, 
+			             final boolean DoMask){
 		
 		finder.checkInput();
 		finder.process();
@@ -177,6 +178,7 @@ implements OutputAlgorithm<Pair<ArrayList<Indexedlength>, ArrayList<Indexedlengt
 		this.minlength = minlength;
 		this.framenumber = framenumber;
 		this.model = model;
+		this.DoMask = DoMask;
 		this.ndims = source.numDimensions();
 		
 	}
@@ -313,7 +315,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 
 		return MinandMax;
            }
- if (model ==  UserChoiceModel.Linefixedds){
+          if (model ==  UserChoiceModel.Linefixedds){
         	   
         	   while(inputcursor.hasNext()){
        			
@@ -491,10 +493,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 				fixed_param[ndims + 1] = intercept;
 				fixed_param[ndims + 2] = 0.5 * Math.min(psf[0], psf[1]);
 			
-				double inicutoffdistance = 0;
-				final double[] inistartpos = { start_param[0], start_param[1] };
-				final double[] iniendpos = { start_param[2], start_param[3] };
-				inicutoffdistance = Distance(inistartpos, iniendpos);
+				
 				
 				
 				MTFitFunction UserChoiceFunction = null;
@@ -547,7 +546,6 @@ public ArrayList<Indexedlength> getEndPoints(){
 					double ds = finalparamstart[4];
 					double dx = finalparamstart[4]/ Math.sqrt(1 + newslope * newslope);
 					double dy = newslope * dx;
-					final double LMdist = sqDistance(startpos, endpos);
 					double[] dxvector = { dx, dy };
 
 					double[] startfit = new double[ndims];
@@ -564,10 +562,11 @@ public ArrayList<Indexedlength> getEndPoints(){
 					 
 					for (int d  = 0; d < ndims; ++d){
 						
-						sigmas+=dxvector[d] * dxvector[d];
+						sigmas+= psf[d] * psf[d];
 					}
-				sigmas = Math.sqrt(sigmas);
-				final int numgaussians = (int) Math.max(Math.round(sigmas /  ds), 2);
+					final int numgaussians = (int) Math.max(Math.round(Math.sqrt(sigmas) /  ds), 2);
+				
+				if (DoMask){
 					System.out.println("Doing Mask Fits: ");
 					try {
 								
@@ -586,7 +585,6 @@ public ArrayList<Indexedlength> getEndPoints(){
 						e.printStackTrace();
 					}
 
-					final double Maskdist = sqDistance(startfit, endfit);
 					// If mask fits fail, return LM solver results, very crucial for
 					// noisy data
 
@@ -603,6 +601,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 						endparam[d] = endfit[d];
 					}
 					
+					
 					if (Math.abs(endpos[0] - endfit[0]) >= cutoffdistance || Math.abs(endpos[1] - endfit[1]) >= cutoffdistance){
 
 						System.out.println("Mask fits fail, both cords move far, returning LM solver results!");
@@ -615,7 +614,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 						}
 				
 					
-					
+				
 					
 					
 
@@ -629,7 +628,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 						}
 					}
 					
-					
+				}
 					final double currentslope = (endparam[1] - startparam[1]) / (endparam[0] - startparam[0]);
 					final double currentintercept = endparam[1] - currentslope * endparam[0];
 
@@ -676,10 +675,12 @@ public ArrayList<Indexedlength> getEndPoints(){
 						 
 						for (int d  = 0; d < ndims; ++d){
 							
-							sigmas+=dxvector[d] * dxvector[d];
+							sigmas+= psf[d] * psf[d];
 						}
-					sigmas = Math.sqrt(sigmas);
-					final int numgaussians = (int) Math.max(2, Math.ceil(sigmas /  ds));
+						final int numgaussians = (int) Math.max(Math.round(Math.sqrt(sigmas) /  ds), 2);
+					
+					if (DoMask){
+					
 						System.out.println("Doing Mask Fits: ");
 						try {
 									
@@ -697,10 +698,6 @@ public ArrayList<Indexedlength> getEndPoints(){
 						} catch (Exception e) {
 							e.printStackTrace();
 						}
-
-						final double Maskdist = sqDistance(startfit, endfit);
-						// If mask fits fail, return LM solver results, very crucial for
-						// noisy data
 
 						
 						/**
@@ -741,6 +738,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 							}
 						}
 						
+				    }
 						
 						final double currentslope = (endparam[1] - startparam[1]) / (endparam[0] - startparam[0]);
 						final double currentintercept = endparam[1] - currentslope * endparam[0];
@@ -789,10 +787,11 @@ public ArrayList<Indexedlength> getEndPoints(){
 					 
 					for (int d  = 0; d < ndims; ++d){
 						
-						sigmas+=dxvector[d] * dxvector[d];
+						sigmas+= psf[d] * psf[d];
 					}
-				sigmas = Math.sqrt(sigmas);
-				final int numgaussians =   (int) Math.max(2, Math.ceil(sigmas /  ds));
+					final int numgaussians = (int) Math.max(Math.round(Math.sqrt(sigmas) /  ds), 2);
+				
+				if (DoMask){
 					System.out.println("Doing Mask Fits: ");
 					try {
 								
@@ -811,11 +810,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 						e.printStackTrace();
 					}
 
-					final double Maskdist = sqDistance(startfit, endfit);
-					// If mask fits fail, return LM solver results, very crucial for
-					// noisy data
-
-					
+			
 					/**
 					 * dimensions of returnparam =  2 * ndims + 3 for the free parameters
 					 * + 4 for the label and the frame number information.
@@ -857,7 +852,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 						}
 					}
 					
-					
+				}
 					final double currentslope = (endparam[1] - startparam[1]) / (endparam[0] - startparam[0]);
 					final double currentintercept = endparam[1] - currentslope * endparam[0];
 

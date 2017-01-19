@@ -23,12 +23,18 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.security.spec.MGF1ParameterSpec;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import javax.swing.border.EmptyBorder;
@@ -199,6 +205,7 @@ public class InteractiveMT implements PlugIn {
 	boolean Mediancurr = false;
 	boolean MedianAll = false;
 	boolean AutoDelta = false;
+	boolean Domask = false;
 	
 	ArrayList<ArrayList<Trackproperties>> Allstart = new ArrayList<ArrayList<Trackproperties>>();
 	ArrayList<ArrayList<Trackproperties>> Allend = new ArrayList<ArrayList<Trackproperties>>();
@@ -233,11 +240,15 @@ public class InteractiveMT implements PlugIn {
 	public FinalInterval interval;
 	RandomAccessibleInterval<UnsignedByteType> newimg;
 	ArrayList<double[]> AllmeanCovar;
+	String usefolder = IJ.getDirectory("imagej");
+	String addToName = "EventMT";
+	String addTrackToName = "TrackedMTID";
 	// first and last slice to process
 	int endStack, currentframe;
 
 	public static enum ValueChange {
-		ROI, ALL, DELTA, FindLinesVia, MAXVAR, MINDIVERSITY, DARKTOBRIGHT, MINSIZE, MAXSIZE, SHOWMSER, FRAME, SHOWHOUGH, thresholdHough, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, rhoPerPixel, thetaPerPixel;
+		ROI, ALL, DELTA, FindLinesVia, MAXVAR, MINDIVERSITY, DARKTOBRIGHT, MINSIZE, MAXSIZE, SHOWMSER,
+		FRAME, SHOWHOUGH, thresholdHough, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, rhoPerPixel, thetaPerPixel;
 	}
 
 	boolean isFinished = false;
@@ -876,7 +887,7 @@ public class InteractiveMT implements PlugIn {
 								currentPreprocessedimg, newtree, minlength, currentframe);
 
 						PrevFrameparam = FindlinesVia.LinefindingMethod(currentimg, currentPreprocessedimg, minlength,
-								currentframe, psf, newlineMser, userChoiceModel);
+								currentframe, psf, newlineMser, userChoiceModel, Domask);
 					}
 
 				}
@@ -888,7 +899,7 @@ public class InteractiveMT implements PlugIn {
 								currentPreprocessedimg, intimg, Maxlabel, thetaPerPixel, rhoPerPixel, currentframe);
 
 						PrevFrameparam = FindlinesVia.LinefindingMethod(currentimg, currentPreprocessedimg, minlength,
-								currentframe, psf, newlineHough, userChoiceModel);
+								currentframe, psf, newlineHough, userChoiceModel, Domask);
 					}
 				}
 
@@ -899,7 +910,7 @@ public class InteractiveMT implements PlugIn {
 						LinefinderInteractiveMSERwHough newlineMserwHough = new LinefinderInteractiveMSERwHough(
 								currentimg, currentPreprocessedimg, newtree, minlength, currentframe, thetaPerPixel, rhoPerPixel);
 						PrevFrameparam = FindlinesVia.LinefindingMethod(currentimg, currentPreprocessedimg, minlength,
-								currentframe, psf, newlineMserwHough, userChoiceModel);
+								currentframe, psf, newlineMserwHough, userChoiceModel, Domask);
 					}
 				}
 				// Draw the detected lines
@@ -922,7 +933,7 @@ public class InteractiveMT implements PlugIn {
 						LinefinderInteractiveMSER newlineMser = new LinefinderInteractiveMSER(groundframe,
 								groundframepre, newtree, minlength, currentframe);
 						PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength,
-								currentframe, psf, newlineMser, userChoiceModel);
+								currentframe, psf, newlineMser, userChoiceModel, Domask);
 					}
 
 				}
@@ -936,7 +947,7 @@ public class InteractiveMT implements PlugIn {
 								groundframepre, intimg, Maxlabel, thetaPerPixel, rhoPerPixel, currentframe);
 
 						PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength,
-								currentframe, psf, newlineHough, userChoiceModel);
+								currentframe, psf, newlineHough, userChoiceModel, Domask);
 					}
 				}
 
@@ -947,7 +958,7 @@ public class InteractiveMT implements PlugIn {
 						LinefinderInteractiveMSERwHough newlineMserwHough = new LinefinderInteractiveMSERwHough(groundframe, groundframepre,
 								newtree, minlength, currentframe, thetaPerPixel, rhoPerPixel);
 						PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength,
-								currentframe, psf, newlineMserwHough, userChoiceModel);
+								currentframe, psf, newlineMserwHough, userChoiceModel, Domask);
 					}
 
 				}
@@ -1146,7 +1157,7 @@ public class InteractiveMT implements PlugIn {
 								groundframepre, newtree, minlength, currentframe);
 
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
-								minlength, currentframe, psf, newlineMser, userChoiceModel);
+								minlength, currentframe, psf, newlineMser, userChoiceModel, Domask);
 						
 
 				}
@@ -1164,7 +1175,7 @@ public class InteractiveMT implements PlugIn {
 								groundframepre, intimg, Maxlabel, thetaPerPixel, rhoPerPixel, currentframe);
 
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
-								minlength, currentframe, psf, newlineHough, userChoiceModel);
+								minlength, currentframe, psf, newlineHough, userChoiceModel, Domask);
 					
 				}
 
@@ -1177,7 +1188,7 @@ public class InteractiveMT implements PlugIn {
 						LinefinderInteractiveHFMSERwHough newlineMserwHough = new LinefinderInteractiveHFMSERwHough(
 								groundframe, groundframepre, newtree, minlength, currentframe, thetaPerPixel, rhoPerPixel);
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
-								minlength, currentframe, psf, newlineMserwHough, userChoiceModel);
+								minlength, currentframe, psf, newlineMserwHough, userChoiceModel, Domask);
 						
 						
 
@@ -1232,11 +1243,84 @@ public class InteractiveMT implements PlugIn {
 			impendsec.draw();
 			
 			
-			 
+			
+			ArrayList<Pair<Integer[], double[]>> lengthliststart = new ArrayList<Pair<Integer[], double[]>>();
+			for (int index = 0; index < Allstart.size(); ++index) {
+
+				final int framenumber = index + next;
+				final ArrayList<Trackproperties> currentframe = Allstart.get(index);
+
+				
+				
+				for (int frameindex = 0; frameindex < currentframe.size(); ++frameindex) {
+
+					final Integer SeedID = currentframe.get(frameindex).seedlabel;
+					final Integer[] FrameID = {framenumber, SeedID};
+					final double[] newpoint = currentframe.get(frameindex).newpoint;
+					final double[] oldpoint = currentframe.get(frameindex).oldpoint;
+					final double length = util.Boundingboxes.Distance(newpoint, oldpoint);
+					final double[] startinfo = { oldpoint[0], oldpoint[1], newpoint[0], newpoint[1], length };
+					Pair<Integer[], double[]> lengthpair = new Pair<Integer[], double[]>(FrameID, startinfo);
+
+					lengthliststart.add(lengthpair);
+					
+
+				}
+				
+				
+
+			}
+
+			writeTracks(usefolder + "//" + addToName + "-start", lengthliststart);
+			
+			
+			ArrayList<Pair<Integer[], double[]>> lengthlistend = new ArrayList<Pair<Integer[], double[]>>();
+			for (int index = 0; index < Allend.size(); ++index) {
+
+				final int framenumber = index + next;
+				final ArrayList<Trackproperties> currentframe = Allend.get(index);
+
+				for (int frameindex = 0; frameindex < currentframe.size(); ++frameindex) {
+					final Integer SeedID = currentframe.get(frameindex).seedlabel;
+					final Integer[] FrameID = {framenumber, SeedID};
+					final double[] newpoint = currentframe.get(frameindex).newpoint;
+					final double[] oldpoint = currentframe.get(frameindex).oldpoint;
+					final double length = util.Boundingboxes.Distance(newpoint, oldpoint);
+					final double[] endinfo = { oldpoint[0], oldpoint[1], newpoint[0], newpoint[1], length };
+					Pair<Integer[], double[]> lengthpair = new Pair<Integer[], double[]>(FrameID, endinfo);
+
+					lengthlistend.add(lengthpair);
+
+				}
+
+			}
+			
+			writeTracks(usefolder + "//" + addToName + "-end", lengthlistend);
 		}
 	}
 
-	
+	public static void writeTracks(String nom, ArrayList<Pair<Integer[], double[]>> lengthlist) {
+		NumberFormat nf = NumberFormat.getInstance(Locale.ENGLISH);
+		nf.setMaximumFractionDigits(3);
+		try {
+			File fichier = new File(nom  + ".txt");
+			FileWriter fw = new FileWriter(fichier);
+			BufferedWriter bw = new BufferedWriter(fw);
+			bw.write("\tFramenumber\tSeedLabel\tOldPointX\tOldPointY\tNewPointX\tNewPointY\tLength\n");
+			for (int index = 0; index < lengthlist.size(); ++index) {
+				bw.write(  "\t" + lengthlist.get(index).fst[0] + "\t" + "\t"
+						+ nf.format(lengthlist.get(index).fst[1]) + "\t" + "\t"
+						+ nf.format(lengthlist.get(index).snd[0]) + "\t" + "\t"
+						+ nf.format(lengthlist.get(index).snd[1]) + "\t" + "\t"
+						+ nf.format(lengthlist.get(index).snd[2]) + "\t" + "\t"
+						+ nf.format(lengthlist.get(index).snd[3]) + "\t" + "\t"
+						+ nf.format(lengthlist.get(index).snd[4]) + "\n");
+			}
+			bw.close();
+			fw.close();
+		} catch (IOException e) {
+		}
+	}
 
 	
 	protected class TrackendsListener implements ActionListener {
@@ -1297,7 +1381,7 @@ public class InteractiveMT implements PlugIn {
 								groundframepre, newtree, minlength, currentframe);
 
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
-								minlength, currentframe, psf, newlineMser, userChoiceModel);
+								minlength, currentframe, psf, newlineMser, userChoiceModel, Domask);
 						
 
 				}
@@ -1316,7 +1400,7 @@ public class InteractiveMT implements PlugIn {
 								groundframepre, intimg, Maxlabel, thetaPerPixel, rhoPerPixel, currentframe);
 
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
-								minlength, currentframe, psf, newlineHough, userChoiceModel);
+								minlength, currentframe, psf, newlineHough, userChoiceModel, Domask);
 					
 				}
 
@@ -1329,7 +1413,7 @@ public class InteractiveMT implements PlugIn {
 						LinefinderInteractiveHFMSERwHough newlineMserwHough = new LinefinderInteractiveHFMSERwHough(
 								groundframe, groundframepre, newtree, minlength, currentframe, thetaPerPixel, rhoPerPixel);
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
-								minlength, currentframe, psf, newlineMserwHough, userChoiceModel);
+								minlength, currentframe, psf, newlineMserwHough, userChoiceModel, Domask);
 						
 						
 
@@ -2772,9 +2856,10 @@ public class InteractiveMT implements PlugIn {
 		int indexmodel = 0;
 
 		gd.addChoice("Choose your model: ", LineModel, LineModel[indexmodel]);
-		
+		gd.addCheckbox("Do Gaussian Mask Fits", Domask);
 		gd.showDialog();
 		indexmodel = gd.getNextChoiceIndex();
+		Domask = gd.getNextBoolean();
 		
             if (indexmodel == 0)
 			userChoiceModel = UserChoiceModel.Line;

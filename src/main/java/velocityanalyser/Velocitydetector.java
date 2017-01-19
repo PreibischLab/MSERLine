@@ -66,6 +66,7 @@ public class Velocitydetector {
 		// value specified here
 		new Normalize();
 
+		boolean Domask = true;
 		FloatType minval = new FloatType(0);
 		FloatType maxval = new FloatType(1);
 		Normalize.normalize(Views.iterable(img), minval, maxval);
@@ -102,14 +103,14 @@ public class Velocitydetector {
 				ImagePlus impcurr = IJ.getImage();
 				impcurr.setOverlay(overlay);
 				PrevFrameparam = FindlinesVia.LinefindingMethod(img, inputimg, minlength, 0, psf, newlineMser,
-						UserChoiceModel.Line);
+						UserChoiceModel.Line, Domask);
 			}
 
 			if (findLinesVia == LinefindingMethod.Hough) {
 				LinefinderHough newlineHough = new LinefinderHough(img, inputimg, minlength, 0);
 
 				PrevFrameparam = FindlinesVia.LinefindingMethod(img, inputimg, minlength, 0, psf, newlineHough,
-						UserChoiceModel.Line);
+						UserChoiceModel.Line, Domask);
 			}
 			if (findLinesVia == LinefindingMethod.MSERwHough) {
 
@@ -119,7 +120,7 @@ public class Velocitydetector {
 				ImagePlus impcurr = IJ.getImage();
 				impcurr.setOverlay(overlay);
 				PrevFrameparam = FindlinesVia.LinefindingMethod(img, inputimg, minlength, 0, psf, newlineMserwHough,
-						UserChoiceModel.Line);
+						UserChoiceModel.Line, Domask);
 			}
 
 			// Draw the detected lines
@@ -154,7 +155,7 @@ public class Velocitydetector {
 				LinefinderMSER newlineMser = new LinefinderMSER(groundframe, inputimg, minlength, 0);
 				newlineMser.setMaxlines(4);
 				PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, inputimg, minlength, 0, psf, newlineMser,
-						UserChoiceModel.Line);
+						UserChoiceModel.Line, Domask);
 
 				Overlay overlay = newlineMser.getOverlay();
 				ImagePlus impcurr = IJ.getImage();
@@ -165,7 +166,7 @@ public class Velocitydetector {
 				LinefinderHough newlineHough = new LinefinderHough(groundframe, inputimg, minlength, 0);
 
 				PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, inputimg, minlength, 0, psf, newlineHough,
-						UserChoiceModel.Line);
+						UserChoiceModel.Line, Domask);
 				
 			}
 
@@ -173,7 +174,7 @@ public class Velocitydetector {
 				LinefinderMSERwHough newlineMserwHough = new LinefinderMSERwHough(groundframe, inputimg, minlength, 0);
 				newlineMserwHough.setMaxlines(4);
 				PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, inputimg, minlength, 0, psf,
-						newlineMserwHough, UserChoiceModel.Line);
+						newlineMserwHough, UserChoiceModel.Line, Domask);
 
 				Overlay overlay = newlineMserwHough.getOverlay();
 				ImagePlus impcurr = IJ.getImage();
@@ -211,7 +212,7 @@ public class Velocitydetector {
 					newlineMser.setMaxlines(8);
 					ImageJFunctions.show(inputimgpre).setTitle("Preprocessed extended image");
 					returnVector = FindlinesVia.LinefindingMethodHF(currentframe, inputimgpre, PrevFrameparam,
-							minlength, frame, psf, newlineMser, userChoiceModelHF);
+							minlength, frame, psf, newlineMser, userChoiceModelHF, Domask);
 					Overlay overlay = newlineMser.getOverlay();
 					ImagePlus impcurr = IJ.getImage();
 					impcurr.setOverlay(overlay);
@@ -222,7 +223,7 @@ public class Velocitydetector {
 					
 					ImageJFunctions.show(currentframe);
 					returnVector = FindlinesVia.LinefindingMethodHF(currentframe, inputimgpre, PrevFrameparam,
-							minlength, frame, psf, newlineHough, userChoiceModelHF);
+							minlength, frame, psf, newlineHough, userChoiceModelHF, Domask);
 				}
 
 				if (findLinesViaHF == LinefindingMethod.MSERwHough) {
@@ -232,7 +233,7 @@ public class Velocitydetector {
 					ImageJFunctions.show(inputimgpre).setTitle("Preprocessed extended image");
 					newlineMserwHough.setMaxlines(8);
 					returnVector = FindlinesVia.LinefindingMethodHF(currentframe, inputimgpre, PrevFrameparam,
-							minlength, frame, psf, newlineMserwHough, userChoiceModelHF);
+							minlength, frame, psf, newlineMserwHough, userChoiceModelHF, Domask);
 					Overlay overlay = newlineMserwHough.getOverlay();
 					ImagePlus impcurr = IJ.getImage();
 					impcurr.setOverlay(overlay);
