@@ -545,6 +545,30 @@ public static FinalInterval CurrentroiInterval(RandomAccessibleInterval<FloatTyp
 		}
 		return Math.sqrt(distance);
 	}
+	
+	public static double VelocityX(final double[] oldpoint, final double[] newpoint) {
+
+		double Velocity = 0;
+
+		int d = 0;
+
+			Velocity = (-oldpoint[d] + newpoint[d]);
+
+		
+		return Velocity;
+	}
+	
+	public static double VelocityY(final double[] oldpoint, final double[] newpoint) {
+
+		double Velocity = 0;
+
+		int d = oldpoint.length - 1;
+
+			Velocity = (-oldpoint[d] + newpoint[d]);
+
+		
+		return Velocity;
+	}
 
 	
 }

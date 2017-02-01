@@ -16,6 +16,7 @@ import net.imglib2.algorithm.region.hypersphere.HyperSphereCursor;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgFactory;
 import net.imglib2.img.array.ArrayImgs;
+import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.numeric.complex.ComplexFloatType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.Views;
@@ -431,32 +432,17 @@ public static void addBackground(final IterableInterval<FloatType> iterable, fin
 				right[d] = cursor.getDoublePosition(d) + direction[d];
 			}
 			boolean isMaximum = true;
-            final double tolerance = 20;
         	final RandomAccess<FloatType> outbound = Threshcannyimg.randomAccess();
 			while (localcursor.hasNext()) {
 				localcursor.fwd();
 			
-				for (int d = 0; d < n; ++d)
-					// Before computing maxima check if it is along the gradient direction
-					if(localcursor.getDoublePosition(d)-left[d]==0 || localcursor.getDoublePosition(d)-right[d]==0){
 				    if (cursor.get().compareTo(localcursor.get()) < 0 ) {
 					isMaximum = false;
 				    	
 					break;
-				}
-			}
 				
-				    if (cursor.get().compareTo(localcursor.get()) >= 0 ) {
-				    	for (int d = 0; d < n; ++d)
-							// If it is a maxima but not near the gradient direction, reject it
-							if(Math.abs(localcursor.getDoublePosition(d)-left[d])>tolerance ||
-									Math.abs(localcursor.getDoublePosition(d)-right[d])>tolerance){
-				    	
-					isMaximum = false;
-								
-					break;
-				}
 			}
+			
 				
 			
 			
@@ -556,34 +542,17 @@ public static void addBackground(final IterableInterval<FloatType> iterable, fin
 				right[d] = cursor.getDoublePosition(d) + direction[d];
 			}
 			boolean isMaximum = true;
-            final double tolerance = 20;
         	final RandomAccess<FloatType> outbound = Threshcannyimg.randomAccess();
 			while (localcursor.hasNext()) {
 				localcursor.fwd();
 			
-				for (int d = 0; d < n; ++d)
-					// Before computing maxima check if it is along the gradient direction
-					if(localcursor.getDoublePosition(d)-left[d]==0 || localcursor.getDoublePosition(d)-right[d]==0){
+					
 				    if (cursor.get().compareTo(localcursor.get()) < 0 ) {
 					isMaximum = false;
 				    	
 					break;
-				}
 			}
 				
-				    if (cursor.get().compareTo(localcursor.get()) >= 0 ) {
-				    	for (int d = 0; d < n; ++d)
-							// If it is a maxima but not near the gradient direction, reject it
-							if(Math.abs(localcursor.getDoublePosition(d)-left[d])>tolerance ||
-									Math.abs(localcursor.getDoublePosition(d)-right[d])>tolerance){
-				    	
-					isMaximum = false;
-								
-					break;
-				}
-			}
-				
-			
 			
 			if (isMaximum) {
 				
@@ -613,6 +582,7 @@ public static void addBackground(final IterableInterval<FloatType> iterable, fin
 		RandomAccessibleInterval<FloatType> meanimg = new ArrayImgFactory<FloatType>().create(inputimg,
 				new FloatType());
 		MeanFilter(Threshcannyimg, meanimg, sigma);
+		
 		return meanimg;
 	}
 	
