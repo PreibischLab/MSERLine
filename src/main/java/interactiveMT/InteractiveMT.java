@@ -222,6 +222,8 @@ public class InteractiveMT implements PlugIn {
 	boolean MedianAll = false;
 	boolean AutoDelta = false;
 	boolean Domask = false;
+	boolean SaveTxt = false;
+	boolean SaveXLS = true;
 	
 	ArrayList<ArrayList<Trackproperties>> Allstart = new ArrayList<ArrayList<Trackproperties>>();
 	ArrayList<ArrayList<Trackproperties>> Allend = new ArrayList<ArrayList<Trackproperties>>();
@@ -666,6 +668,9 @@ public class InteractiveMT implements PlugIn {
 		final Checkbox mser = new Checkbox("MSER", Finders, FindLinesViaMSER);
 		final Checkbox hough = new Checkbox("HOUGH", Finders, FindLinesViaHOUGH);
 		final Checkbox mserwhough = new Checkbox("MSERwHOUGH", Finders, FindLinesViaMSERwHOUGH);
+		
+		final Checkbox txtfile = new Checkbox("Save tracks as TXT file", SaveTxt);
+		final Checkbox xlsfile = new Checkbox("Save tracks as XLS file", SaveXLS);
       
 		/* Location */
 		frame.setLayout(layout);
@@ -725,6 +730,15 @@ public class InteractiveMT implements PlugIn {
 		c.insets = new Insets(10, 10, 0, 235);
 		frame.add(SkipframeandTrackEndPoints, c);
 
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		frame.add(txtfile, c);
+		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		frame.add(xlsfile, c);
+		
+		
 		Normalize.addItemListener(new NormalizeListener());
 		MedFiltercur.addItemListener(new MediancurrListener() );
 		MedFilterAll.addItemListener(new MedianAllListener() );
@@ -740,6 +754,8 @@ public class InteractiveMT implements PlugIn {
 
 		frame.addWindowListener(new FrameListener(frame));
 
+		txtfile.addItemListener(new SaveasTXT());
+		xlsfile.addItemListener(new SaveasXLS());
 		frame.setVisible(true);
 		MTText.setFont(MTText.getFont().deriveFont(Font.BOLD));
 		MTTextHF.setFont(MTTextHF.getFont().deriveFont(Font.BOLD));
@@ -1029,6 +1045,34 @@ public class InteractiveMT implements PlugIn {
 	    	
 	    }
 	 
+	 protected class SaveasTXT implements ItemListener{
+		 
+		 @Override
+	  		public void itemStateChanged(ItemEvent arg0) {
+			 if (arg0.getStateChange() == ItemEvent.DESELECTED)
+				 SaveTxt = false;
+			 
+			  else if (arg0.getStateChange() == ItemEvent.SELECTED)
+				  SaveTxt = true;
+			 
+		 }
+		 
+	 }
+	 
+     protected class SaveasXLS implements ItemListener{
+		 
+		 @Override
+	  		public void itemStateChanged(ItemEvent arg0) {
+			 if (arg0.getStateChange() == ItemEvent.DESELECTED)
+				 SaveXLS = false;
+			 
+			  else if (arg0.getStateChange() == ItemEvent.SELECTED)
+				  SaveXLS = true;
+			 
+		 }
+		 
+	 }
+	 
 	    protected class MediancurrListener implements ItemListener{
 
 	  		@Override
@@ -1235,7 +1279,7 @@ public class InteractiveMT implements PlugIn {
 			SimpleWeightedGraph<double[], DefaultWeightedEdge> graphstart = trackerstart.getResult();
 			ArrayList<Subgraphs> subgraphstart = trackerstart.getFramedgraph();
 			
-			DisplaysubGraphstart displaytrackstart = new DisplaysubGraphstart(impstart, subgraphstart, next);
+			DisplaysubGraphstart displaytrackstart = new DisplaysubGraphstart(impstart, subgraphstart, next - 1);
 			displaytrackstart.getImp();
 			impstart.draw();
 			
@@ -1247,7 +1291,7 @@ public class InteractiveMT implements PlugIn {
 			SimpleWeightedGraph<double[], DefaultWeightedEdge> graphend = trackerend.getResult();
 			ArrayList<Subgraphs> subgraphend = trackerend.getFramedgraph();
 			
-			DisplaysubGraphend displaytrackend = new DisplaysubGraphend(impend, subgraphend, next);
+			DisplaysubGraphend displaytrackend = new DisplaysubGraphend(impend, subgraphend, next - 1);
 			displaytrackend.getImp();
 			impend.draw();
 			
@@ -1304,14 +1348,16 @@ public class InteractiveMT implements PlugIn {
 			
 			ResultsTable rt = new ResultsTable();
 			for (int seedID = MinSeedLabel; seedID <= MaxSeedLabel; ++seedID){
-				
+				if (SaveTxt){
 				try {
+					
 					File fichier = new File(usefolder + "//" + addTrackToName + "SeedLabel" + seedID  + "-start" + ".txt");
 					FileWriter fw = new FileWriter(fichier);
 					BufferedWriter bw = new BufferedWriter(fw);
 					bw.write("\tFramenumber\tSeedLabel\tOldX (px)\tOldY (px)\tNewX (px)\tNewY (px)\tOldX (real)\tOldY (real)"
 							+ "\tNewX (real)\tNewY (real)"
 							+ "\tLength ( real)\tVelocityX (real)\tVelocityY (real)\n");
+					
 					for (int index = 0; index < Allstart.size(); ++index) {
 						if (lengthliststart.get(index).fst[1] == seedID){
 						bw.write(  "\t" + lengthliststart.get(index).fst[0] + "\t" + "\t"
@@ -1327,7 +1373,16 @@ public class InteractiveMT implements PlugIn {
 								+ nf.format(lengthliststart.get(index).snd[8]) + "\t" + "\t"
 								+ nf.format(lengthliststart.get(index).snd[9]) + "\t" + "\t"
 								+ nf.format(lengthliststart.get(index).snd[10]) + "\n");
+						}
 						
+					}
+					bw.close();
+					fw.close();
+				} catch (IOException e) {
+				}
+				}
+					for (int index = 0; index < Allstart.size(); ++index) {
+						if (lengthliststart.get(index).fst[1] == seedID){
 						rt.incrementCounter();
 						rt.addValue("FrameNumber", lengthliststart.get(index).fst[0] );
 						rt.addValue("SeedLabel", lengthliststart.get(index).fst[1] );
@@ -1344,17 +1399,17 @@ public class InteractiveMT implements PlugIn {
 						rt.addValue("VelocityY in real units", lengthliststart.get(index).snd[10] );
 						}
 						
+						if (SaveXLS)
+						saveResultsToExcel(usefolder + "//" + addTrackToName + "start" +  "SeedLabel" + seedID +  ".xls" , rt);
+						rt.reset();
 					}
 					
 					
 					
-					saveResultsToExcel(usefolder + "//" + addTrackToName + "start" + ".xls" , rt);
+				
 				
 			
-				bw.close();
-				fw.close();
-			} catch (IOException e) {
-			}
+				
 			
 			}
 			
@@ -1397,7 +1452,7 @@ public class InteractiveMT implements PlugIn {
 			
 			ResultsTable rtend = new ResultsTable();
 			for (int seedID = MinSeedLabel; seedID <= MaxSeedLabel; ++seedID){
-				
+				if (SaveTxt){
 				try {
 					File fichier = new File(usefolder + "//" + addTrackToName + "SeedLabel" + seedID + "-end" + ".txt");
 					FileWriter fw = new FileWriter(fichier);
@@ -1420,8 +1475,15 @@ public class InteractiveMT implements PlugIn {
 								+ nf.format(lengthlistend.get(index).snd[8]) + "\t" + "\t"
 								+ nf.format(lengthlistend.get(index).snd[9]) + "\t" + "\t"
 								+ nf.format(lengthlistend.get(index).snd[10]) + "\n");
-						
-						
+						}
+					}
+					bw.close();
+					fw.close();
+				} catch (IOException e) {
+				}
+				}
+					for (int index = 0; index < Allend.size(); ++index) {
+						if (lengthlistend.get(index).fst[1] == seedID){
 						rtend.incrementCounter();
 						rtend.addValue("FrameNumber", lengthlistend.get(index).fst[0] );
 						rtend.addValue("SeedLabel", lengthlistend.get(index).fst[1] );
@@ -1457,20 +1519,17 @@ public class InteractiveMT implements PlugIn {
 						
 						
 						}
-						
+						if (SaveXLS)
+						saveResultsToExcel(usefolder + "//" + addTrackToName + "end" + "seedLabel" + seedID + ".xls" , rtend);
+						rtend.reset();
 					}
 					
-					rt.show("Start and ENd of MT");
-					saveResultsToExcel(usefolder + "//" + addTrackToName + "end" + ".xls" , rtend);
+					
 				
 			
-				bw.close();
-				fw.close();
-			} catch (IOException e) {
-			}
 			
 			}
-			
+			rt.show("Start and End of MT");
 			
 		}
 	}
@@ -1692,6 +1751,9 @@ public class InteractiveMT implements PlugIn {
 			ImagePlus impstartsec = ImageJFunctions.show(originalimg);
 			ImagePlus impendsec = ImageJFunctions.show(originalPreprocessedimg);
 
+			ImagePlus impstart = ImageJFunctions.show(originalimg);
+			ImagePlus impend = ImageJFunctions.show(originalPreprocessedimg);
+			
 			final Trackstart trackerstart = new Trackstart(Allstart,MaxFrames - next);
 			final Trackend trackerend = new Trackend(Allend, MaxFrames - next);
 			trackerstart.process();
@@ -1706,6 +1768,21 @@ public class InteractiveMT implements PlugIn {
 			displaygraphtrackend.getImp();
 			impendsec.draw();
 
+			ArrayList<Subgraphs> subgraphstart = trackerstart.getFramedgraph();
+			ArrayList<Subgraphs> subgraphend = trackerend.getFramedgraph();
+			
+			
+			DisplaysubGraphstart displaytrackstart = new DisplaysubGraphstart(impstart, subgraphstart, next - 1);
+			displaytrackstart.getImp();
+			impstart.draw();
+			
+			
+		
+			
+			DisplaysubGraphend displaytrackend = new DisplaysubGraphend(impend, subgraphend, next - 1);
+			displaytrackend.getImp();
+			impend.draw();
+			
 			
 			ArrayList<Pair<Integer[], double[]>> lengthliststart = new ArrayList<Pair<Integer[], double[]>>();
 			for (int index = 0; index < Allstart.size(); ++index) {
@@ -1749,7 +1826,7 @@ public class InteractiveMT implements PlugIn {
 			
 			ResultsTable rt = new ResultsTable();
 			for (int seedID = MinSeedLabel; seedID <= MaxSeedLabel; ++seedID){
-				
+				if(SaveTxt){
 				try {
 					File fichier = new File(usefolder + "//" + addTrackToName + "SeedLabel" + seedID  + "-start" + ".txt");
 					FileWriter fw = new FileWriter(fichier);
@@ -1757,7 +1834,6 @@ public class InteractiveMT implements PlugIn {
 					bw.write("\tFramenumber\tSeedLabel\tOldX (px)\tOldY (px)\tNewX (px)\tNewY (px)\tOldX (real)\tOldY (real)"
 							+ "\tNewX (real)\tNewY (real)"
 							+ "\tLength ( real)\tVelocityX (real)\tVelocityY (real)\n");
-					rt.addLabel("Start of MT");
 					for (int index = 0; index < Allstart.size(); ++index) {
 						if (lengthliststart.get(index).fst[1] == seedID){
 						bw.write(  "\t" + lengthliststart.get(index).fst[0] + "\t" + "\t"
@@ -1773,39 +1849,46 @@ public class InteractiveMT implements PlugIn {
 								+ nf.format(lengthliststart.get(index).snd[8]) + "\t" + "\t"
 								+ nf.format(lengthliststart.get(index).snd[9]) + "\t" + "\t"
 								+ nf.format(lengthliststart.get(index).snd[10]) + "\n");
-						
+						}
+					}
+					bw.close();
+					fw.close();
+				} catch (IOException e) {
+				}
+				}
+					for (int index = 0; index < Allstart.size(); ++index) {
+						if (lengthliststart.get(index).fst[1] == seedID){
 						rt.incrementCounter();
 						rt.addValue("FrameNumber", lengthliststart.get(index).fst[0] );
 						rt.addValue("SeedLabel", lengthliststart.get(index).fst[1] );
-						rt.addValue("OldX in px units", lengthliststart.get(index).snd[0] );
-						rt.addValue("OldY in px units", lengthliststart.get(index).snd[1] );
-						rt.addValue("NewX in px units", lengthliststart.get(index).snd[2] );
-						rt.addValue("NewY in px units", lengthliststart.get(index).snd[3] );
-						rt.addValue("OldX in real units", lengthliststart.get(index).snd[4] );
-						rt.addValue("OldY in real units", lengthliststart.get(index).snd[5] );
-						rt.addValue("NewX in real units", lengthliststart.get(index).snd[6] );
-						rt.addValue("NewY in real units", lengthliststart.get(index).snd[7] );
-						rt.addValue("Length in real units", lengthliststart.get(index).snd[8] );
-						rt.addValue("VelocityX in real units", lengthliststart.get(index).snd[9] );
-						rt.addValue("VelocityY in real units", lengthliststart.get(index).snd[10] );
+						rt.addValue("OldX in px units",(float) lengthliststart.get(index).snd[0] );
+						rt.addValue("OldY in px units",(float) lengthliststart.get(index).snd[1] );
+						rt.addValue("NewX in px units",(float) lengthliststart.get(index).snd[2] );
+						rt.addValue("NewY in px units",(float) lengthliststart.get(index).snd[3] );
+						rt.addValue("OldX in real units",(float) lengthliststart.get(index).snd[4] );
+						rt.addValue("OldY in real units",(float) lengthliststart.get(index).snd[5] );
+						rt.addValue("NewX in real units",(float) lengthliststart.get(index).snd[6] );
+						rt.addValue("NewY in real units",(float) lengthliststart.get(index).snd[7] );
+						rt.addValue("Length in real units",(float) lengthliststart.get(index).snd[8] );
+						rt.addValue("VelocityX in real units",(float) lengthliststart.get(index).snd[9] );
+						rt.addValue("VelocityY in real units",(float) lengthliststart.get(index).snd[10] );
 						}
-						
+
+						if (SaveXLS)
+						saveResultsToExcel(usefolder + "//" + addTrackToName + "start" + "SeedLabel" +  seedID + ".xls" , rt);
+						rt.reset();
 					}
 					
 					
 				
 				
 			
-				bw.close();
-				fw.close();
-			} catch (IOException e) {
-			}
+			
 			
 			}
 					
 					
 					
-					saveResultsToExcel(usefolder + "//" + addTrackToName + "start" + ".xls" , rt);
 			ArrayList<Pair<Integer[], double[]>> lengthlistend = new ArrayList<Pair<Integer[], double[]>>();
 			for (int index = 0; index < Allend.size(); ++index) {
 
@@ -1840,7 +1923,7 @@ public class InteractiveMT implements PlugIn {
 			
 			ResultsTable rtend = new ResultsTable();
 			for (int seedID = MinSeedLabel; seedID <= MaxSeedLabel; ++seedID){
-				
+				if (SaveTxt){
 				try {
 					File fichier = new File(usefolder + "//" + addTrackToName + "SeedLabel" + seedID + "-end" + ".txt");
 					FileWriter fw = new FileWriter(fichier);
@@ -1863,53 +1946,61 @@ public class InteractiveMT implements PlugIn {
 								+ nf.format(lengthlistend.get(index).snd[8]) + "\t" + "\t"
 								+ nf.format(lengthlistend.get(index).snd[9]) + "\t" + "\t"
 								+ nf.format(lengthlistend.get(index).snd[10]) + "\n");
+						}
 						
-						
+					}
+					bw.close();
+					fw.close();
+				} catch (IOException e) {
+				}
+				}
+					for (int index = 0; index < Allend.size(); ++index) {
+						if (lengthlistend.get(index).fst[1] == seedID){
 						rtend.incrementCounter();
 						rtend.addValue("FrameNumber", lengthlistend.get(index).fst[0] );
 						rtend.addValue("SeedLabel", lengthlistend.get(index).fst[1] );
-						rtend.addValue("OldX in px units", lengthlistend.get(index).snd[0] );
-						rtend.addValue("OldY in px units", lengthlistend.get(index).snd[1] );
-						rtend.addValue("NewX in px units", lengthlistend.get(index).snd[2] );
-						rtend.addValue("NewY in px units", lengthlistend.get(index).snd[3] );
-						rtend.addValue("OldX in real units", lengthlistend.get(index).snd[4] );
-						rtend.addValue("OldY in real units", lengthlistend.get(index).snd[5] );
-						rtend.addValue("NewX in real units", lengthlistend.get(index).snd[6] );
-						rtend.addValue("NewY in real units", lengthlistend.get(index).snd[7] );
-						rtend.addValue("Length in real units", lengthlistend.get(index).snd[8] );
-						rtend.addValue("VelocityX in real units", lengthlistend.get(index).snd[9] );
-						rtend.addValue("VelocityY in real units", lengthlistend.get(index).snd[10] );
+						rtend.addValue("OldX in px units", (float) lengthlistend.get(index).snd[0] );
+						rtend.addValue("OldY in px units",(float) lengthlistend.get(index).snd[1] );
+						rtend.addValue("NewX in px units",(float) lengthlistend.get(index).snd[2] );
+						rtend.addValue("NewY in px units",(float) lengthlistend.get(index).snd[3] );
+						rtend.addValue("OldX in real units",(float) lengthlistend.get(index).snd[4] );
+						rtend.addValue("OldY in real units",(float) lengthlistend.get(index).snd[5] );
+						rtend.addValue("NewX in real units",(float) lengthlistend.get(index).snd[6] );
+						rtend.addValue("NewY in real units",(float) lengthlistend.get(index).snd[7] );
+						rtend.addValue("Length in real units",(float) lengthlistend.get(index).snd[8] );
+						rtend.addValue("VelocityX in real units",(float) lengthlistend.get(index).snd[9] );
+						rtend.addValue("VelocityY in real units",(float) lengthlistend.get(index).snd[10] );
 						
 						
 						rt.incrementCounter();
 						rt.addValue("FrameNumber", lengthlistend.get(index).fst[0] );
 						rt.addValue("SeedLabel", lengthlistend.get(index).fst[1] );
-						rt.addValue("OldX in px units", lengthlistend.get(index).snd[0] );
-						rt.addValue("OldY in px units", lengthlistend.get(index).snd[1] );
-						rt.addValue("NewX in px units", lengthlistend.get(index).snd[2] );
-						rt.addValue("NewY in px units", lengthlistend.get(index).snd[3] );
-						rt.addValue("OldX in real units", lengthlistend.get(index).snd[4] );
-						rt.addValue("OldY in real units", lengthlistend.get(index).snd[5] );
-						rt.addValue("NewX in real units", lengthlistend.get(index).snd[6] );
-						rt.addValue("NewY in real units", lengthlistend.get(index).snd[7] );
-						rt.addValue("Length in real units", lengthlistend.get(index).snd[8] );
-						rt.addValue("VelocityX in real units", lengthlistend.get(index).snd[9] );
-						rt.addValue("VelocityY in real units", lengthlistend.get(index).snd[10] );
+						rt.addValue("OldX in px units",(float) lengthlistend.get(index).snd[0] );
+						rt.addValue("OldY in px units",(float) lengthlistend.get(index).snd[1] );
+						rt.addValue("NewX in px units",(float) lengthlistend.get(index).snd[2] );
+						rt.addValue("NewY in px units",(float) lengthlistend.get(index).snd[3] );
+						rt.addValue("OldX in real units",(float) lengthlistend.get(index).snd[4] );
+						rt.addValue("OldY in real units",(float) lengthlistend.get(index).snd[5] );
+						rt.addValue("NewX in real units",(float) lengthlistend.get(index).snd[6] );
+						rt.addValue("NewY in real units",(float) lengthlistend.get(index).snd[7] );
+						rt.addValue("Length in real units",(float) lengthlistend.get(index).snd[8] );
+						rt.addValue("VelocityX in real units",(float) lengthlistend.get(index).snd[9] );
+						rt.addValue("VelocityY in real units",(float) lengthlistend.get(index).snd[10] );
 						
 						
 						}
 						
+						if (SaveXLS)
+						saveResultsToExcel(usefolder + "//" + addTrackToName + "end" + "SeedLabel" +  seedID + ".xls" , rtend);
+						
+						rtend.reset();
 					}
 					
-					rt.show("Start and End of MT");	
-					saveResultsToExcel(usefolder + "//" + addTrackToName + "end" + ".xls" , rtend);
+					
 			
-				bw.close();
-				fw.close();
-			} catch (IOException e) {
-			}
+			
 			}			
-			
+			rt.show("Start and End of MT");	
 		}
 	}
 
@@ -3321,7 +3412,7 @@ public class InteractiveMT implements PlugIn {
             if (indexmodel == 1)
 			userChoiceModel = UserChoiceModel.Splineordersec;
             if (indexmodel == 2)
-			userChoiceModel = UserChoiceModel.Splineordersec;
+			userChoiceModel = UserChoiceModel.Splineorderthird;
 
           
 	

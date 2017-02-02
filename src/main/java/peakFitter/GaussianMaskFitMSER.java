@@ -82,7 +82,7 @@ public class GaussianMaskFitMSER {
 				
 				final double signal = cImg.get().getRealDouble();
 				final double mask = cMask.get().getRealDouble();
-				final double weight = 8;
+				final double weight = maxintensityline;
 
 				final double signalmask = signal * mask * weight;
 
@@ -103,17 +103,21 @@ public class GaussianMaskFitMSER {
 			++i;
 
 		} while (i < iterations);
-		restoreBackground(signalIterable, noiselevel);
+		restoreBackground(signalIterable, bg);
 
 		// ImageJFunctions.show(gaussianMask);
+	
+		
 		switch (startorend) {
 
 		case StartfitMSER:
 			for (int d = 0; d < n; ++d)
 			location[d] += -(numgaussians - 1)*dxvector[d];
+			break;
 		case EndfitMSER:
 			for (int d = 0; d < n; ++d)
 			location[d] +=  (numgaussians - 1)*dxvector[d];
+			break;
 		}
 	
 		
@@ -165,7 +169,7 @@ public class GaussianMaskFitMSER {
 				for (int n = 1; n <= numgaussians; ++n){	
 			
 					
-			final double x = cursor.getDoublePosition(d) - location[d] + 0.5 * (n-1) * dxvector[d];
+			final double x = cursor.getDoublePosition(d) - location[d] +  (n-1) * dxvector[d];
 			sumofgaussians+= Math.exp(-(x * x) / sq_sigma[d]) ;
 			
 			}
@@ -206,7 +210,7 @@ public class GaussianMaskFitMSER {
 					for (int n = 1; n <= numgaussians; ++n){	
 				
 						
-				final double x = cursor.getDoublePosition(d) - location[d] -  0.5 *(n-1) * dxvector[d];
+				final double x = cursor.getDoublePosition(d) - location[d] -  (n-1) * dxvector[d];
 				sumofgaussians+= Math.exp(-(x * x) / sq_sigma[d]) ;
 				
 				}

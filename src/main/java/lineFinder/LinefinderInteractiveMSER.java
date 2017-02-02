@@ -189,7 +189,6 @@ public class LinefinderInteractiveMSER  implements Linefinder{
 				
 				CommonOutput currentOutput = new CommonOutput(framenumber, Roiindex, slopeandinterceptCI, Roiimg, ActualRoiimg, interval);
 				
-				
 				output.add(currentOutput);
 				}
 				}

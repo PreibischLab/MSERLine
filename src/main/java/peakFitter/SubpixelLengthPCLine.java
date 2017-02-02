@@ -935,6 +935,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 			RandomAccessibleInterval<FloatType> currentimg = imgs.get(label).Actualroi;
 			FinalInterval interval = imgs.get(label).interval;
 			currentimg = Views.interval(currentimg, interval);	
+			
 			Cursor<FloatType> localcursor = Views.iterable(currentimg).localizingCursor();
 
 			while (localcursor.hasNext()) {
