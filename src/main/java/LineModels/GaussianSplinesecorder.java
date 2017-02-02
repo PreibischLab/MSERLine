@@ -84,7 +84,7 @@ public class GaussianSplinesecorder implements MTFitFunction {
 		}
 		double slope = (maxVal[1] - minVal[1]) / (maxVal[0] - minVal[0]) - curvature * (maxVal[0] + minVal[0]);
 
-		double ds = Math.abs(a[2 * ndims]);
+		double ds = (a[2 * ndims]);
 
 		
 		double mplus2bxstart = slope + 2 * curvature* minVal[0] ;
@@ -109,6 +109,10 @@ public class GaussianSplinesecorder implements MTFitFunction {
 			sum += b[i] * di * di;
 			dsum += 2 * b[i] * di * dxvectorderivstart[i];
 		}
+		mplus2bxstart = slope + 2 * curvature* minVal[0];
+		dxvectorderivstart[0] = 1 / Math.sqrt(1 + mplus2bxstart* mplus2bxstart);
+		dxvectorderivstart[1] = mplus2bxstart / Math.sqrt(1 + mplus2bxstart * mplus2bxstart);
+				
 		sumofgaussians+= dsum * Math.exp(-sum);
 		if (minVal[0] > maxVal[0] || minVal[1] > maxVal[1] && slope > 0)
 			break;
@@ -134,7 +138,7 @@ public class GaussianSplinesecorder implements MTFitFunction {
 			maxVal[i] = a[ndims + i];
 		}
 		double slope = (maxVal[1] - minVal[1]) / (maxVal[0] - minVal[0]) - curvature * (maxVal[0] + minVal[0]);
-		double ds = Math.abs(a[2 * ndims]);
+		double ds = (a[2 * ndims]);
 		double mplus2bxstart = slope + 2 * curvature* minVal[0];
 		
 
@@ -158,6 +162,11 @@ public class GaussianSplinesecorder implements MTFitFunction {
 			sum += b[i] * di * di;
 			dsum += 2 * b[i] * di * dxvectorCstart[i];
 		}
+		
+		dxbydb = - ds * mplus2bxstart * (-(maxVal[0] + minVal[0]) + 2 * minVal[0]) / (Math.pow(1 + mplus2bxstart * mplus2bxstart, 3 / 2));
+		dxvectorCstart[0] = dxbydb;
+		dxvectorCstart[1] =  mplus2bxstart* dxbydb + (-(maxVal[0] + minVal[0]) + 2 * minVal[0]) * dxvectorstart[0];
+		
 		sumofgaussians+= dsum * Math.exp(-sum);
 		if (minVal[0] > maxVal[0] || minVal[1] > maxVal[1] && slope > 0)
 			break;
@@ -205,7 +214,7 @@ public class GaussianSplinesecorder implements MTFitFunction {
 		double curvature = a[2 * ndims + 1];
 		double slope = (maxVal[1] - minVal[1]) / (maxVal[0] - minVal[0]) - curvature * (maxVal[0] + minVal[0]);
 
-		double ds = Math.abs(a[2 * ndims]);
+		double ds = (a[2 * ndims]);
 
 		while (true) {
 

@@ -1259,7 +1259,7 @@ public class InteractiveMT implements PlugIn {
 			
 			ArrayList<Pair<Integer[], double[]>> lengthliststart = new ArrayList<Pair<Integer[], double[]>>();
 			
-			final ArrayList<Trackproperties> first = Allstart.get(next);
+			final ArrayList<Trackproperties> first = Allstart.get(0);
 			int MaxSeedLabel = first.get(first.size() - 1).seedlabel;
 			int MinSeedLabel = first.get(0).seedlabel;
 			
@@ -1741,7 +1741,7 @@ public class InteractiveMT implements PlugIn {
 				
 
 			}
-			final ArrayList<Trackproperties> first = Allstart.get(next);
+			final ArrayList<Trackproperties> first = Allstart.get(0);
 			int MaxSeedLabel = first.get(first.size() - 1).seedlabel;
 			int MinSeedLabel = first.get(0).seedlabel;
 			NumberFormat nf = NumberFormat.getInstance(Locale.ENGLISH);

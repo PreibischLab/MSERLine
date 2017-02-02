@@ -18,7 +18,7 @@ public class GaussianMaskFitMSER {
 	public static double[] sumofgaussianMaskFit(final RandomAccessibleInterval<FloatType> signalInterval,
 			final double[] location, final double[] sigma, final int numgaussians,
 			final int iterations, final double[] dxvector, final double slope, final double intercept,
-			final double maxintensityline,  final boolean halfgaussian, final EndfitMSER startorend, int label)
+			final double maxintensityline,  final boolean halfgaussian, final EndfitMSER startorend, int label, double noiselevel)
 			throws Exception {
 		final int n = signalInterval.numDimensions();
 
@@ -53,12 +53,12 @@ public class GaussianMaskFitMSER {
 			switch (startorend) {
 
 			case StartfitMSER:
-				beststartfitsumofGaussian(translatedIterableMask,  location, numgaussians, sq_sigma, dxvector, slope, intercept, maxintensityline,
+				beststartfitsumofGaussian(translatedIterableMask,  location, numgaussians, sq_sigma, dxvector, slope, intercept, maxintensityline, noiselevel,
 						halfgaussian);
 				break;
 
 			case EndfitMSER:
-				bestendfitsumofGaussian(translatedIterableMask, location, numgaussians, sq_sigma, dxvector, slope, intercept, maxintensityline,
+				bestendfitsumofGaussian(translatedIterableMask, location, numgaussians, sq_sigma, dxvector, slope, intercept, maxintensityline, noiselevel,
 						halfgaussian);
 				break;
 
@@ -82,7 +82,7 @@ public class GaussianMaskFitMSER {
 				
 				final double signal = cImg.get().getRealDouble();
 				final double mask = cMask.get().getRealDouble();
-				final double weight = maxintensityline;
+				final double weight = 8;
 
 				final double signalmask = signal * mask * weight;
 
@@ -103,7 +103,7 @@ public class GaussianMaskFitMSER {
 			++i;
 
 		} while (i < iterations);
-		restoreBackground(signalIterable, bg);
+		restoreBackground(signalIterable, noiselevel);
 
 		// ImageJFunctions.show(gaussianMask);
 		switch (startorend) {
@@ -146,6 +146,7 @@ public class GaussianMaskFitMSER {
 	final public static void beststartfitsumofGaussian(final IterableInterval<FloatType> image, final double[] location,
 			final int numgaussians,
 			final double[] sq_sigma, final double[] dxvector, final double slope, final double intercept, final double maxintensityline,
+			final double noiselevel,
 			boolean halfgaussian) {
 		final int ndims = image.numDimensions();
 		final Cursor<FloatType> cursor = image.localizingCursor();
@@ -164,23 +165,14 @@ public class GaussianMaskFitMSER {
 				for (int n = 1; n <= numgaussians; ++n){	
 			
 					
-			final double x = cursor.getDoublePosition(d) - location[d] + (n-1) * dxvector[d];
+			final double x = cursor.getDoublePosition(d) - location[d] + 0.5 * (n-1) * dxvector[d];
 			sumofgaussians+= Math.exp(-(x * x) / sq_sigma[d]) ;
 			
 			}
 				value *=  sumofgaussians;
-		}
-			/*
-			for (int d = 0; d < ndims; ++d) {
-				final double x = cursor.getDoublePosition(d) - location[d] ;
-				final double y = cursor.getDoublePosition(d) - location[d] + dxvector[d];
-				final double z = cursor.getDoublePosition(d) - location[d] + 2 *dxvector[d];
-
-				value *=  Math.exp(-(x * x) / sq_sigma[d]) + Math.exp(-(y * y) / sq_sigma[d])+ 0*Math.exp(-(z * z) / sq_sigma[d]) ;
 				
-
-			}
-			*/
+		}
+			
 			if (halfgaussian){
 			if (cursor.getDoublePosition(1) >= location[1] - (cursor.getDoublePosition(0) - location[0])/slope)
 				 					value *= 0;
@@ -197,6 +189,7 @@ public class GaussianMaskFitMSER {
 	final public static void bestendfitsumofGaussian(final IterableInterval<FloatType> image,  final double[] location,
 			final int numgaussians,
 			final double[] sq_sigma, final double[] dxvector, final double slope, final double intercept, final double maxintensityline,
+			final double noiselevel,
 			 boolean halfgaussian) {
 		final int ndims = image.numDimensions();
 		final Cursor<FloatType> cursor = image.localizingCursor();
@@ -213,23 +206,14 @@ public class GaussianMaskFitMSER {
 					for (int n = 1; n <= numgaussians; ++n){	
 				
 						
-				final double x = cursor.getDoublePosition(d) - location[d] - (n-1) * dxvector[d];
+				final double x = cursor.getDoublePosition(d) - location[d] -  0.5 *(n-1) * dxvector[d];
 				sumofgaussians+= Math.exp(-(x * x) / sq_sigma[d]) ;
 				
 				}
 					value *=  sumofgaussians;
-			}
-			/*
-			for (int d = 0; d < ndims; ++d) {
-				final double x = cursor.getDoublePosition(d) - location[d] ;
-				final double y = cursor.getDoublePosition(d) - location[d] - dxvector[d];
-				final double z = cursor.getDoublePosition(d) - location[d] - 2 *dxvector[d];
-				sumofgaussians = Math.exp(-(x * x) / sq_sigma[d]) + Math.exp(-(y * y) / sq_sigma[d]) + 0*Math.exp(-(z * z) / sq_sigma[d]) ;
 				
-				value *= sumofgaussians;			
-
 			}
-			*/
+			
 			if (halfgaussian){
 				if (cursor.getDoublePosition(1) <= location[1] - (cursor.getDoublePosition(0) - location[0])/slope)
 					 					value *= 0;
