@@ -13,7 +13,6 @@ public class IntensityDiffCostFunction implements CostFunction< Trackproperties,
 	{
 		
 		return 0;
-		//return source.IntensityweightedsquareDistanceTo(target );
 	}
 
 	

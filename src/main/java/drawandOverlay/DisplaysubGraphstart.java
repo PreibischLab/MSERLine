@@ -94,8 +94,8 @@ public ImagePlus getImp() { return this.imp; }
 			}
 			
 			
-			final FileSaver savestart = new FileSaver(imp);
-			savestart.saveAsJpeg("Movingend_subgraph"+arg0.getFrame());
+		//	final FileSaver savestart = new FileSaver(imp);
+		//	savestart.saveAsJpeg("Movingend_subgraph"+arg0.getFrame());
 			
 			System.out.println( arg0.getFrame() );
 		}		

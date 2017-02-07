@@ -107,6 +107,7 @@ import mpicbg.imglib.multithreading.SimpleMultiThreading;
 import mpicbg.imglib.util.Util;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
+import net.imglib2.Interval;
 import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.componenttree.mser.Mser;
@@ -516,7 +517,12 @@ public class InteractiveMT implements PlugIn {
 
 				currentimg = extractImage(originalimg);
 				currentPreprocessedimg = extractImage(originalPreprocessedimg);
+				// Expand the image by 10 pixels
 				
+				Interval spaceinterval = Intervals.createMinMax(new long[] {currentimg.min(0),currentimg.min(1), currentimg.max(0), currentimg.max(1)});
+				Interval interval = Intervals.expand(spaceinterval, 10);
+				currentimg = Views.interval(Views.extendBorder(currentimg), interval);
+				currentPreprocessedimg = Views.interval(Views.extendBorder(currentPreprocessedimg), interval);
 				
 				newimg = copytoByteImage(Kernels.CannyEdgeandMean(currentPreprocessedimg, Cannyradius));
 				
@@ -529,7 +535,10 @@ public class InteractiveMT implements PlugIn {
 				currentimg = extractImage(Views.hyperSlice(originalimg, ndims - 1, currentframe - 1));
 				currentPreprocessedimg = extractImage(
 						Views.hyperSlice(originalPreprocessedimg, ndims - 1, currentframe - 1));
-			
+				Interval spaceinterval = Intervals.createMinMax(new long[] {currentimg.min(0),currentimg.min(1), currentimg.max(0), currentimg.max(1)});
+				Interval interval = Intervals.expand(spaceinterval, 10);
+				currentimg = Views.interval(Views.extendBorder(currentimg), interval);
+				currentPreprocessedimg = Views.interval(Views.extendBorder(currentPreprocessedimg), interval);
 				
 					newimg = copytoByteImage(Kernels.CannyEdgeandMean(currentPreprocessedimg, Cannyradius));
 				roiChanged = true;
@@ -647,7 +656,7 @@ public class InteractiveMT implements PlugIn {
 	
 	public void displaySliders() {
 
-		final Frame frame = new Frame("Find MT's and Track");
+		final Frame frame = new Frame("Find MTs and Track");
 		frame.setSize(550, 550);
 		/* Instantiation */
 		final GridBagLayout layout = new GridBagLayout();
@@ -660,10 +669,10 @@ public class InteractiveMT implements PlugIn {
 		
 		final Label MTText = new Label("Step 1) Determine end points of MT (start from seeds) ", Label.CENTER);
 		final Label MTTextHF = new Label("Step 2) Track both end points of MT over time ", Label.CENTER);
-		final Button MoveNext = new Button("Determine these parameters for red channel (take first image)");
-		final Button JumptoFrame = new Button("Determine these parameters for red channel (take user chosen image)");
-		final Button TrackEndPoints = new Button("Track EndPoints");
-		final Button SkipframeandTrackEndPoints = new Button("Skip first few frames and Track EndPoints");
+		final Button MoveNext = new Button("Update parameters using First Red Channel image");
+		final Button JumptoFrame = new Button("Update parameters using Nth Red Channel image, choose N:");
+		final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
+		final Button SkipframeandTrackEndPoints = new Button("TrackEndPoint (User specified first and last frame)");
 		
 		final Checkbox mser = new Checkbox("MSER", Finders, FindLinesViaMSER);
 		final Checkbox hough = new Checkbox("HOUGH", Finders, FindLinesViaHOUGH);
@@ -723,11 +732,11 @@ public class InteractiveMT implements PlugIn {
 		frame.add(MTTextHF, c);
 		
 		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 355);
+		c.insets = new Insets(10, 10, 0, 200);
 		frame.add(TrackEndPoints, c);
 		
 		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 235);
+		c.insets = new Insets(10, 10, 0, 200);
 		frame.add(SkipframeandTrackEndPoints, c);
 
 		++c.gridy;
@@ -797,14 +806,7 @@ public class InteractiveMT implements PlugIn {
 			roiListener = new RoiListener();
 			preprocessedimp.getCanvas().addMouseListener(roiListener);
 			
-			if (FindLinesViaMSER)
-				UpdateMSER();
-			
-			if (FindLinesViaHOUGH)
-				UpdateHough();
-			
-			if (FindLinesViaMSERwHOUGH)
-				UpdateMSERwHough();
+			DialogueMethodChange();
 
 		}
 	}
@@ -870,14 +872,10 @@ public class InteractiveMT implements PlugIn {
 			roiListener = new RoiListener();
 			preprocessedimp.getCanvas().addMouseListener(roiListener);
 
-			if (FindLinesViaMSER)
-				UpdateMSER();
 			
-			if (FindLinesViaHOUGH)
-				UpdateHough();
+			DialogueMethodChange();
 			
-			if (FindLinesViaMSERwHOUGH)
-				UpdateMSERwHough();
+			
 		}
 	}
 
@@ -1346,7 +1344,7 @@ public class InteractiveMT implements PlugIn {
 			NumberFormat nf = NumberFormat.getInstance(Locale.ENGLISH);
 			nf.setMaximumFractionDigits(3);
 			
-		
+			ResultsTable rtAll = new ResultsTable();
 			for (int seedID = MinSeedLabel; seedID <= MaxSeedLabel; ++seedID){
 				ResultsTable rt = new ResultsTable();
 				if (SaveTxt){
@@ -1398,6 +1396,23 @@ public class InteractiveMT implements PlugIn {
 						rt.addValue("Length in real units", lengthliststart.get(index).snd[8] );
 						rt.addValue("VelocityX in real units", lengthliststart.get(index).snd[9] );
 						rt.addValue("VelocityY in real units", lengthliststart.get(index).snd[10] );
+						
+						
+						rtAll.incrementCounter();
+						rtAll.addValue("FrameNumber", lengthliststart.get(index).fst[0] );
+						rtAll.addValue("SeedLabel", lengthliststart.get(index).fst[1] );
+						rtAll.addValue("OldX in px units", lengthliststart.get(index).snd[0] );
+						rtAll.addValue("OldY in px units", lengthliststart.get(index).snd[1] );
+						rtAll.addValue("NewX in px units", lengthliststart.get(index).snd[2] );
+						rtAll.addValue("NewY in px units", lengthliststart.get(index).snd[3] );
+						rtAll.addValue("OldX in real units", lengthliststart.get(index).snd[4] );
+						rtAll.addValue("OldY in real units", lengthliststart.get(index).snd[5] );
+						rtAll.addValue("NewX in real units", lengthliststart.get(index).snd[6] );
+						rtAll.addValue("NewY in real units", lengthliststart.get(index).snd[7] );
+						rtAll.addValue("Length in real units", lengthliststart.get(index).snd[8] );
+						rtAll.addValue("VelocityX in real units", lengthliststart.get(index).snd[9] );
+						rtAll.addValue("VelocityY in real units", lengthliststart.get(index).snd[10] );
+						
 						}
 						
 					
@@ -1409,7 +1424,6 @@ public class InteractiveMT implements PlugIn {
 						saveResultsToExcel(usefolder + "//" + addTrackToName + "start" +  "SeedLabel" + seedID +  ".xls" , rt, seedID);
 				
 				
-					rt.show("Start and End of MT");
 			}
 			
 			
@@ -1499,7 +1513,20 @@ public class InteractiveMT implements PlugIn {
 						rtend.addValue("VelocityX in real units", lengthlistend.get(index).snd[9] );
 						rtend.addValue("VelocityY in real units", lengthlistend.get(index).snd[10] );
 						
-						
+						rtAll.incrementCounter();
+						rtAll.addValue("FrameNumber", lengthlistend.get(index).fst[0] );
+						rtAll.addValue("SeedLabel", lengthlistend.get(index).fst[1] );
+						rtAll.addValue("OldX in px units", lengthlistend.get(index).snd[0] );
+						rtAll.addValue("OldY in px units", lengthlistend.get(index).snd[1] );
+						rtAll.addValue("NewX in px units", lengthlistend.get(index).snd[2] );
+						rtAll.addValue("NewY in px units", lengthlistend.get(index).snd[3] );
+						rtAll.addValue("OldX in real units", lengthlistend.get(index).snd[4] );
+						rtAll.addValue("OldY in real units", lengthlistend.get(index).snd[5] );
+						rtAll.addValue("NewX in real units", lengthlistend.get(index).snd[6] );
+						rtAll.addValue("NewY in real units", lengthlistend.get(index).snd[7] );
+						rtAll.addValue("Length in real units", lengthlistend.get(index).snd[8] );
+						rtAll.addValue("VelocityX in real units", lengthlistend.get(index).snd[9] );
+						rtAll.addValue("VelocityY in real units", lengthlistend.get(index).snd[10] );
 						
 						
 						
@@ -1515,7 +1542,7 @@ public class InteractiveMT implements PlugIn {
 			
 			}
 			
-			
+			rtAll.show("Start and End of MT, respectively");
 		}
 	}
       public void saveResultsToExcel(String xlFile, ResultsTable rt, int SeedID){
@@ -1812,7 +1839,7 @@ public class InteractiveMT implements PlugIn {
 			NumberFormat nf = NumberFormat.getInstance(Locale.ENGLISH);
 			nf.setMaximumFractionDigits(3);
 			
-			
+			ResultsTable rtAll = new ResultsTable();
 			for (int seedID = MinSeedLabel; seedID <= MaxSeedLabel; ++seedID){
 				ResultsTable rt = new ResultsTable();
 				if(SaveTxt){
@@ -1861,6 +1888,25 @@ public class InteractiveMT implements PlugIn {
 						rt.addValue("Length in real units",(float) lengthliststart.get(index).snd[8] );
 						rt.addValue("VelocityX in real units",(float) lengthliststart.get(index).snd[9] );
 						rt.addValue("VelocityY in real units",(float) lengthliststart.get(index).snd[10] );
+						
+						
+						
+						rtAll.incrementCounter();
+						rtAll.addValue("FrameNumber", lengthliststart.get(index).fst[0] );
+						rtAll.addValue("SeedLabel", lengthliststart.get(index).fst[1] );
+						rtAll.addValue("OldX in px units", lengthliststart.get(index).snd[0] );
+						rtAll.addValue("OldY in px units", lengthliststart.get(index).snd[1] );
+						rtAll.addValue("NewX in px units", lengthliststart.get(index).snd[2] );
+						rtAll.addValue("NewY in px units", lengthliststart.get(index).snd[3] );
+						rtAll.addValue("OldX in real units", lengthliststart.get(index).snd[4] );
+						rtAll.addValue("OldY in real units", lengthliststart.get(index).snd[5] );
+						rtAll.addValue("NewX in real units", lengthliststart.get(index).snd[6] );
+						rtAll.addValue("NewY in real units", lengthliststart.get(index).snd[7] );
+						rtAll.addValue("Length in real units", lengthliststart.get(index).snd[8] );
+						rtAll.addValue("VelocityX in real units", lengthliststart.get(index).snd[9] );
+						rtAll.addValue("VelocityY in real units", lengthliststart.get(index).snd[10] );
+						
+						
 						}
 
 						
@@ -1910,7 +1956,6 @@ public class InteractiveMT implements PlugIn {
 			
 			
 			for (int seedID = MinSeedLabel; seedID <= MaxSeedLabel; ++seedID){
-				ResultsTable rt = new ResultsTable();
 				ResultsTable rtend = new ResultsTable();
 				if (SaveTxt){
 				try {
@@ -1964,20 +2009,20 @@ public class InteractiveMT implements PlugIn {
 						rtend.addValue("VelocityY in real units",(float) lengthlistend.get(index).snd[10] );
 						
 						
-						rt.incrementCounter();
-						rt.addValue("FrameNumber", lengthlistend.get(index).fst[0] );
-						rt.addValue("SeedLabel", lengthlistend.get(index).fst[1] );
-						rt.addValue("OldX in px units",(float) lengthlistend.get(index).snd[0] );
-						rt.addValue("OldY in px units",(float) lengthlistend.get(index).snd[1] );
-						rt.addValue("NewX in px units",(float) lengthlistend.get(index).snd[2] );
-						rt.addValue("NewY in px units",(float) lengthlistend.get(index).snd[3] );
-						rt.addValue("OldX in real units",(float) lengthlistend.get(index).snd[4] );
-						rt.addValue("OldY in real units",(float) lengthlistend.get(index).snd[5] );
-						rt.addValue("NewX in real units",(float) lengthlistend.get(index).snd[6] );
-						rt.addValue("NewY in real units",(float) lengthlistend.get(index).snd[7] );
-						rt.addValue("Length in real units",(float) lengthlistend.get(index).snd[8] );
-						rt.addValue("VelocityX in real units",(float) lengthlistend.get(index).snd[9] );
-						rt.addValue("VelocityY in real units",(float) lengthlistend.get(index).snd[10] );
+						rtAll.incrementCounter();
+						rtAll.addValue("FrameNumber", lengthlistend.get(index).fst[0] );
+						rtAll.addValue("SeedLabel", lengthlistend.get(index).fst[1] );
+						rtAll.addValue("OldX in px units",(float) lengthlistend.get(index).snd[0] );
+						rtAll.addValue("OldY in px units",(float) lengthlistend.get(index).snd[1] );
+						rtAll.addValue("NewX in px units",(float) lengthlistend.get(index).snd[2] );
+						rtAll.addValue("NewY in px units",(float) lengthlistend.get(index).snd[3] );
+						rtAll.addValue("OldX in real units",(float) lengthlistend.get(index).snd[4] );
+						rtAll.addValue("OldY in real units",(float) lengthlistend.get(index).snd[5] );
+						rtAll.addValue("NewX in real units",(float) lengthlistend.get(index).snd[6] );
+						rtAll.addValue("NewY in real units",(float) lengthlistend.get(index).snd[7] );
+						rtAll.addValue("Length in real units",(float) lengthlistend.get(index).snd[8] );
+						rtAll.addValue("VelocityX in real units",(float) lengthlistend.get(index).snd[9] );
+						rtAll.addValue("VelocityY in real units",(float) lengthlistend.get(index).snd[10] );
 						
 						
 						}
@@ -1989,9 +2034,10 @@ public class InteractiveMT implements PlugIn {
 						saveResultsToExcel(usefolder + "//" + addTrackToName + "end" + "SeedLabel" +  seedID + ".xls" , rtend, seedID);
 					
 					
-					rt.show("Start and End of MT");	
+					
 			
-			}			
+			}	
+			rtAll.show("Start and End of MT");	
 			
 		}
 	}
@@ -3411,6 +3457,45 @@ public class InteractiveMT implements PlugIn {
 
 		return !gd.wasCanceled();  
 	}
+	
+	
+	public boolean DialogueMethodChange() {
+
+		GenericDialog gd = new GenericDialog("Change method for finding MTs");
+		String[] MTfindModel = { "MSER", "HOUGH", "MSERwHOUGH" };
+		int indexmodel = 0;
+
+		gd.addChoice("Choose your MT finder for higher frames: ", MTfindModel, MTfindModel[indexmodel]);
+		gd.showDialog();
+		indexmodel = gd.getNextChoiceIndex();
+		
+            if (indexmodel == 0){
+            	
+            	FindLinesViaMSER = true;
+				FindLinesViaHOUGH = false;
+				FindLinesViaMSERwHOUGH = false;
+				UpdateMSER();
+			
+            }
+            if (indexmodel == 1){
+            	FindLinesViaMSER = false;
+				FindLinesViaHOUGH = true;
+				FindLinesViaMSERwHOUGH = false;
+				UpdateHough();
+            }
+            if (indexmodel == 2){
+            	FindLinesViaMSER = false;
+				FindLinesViaHOUGH = false;
+				FindLinesViaMSERwHOUGH = true;
+				UpdateMSERwHough();
+		    
+            }
+
+          
+	
+
+		return !gd.wasCanceled();  
+	}
 
 	public boolean DialogueMedian() {
 		// Create dialog
@@ -3648,8 +3733,8 @@ public class InteractiveMT implements PlugIn {
 	public static void main(String[] args) {
 		new ImageJ();
 // MT2012017
-		ImagePlus imp = new Opener().openImage("/Users/varunkapoor/res/MT2012017.tif");
-		ImagePlus Preprocessedimp = new Opener().openImage("/Users/varunkapoor/res/BGMT2012017.tif");
+		ImagePlus imp = new Opener().openImage("/Users/varunkapoor/res/2017B.tif");
+		ImagePlus Preprocessedimp = new Opener().openImage("/Users/varunkapoor/res/BG2017B.tif");
 		imp.show();
 		Preprocessedimp.show();
 		final double[] psf = { 1.65, 1.47 };

@@ -544,6 +544,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 					double newslope = (endpos[1] - startpos[1]) / (endpos[0] - startpos[0]);
 					double newintercept = (endpos[1] - newslope * endpos[0]);
 					double ds = finalparamstart[2 * ndims];
+					double Intensity = finalparamstart[2* ndims + 1];
 					double dx = ds/ Math.sqrt(1 + newslope * newslope);
 					double dy = newslope * dx;
 					final double background = finalparamstart[2 * ndims + 2];
@@ -572,7 +573,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 					try {
 								
 							startfit =	peakFitter.GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
-								iterations, dxvector, newslope, newintercept, maxintensityline, halfgaussian, EndfitMSER.StartfitMSER,
+								iterations, dxvector, newslope, newintercept, Intensity, halfgaussian, EndfitMSER.StartfitMSER,
 								label, background);
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -580,7 +581,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 
 					try {
 						endfit = peakFitter.GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians,
-								iterations, dxvector, newslope, newintercept, maxintensityline,  halfgaussian, EndfitMSER.EndfitMSER,
+								iterations, dxvector, newslope, newintercept, Intensity,  halfgaussian, EndfitMSER.EndfitMSER,
 								label, background);
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -661,6 +662,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 						double dy = newslope * dx;
 						final double LMdist = sqDistance(startpos, endpos);
 						double[] dxvector = { dx, dy };
+						final double Intensity = finalparamstart[2 * ndims];
 						final double background = finalparamstart[2 * ndims + 1];
 						double[] startfit = new double[ndims];
 						double[] endfit = new double[ndims];
@@ -686,7 +688,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 						try {
 									
 								startfit =	peakFitter.GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
-									iterations, dxvector, newslope, newintercept, maxintensityline, halfgaussian, EndfitMSER.StartfitMSER,
+									iterations, dxvector, newslope, newintercept, Intensity, halfgaussian, EndfitMSER.StartfitMSER,
 									label, background);
 						} catch (Exception e) {
 							e.printStackTrace();
@@ -694,7 +696,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 
 						try {
 							endfit = peakFitter.GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians,
-									iterations, dxvector, newslope, newintercept, maxintensityline,  halfgaussian, EndfitMSER.EndfitMSER,
+									iterations, dxvector, newslope, newintercept, Intensity,  halfgaussian, EndfitMSER.EndfitMSER,
 									label, background);
 						} catch (Exception e) {
 							e.printStackTrace();

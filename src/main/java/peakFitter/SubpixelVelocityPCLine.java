@@ -707,6 +707,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			if (model == UserChoiceModel.Line) {
 				if (startorend == StartorEnd.Start) {
 					double ds = LMparam[2 * ndims];
+					double Intensity = LMparam[2 * ndims + 1];
 					final double background = LMparam[2 * ndims + 2];
 					final double newslope = (startpos[1] - endpos[1]) / (startpos[0] - endpos[0]);
 					final double newintercept = startpos[1] - newslope * startpos[0];
@@ -728,7 +729,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					
 					try {
 						startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
-								iterations, dxvector, newslope, newintercept, maxintensityline, halfgaussian,
+								iterations, dxvector, newslope, newintercept, Intensity, halfgaussian,
 								EndfitMSER.StartfitMSER, label, background);
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -765,6 +766,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					return PointofInterest;
 				} else {
 					double ds = LMparam[2 * ndims];
+					double Intensity = LMparam[2 * ndims + 1];
 					final double background = LMparam[2 * ndims + 2];
 					final double newslope = (endpos[1] - inipos[1]) / (endpos[0] - inipos[0]);
 					final double newintercept = endpos[1] - newslope * endpos[0];
@@ -784,7 +786,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					
 					try {
 						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
-								dxvector, newslope, newintercept, maxintensityline, halfgaussian, EndfitMSER.EndfitMSER,
+								dxvector, newslope, newintercept, Intensity, halfgaussian, EndfitMSER.EndfitMSER,
 								label, background);
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -825,6 +827,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			if (model == UserChoiceModel.Linefixedds) {
 				if (startorend == StartorEnd.Start) {
 					double ds = fixed_param[ndims + 2];
+					final double Intensity = LMparam[2* ndims];
 					final double background = LMparam[2 * ndims + 1];
 					final double newslope = (startpos[1] - inipos[1]) / (startpos[0] - inipos[0]);
 					final double newintercept = startpos[1] - newslope * startpos[0];
@@ -843,7 +846,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					if (DoMask){
 					try {
 						startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
-								iterations, dxvector, newslope, newintercept, maxintensityline, halfgaussian,
+								iterations, dxvector, newslope, newintercept, Intensity, halfgaussian,
 								EndfitMSER.StartfitMSER, label, background);
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -878,6 +881,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					return PointofInterest;
 				} else {
 					double ds =fixed_param[ndims + 2];
+					final double Intensity = LMparam[2 * ndims];
 					final double background = LMparam[2 * ndims + 1];
 					final double newslope = (endpos[1] - inipos[1]) / (endpos[0] - inipos[0]);
 					final double newintercept = endpos[1] - newslope * endpos[0];
@@ -896,7 +900,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					if (DoMask){
 					try {
 						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
-								dxvector, newslope, newintercept, maxintensityline, halfgaussian, EndfitMSER.EndfitMSER,
+								dxvector, newslope, newintercept, Intensity, halfgaussian, EndfitMSER.EndfitMSER,
 								label, background);
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -959,7 +963,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					
 					try {
 						startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
-								iterations, dxvector, newslope, newintercept, maxintensityline, halfgaussian,
+								iterations, dxvector, newslope, newintercept, lineIntensity, halfgaussian,
 								EndfitMSER.StartfitMSER, label, background);
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -1012,7 +1016,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					if (DoMask){
 					try {
 						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
-								dxvector, newslope, newintercept, maxintensityline, halfgaussian, EndfitMSER.EndfitMSER,
+								dxvector, newslope, newintercept, lineIntensity, halfgaussian, EndfitMSER.EndfitMSER,
 								label, background);
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -1050,6 +1054,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			else if (model == UserChoiceModel.Splineordersecfixedds) {
 				if (startorend == StartorEnd.Start) {
 					final double Curvature = LMparam[2 * ndims];
+					
 					final double currentintercept = iniparam.originalintercept;
 					final double ds = fixed_param[ndims + 2];
 					final double lineIntensity = LMparam[2 * ndims + 1];
@@ -1075,7 +1080,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					
 					try {
 						startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
-								iterations, dxvector, newslope, currentintercept, maxintensityline, halfgaussian,
+								iterations, dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
 								EndfitMSER.StartfitMSER, label, background);
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -1147,7 +1152,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					
 					try {
 						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
-								dxvector, newslope, currentintercept, maxintensityline, halfgaussian,
+								dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
 								EndfitMSER.EndfitMSER, label, background);
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -1212,7 +1217,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 				
 					try {
 						startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
-								iterations, dxvector, newslope, currentintercept, maxintensityline, halfgaussian,
+								iterations, dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
 								EndfitMSER.StartfitMSER, label, background);
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -1280,7 +1285,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					
 					try {
 						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
-								dxvector, newslope, currentintercept, maxintensityline, halfgaussian,
+								dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
 								EndfitMSER.EndfitMSER, label, background);
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -1356,7 +1361,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 				
 					try {
 						startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
-								iterations, dxvector, newslope, currentintercept, maxintensityline, halfgaussian,
+								iterations, dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
 								EndfitMSER.StartfitMSER, label, background);
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -1425,7 +1430,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					
 					try {
 						endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
-								dxvector, newslope, currentintercept, maxintensityline, halfgaussian,
+								dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
 								EndfitMSER.EndfitMSER, label, background);
 					} catch (Exception e) {
 						e.printStackTrace();
