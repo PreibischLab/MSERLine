@@ -534,6 +534,38 @@ public static FinalInterval CurrentroiInterval(RandomAccessibleInterval<FloatTyp
 		return Math.sqrt(distance);
 	}
 	
+	
+	
+	public static int CummulativeDistance (final double[] pointT, final double[] pointTp1, final double[] pointTp2,   final double oldlength){
+		
+		int grow = 0;
+
+		
+		
+		if ((pointTp2[0] < pointTp1[0]) && (pointTp2[0] > pointT[0]) && (pointTp2[0] < pointTp1[0]) && (pointTp2[0] > pointT[0])  )
+			grow = -1;
+		
+		
+		
+			
+			
+		return grow;
+		
+		
+	}
+	
+	public static float Distancesq(final double[] minCorner, final double[] maxCorner) {
+
+		float distance = 0;
+
+		for (int d = 0; d < minCorner.length; ++d) {
+
+			distance += Math.pow((minCorner[d] - maxCorner[d]), 2);
+
+		}
+		return distance;
+	}
+	
 	public static double Distance(final double[] minCorner, final double[] maxCorner) {
 
 		double distance = 0;

@@ -1306,7 +1306,7 @@ public class InteractiveMT implements PlugIn {
 			int MinSeedLabel = first.get(0).seedlabel;
 			
 			
-			
+			double startlength = 0;
 			for (int index = 0; index < Allstart.size(); ++index) {
 
 				final int framenumber = index + next;
@@ -1317,6 +1317,7 @@ public class InteractiveMT implements PlugIn {
 
 					final Integer SeedID = currentframe.get(frameindex).seedlabel;
 					final Integer[] FrameID = {framenumber, SeedID};
+					final double[] originalpoint = currentframe.get(frameindex).originalpoint;
 					final double[] newpoint = currentframe.get(frameindex).newpoint;
 					final double[] oldpoint = currentframe.get(frameindex).oldpoint;
 					final double[] newpointCal = new double [] {currentframe.get(frameindex).newpoint[0] * calibration[0],
@@ -1325,11 +1326,31 @@ public class InteractiveMT implements PlugIn {
 							currentframe.get(frameindex).oldpoint[1] * calibration[1]};
 					
 					final double length = util.Boundingboxes.Distance(newpointCal, oldpointCal);
-					final double VelocityX = util.Boundingboxes.VelocityX(oldpointCal, newpointCal);
-					final double VelocityY = util.Boundingboxes.VelocityY(oldpointCal, newpointCal);
+					final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, newpoint);
+					final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
+					
+					
+					
+					
+					if (seedtoold > seedtocurrent && framenumber > next + 5){
+						
+						// MT shrank
+						
+                    startlength-=length;					
+						
+					}
+					else{
+						
+						
+						// MT grew
+						
+					startlength+=length;
+						
+					}
+					
+					
 					final double[] startinfo = { oldpoint[0], oldpoint[1], newpoint[0], newpoint[1], oldpointCal[0], oldpointCal[1], newpointCal[0], newpointCal[1],
-							length, VelocityX,
-							VelocityY};
+							length, startlength};
 					Pair<Integer[], double[]> lengthpair = new Pair<Integer[], double[]>(FrameID, startinfo);
 
 					lengthliststart.add(lengthpair);
@@ -1340,6 +1361,8 @@ public class InteractiveMT implements PlugIn {
 				
 
 			}
+			
+		
 
 			NumberFormat nf = NumberFormat.getInstance(Locale.ENGLISH);
 			nf.setMaximumFractionDigits(3);
@@ -1355,7 +1378,7 @@ public class InteractiveMT implements PlugIn {
 					BufferedWriter bw = new BufferedWriter(fw);
 					bw.write("\tFramenumber\tSeedLabel\tOldX (px)\tOldY (px)\tNewX (px)\tNewY (px)\tOldX (real)\tOldY (real)"
 							+ "\tNewX (real)\tNewY (real)"
-							+ "\tLength ( real)\tVelocityX (real)\tVelocityY (real)\n");
+							+ "\tLength ( real)\tCummulativeLength (real)n");
 					
 					for (int index = 0; index < lengthliststart.size(); ++index) {
 						if (lengthliststart.get(index).fst[1] == seedID){
@@ -1370,8 +1393,7 @@ public class InteractiveMT implements PlugIn {
 								+ nf.format(lengthliststart.get(index).snd[6]) + "\t" + "\t"
 								+ nf.format(lengthliststart.get(index).snd[7]) + "\t" + "\t"
 								+ nf.format(lengthliststart.get(index).snd[8]) + "\t" + "\t"
-								+ nf.format(lengthliststart.get(index).snd[9]) + "\t" + "\t"
-								+ nf.format(lengthliststart.get(index).snd[10]) + "\n");
+								+ nf.format(lengthliststart.get(index).snd[9])  + "\n");
 						}
 						
 					}
@@ -1394,8 +1416,7 @@ public class InteractiveMT implements PlugIn {
 						rt.addValue("NewX in real units", lengthliststart.get(index).snd[6] );
 						rt.addValue("NewY in real units", lengthliststart.get(index).snd[7] );
 						rt.addValue("Length in real units", lengthliststart.get(index).snd[8] );
-						rt.addValue("VelocityX in real units", lengthliststart.get(index).snd[9] );
-						rt.addValue("VelocityY in real units", lengthliststart.get(index).snd[10] );
+						rt.addValue("Cummulative Length in real units", lengthliststart.get(index).snd[9] );
 						
 						
 						rtAll.incrementCounter();
@@ -1410,8 +1431,7 @@ public class InteractiveMT implements PlugIn {
 						rtAll.addValue("NewX in real units", lengthliststart.get(index).snd[6] );
 						rtAll.addValue("NewY in real units", lengthliststart.get(index).snd[7] );
 						rtAll.addValue("Length in real units", lengthliststart.get(index).snd[8] );
-						rtAll.addValue("VelocityX in real units", lengthliststart.get(index).snd[9] );
-						rtAll.addValue("VelocityY in real units", lengthliststart.get(index).snd[10] );
+						rtAll.addValue("Cummulative Length in real units", lengthliststart.get(index).snd[9] );
 						
 						}
 						
@@ -1426,8 +1446,7 @@ public class InteractiveMT implements PlugIn {
 				
 			}
 			
-			
-			
+			double endlength = 0;
 			ArrayList<Pair<Integer[], double[]>> lengthlistend = new ArrayList<Pair<Integer[], double[]>>();
 			for (int index = 0; index < Allend.size(); ++index) {
 
@@ -1437,6 +1456,7 @@ public class InteractiveMT implements PlugIn {
 				for (int frameindex = 0; frameindex < currentframe.size(); ++frameindex) {
 					final Integer SeedID = currentframe.get(frameindex).seedlabel;
 					final Integer[] FrameID = {framenumber, SeedID};
+					final double[] originalpoint = currentframe.get(frameindex).originalpoint;
 					final double[] newpoint = currentframe.get(frameindex).newpoint;
 					final double[] oldpoint = currentframe.get(frameindex).oldpoint;
 					
@@ -1446,14 +1466,32 @@ public class InteractiveMT implements PlugIn {
 							currentframe.get(frameindex).oldpoint[1] * calibration[1]};
 					
 					final double length = util.Boundingboxes.Distance(newpointCal, oldpointCal);
-					final double VelocityX = util.Boundingboxes.VelocityX(oldpointCal, newpointCal);
-					final double VelocityY = util.Boundingboxes.VelocityY(oldpointCal, newpointCal);
 					
+					final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, newpoint);
+					final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
+					
+					
+					
+					
+					if (seedtoold > seedtocurrent && framenumber > next + 5){
+						
+						// MT shrank
+						
+                    endlength-=length;					
+						
+					}
+					else{
+						
+						
+						// MT grew
+						
+					endlength+=length;
+						
+					}
 					final double[] endinfo = { oldpoint[0], oldpoint[1], newpoint[0], newpoint[1],
-							oldpointCal[0], oldpointCal[1], newpointCal[0], newpointCal[1], length, VelocityX,
-							VelocityY};
+							oldpointCal[0], oldpointCal[1], newpointCal[0], newpointCal[1], length, endlength};
 					Pair<Integer[], double[]> lengthpair = new Pair<Integer[], double[]>(FrameID, endinfo);
-
+					
 					lengthlistend.add(lengthpair);
 
 				}
@@ -1473,7 +1511,7 @@ public class InteractiveMT implements PlugIn {
 					BufferedWriter bw = new BufferedWriter(fw);
 					bw.write("\tFramenumber\tSeedLabel\tOldX (px)\tOldY (px)\tNewX (px)\tNewY (px)\tOldX (real)\tOldY (real)"
 							+ "\tNewX (real)\tNewY (real)"
-							+ "\tLength ( real)\tVelocityX (real)\tVelocityY (real)\n");
+							+ "\tLength ( real)\tCummulativeLength(real)\n");
 					for (int index = 0; index < lengthlistend.size(); ++index) {
 						if (lengthlistend.get(index).fst[1] == seedID){
 						bw.write(  "\t" + lengthlistend.get(index).fst[0] + "\t" + "\t"
@@ -1487,8 +1525,7 @@ public class InteractiveMT implements PlugIn {
 								+ nf.format(lengthlistend.get(index).snd[6]) + "\t" + "\t"
 								+ nf.format(lengthlistend.get(index).snd[7]) + "\t" + "\t"
 								+ nf.format(lengthlistend.get(index).snd[8]) + "\t" + "\t"
-								+ nf.format(lengthlistend.get(index).snd[9]) + "\t" + "\t"
-								+ nf.format(lengthlistend.get(index).snd[10]) + "\n");
+								+ nf.format(lengthlistend.get(index).snd[9]) +  "\n");
 						}
 					}
 					bw.close();
@@ -1510,8 +1547,7 @@ public class InteractiveMT implements PlugIn {
 						rtend.addValue("NewX in real units", lengthlistend.get(index).snd[6] );
 						rtend.addValue("NewY in real units", lengthlistend.get(index).snd[7] );
 						rtend.addValue("Length in real units", lengthlistend.get(index).snd[8] );
-						rtend.addValue("VelocityX in real units", lengthlistend.get(index).snd[9] );
-						rtend.addValue("VelocityY in real units", lengthlistend.get(index).snd[10] );
+						rtend.addValue("Cummulative Length in real units", lengthlistend.get(index).snd[9] );
 						
 						rtAll.incrementCounter();
 						rtAll.addValue("FrameNumber", lengthlistend.get(index).fst[0] );
@@ -1525,8 +1561,7 @@ public class InteractiveMT implements PlugIn {
 						rtAll.addValue("NewX in real units", lengthlistend.get(index).snd[6] );
 						rtAll.addValue("NewY in real units", lengthlistend.get(index).snd[7] );
 						rtAll.addValue("Length in real units", lengthlistend.get(index).snd[8] );
-						rtAll.addValue("VelocityX in real units", lengthlistend.get(index).snd[9] );
-						rtAll.addValue("VelocityY in real units", lengthlistend.get(index).snd[10] );
+						rtAll.addValue("Cummulative Length in real units", lengthlistend.get(index).snd[9] );
 						
 						
 						
@@ -1618,36 +1653,6 @@ public class InteractiveMT implements PlugIn {
 		
 	}
 	
-	public static void writeTracks(String nom, ArrayList<Pair<Integer[], double[]>> lengthlist) {
-		NumberFormat nf = NumberFormat.getInstance(Locale.ENGLISH);
-		nf.setMaximumFractionDigits(3);
-		try {
-			File fichier = new File(nom  + ".txt");
-			FileWriter fw = new FileWriter(fichier);
-			BufferedWriter bw = new BufferedWriter(fw);
-			bw.write("\tFramenumber\tSeedLabel\tOldX (px)\tOldY (px)\tNewX (px)\tNewY (px)\tOldX (real)\tOldY (real)"
-					+ "\tNewX (real)\tNewY (real)"
-					+ "\tLength ( real)\tVelocityX (real)\tVelocityY (real)\n");
-			for (int index = 0; index < lengthlist.size(); ++index) {
-				bw.write(  "\t" + lengthlist.get(index).fst[0] + "\t" + "\t"
-						+ nf.format(lengthlist.get(index).fst[1]) + "\t" + "\t"
-						+ nf.format(lengthlist.get(index).snd[0]) + "\t" + "\t"
-						+ nf.format(lengthlist.get(index).snd[1]) + "\t" + "\t"
-						+ nf.format(lengthlist.get(index).snd[2]) + "\t" + "\t"
-						+ nf.format(lengthlist.get(index).snd[3]) + "\t" + "\t"
-						+ nf.format(lengthlist.get(index).snd[4]) + "\t" + "\t"
-						+ nf.format(lengthlist.get(index).snd[5]) + "\t" + "\t"
-						+ nf.format(lengthlist.get(index).snd[6]) + "\t" + "\t"
-						+ nf.format(lengthlist.get(index).snd[7]) + "\t" + "\t"
-						+ nf.format(lengthlist.get(index).snd[8]) + "\t" + "\t"
-						+ nf.format(lengthlist.get(index).snd[9]) + "\t" + "\t"
-						+ nf.format(lengthlist.get(index).snd[10]) + "\n");
-			}
-			bw.close();
-			fw.close();
-		} catch (IOException e) {
-		}
-	}
 
 	
 	protected class TrackendsListener implements ActionListener {
@@ -1797,8 +1802,7 @@ public class InteractiveMT implements PlugIn {
 			DisplaysubGraphend displaytrackend = new DisplaysubGraphend(impend, subgraphend, next - 1);
 			displaytrackend.getImp();
 			impend.draw();
-			
-			
+			double startlength = 0;
 			ArrayList<Pair<Integer[], double[]>> lengthliststart = new ArrayList<Pair<Integer[], double[]>>();
 			for (int index = 0; index < Allstart.size(); ++index) {
 
@@ -1810,6 +1814,7 @@ public class InteractiveMT implements PlugIn {
 
 					final Integer SeedID = currentframe.get(frameindex).seedlabel;
 					final Integer[] FrameID = {framenumber, SeedID};
+					final double[] originalpoint = currentframe.get(frameindex).originalpoint;
 					final double[] newpoint = currentframe.get(frameindex).newpoint;
 					final double[] oldpoint = currentframe.get(frameindex).oldpoint;
 					final double[] newpointCal = new double [] {currentframe.get(frameindex).newpoint[0] * calibration[0],
@@ -1818,21 +1823,43 @@ public class InteractiveMT implements PlugIn {
 							currentframe.get(frameindex).oldpoint[1] * calibration[1]};
 					
 					final double length = util.Boundingboxes.Distance(newpointCal, oldpointCal);
-					final double VelocityX = util.Boundingboxes.VelocityX(oldpointCal, newpointCal);
-					final double VelocityY = util.Boundingboxes.VelocityY(oldpointCal, newpointCal);
+					final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, newpoint);
+					final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
+					
+					
+					
+					
+					if (seedtoold > seedtocurrent && framenumber > next + 5){
+						
+						// MT shrank
+						
+                    startlength-=length;					
+						
+					}
+					else{
+						
+						
+						// MT grew
+						
+					startlength+=length;
+						
+					}
+					
 					final double[] startinfo = { oldpoint[0], oldpoint[1], newpoint[0], newpoint[1], oldpointCal[0], oldpointCal[1], newpointCal[0], newpointCal[1],
-							length, VelocityX,
-							VelocityY};
+							length, startlength};
 					Pair<Integer[], double[]> lengthpair = new Pair<Integer[], double[]>(FrameID, startinfo);
 
 					lengthliststart.add(lengthpair);
-					
 
 				}
 				
 				
 
 			}
+			
+			
+               
+			
 			final ArrayList<Trackproperties> first = Allstart.get(0);
 			int MaxSeedLabel = first.get(first.size() - 1).seedlabel;
 			int MinSeedLabel = first.get(0).seedlabel;
@@ -1849,7 +1876,7 @@ public class InteractiveMT implements PlugIn {
 					BufferedWriter bw = new BufferedWriter(fw);
 					bw.write("\tFramenumber\tSeedLabel\tOldX (px)\tOldY (px)\tNewX (px)\tNewY (px)\tOldX (real)\tOldY (real)"
 							+ "\tNewX (real)\tNewY (real)"
-							+ "\tLength ( real)\tVelocityX (real)\tVelocityY (real)\n");
+							+ "\tLength ( real)\tCummulativeLength (real)\n");
 					for (int index = 0; index < Allstart.size(); ++index) {
 						if (lengthliststart.get(index).fst[1] == seedID){
 						bw.write(  "\t" + lengthliststart.get(index).fst[0] + "\t" + "\t"
@@ -1863,8 +1890,7 @@ public class InteractiveMT implements PlugIn {
 								+ nf.format(lengthliststart.get(index).snd[6]) + "\t" + "\t"
 								+ nf.format(lengthliststart.get(index).snd[7]) + "\t" + "\t"
 								+ nf.format(lengthliststart.get(index).snd[8]) + "\t" + "\t"
-								+ nf.format(lengthliststart.get(index).snd[9]) + "\t" + "\t"
-								+ nf.format(lengthliststart.get(index).snd[10]) + "\n");
+								+ nf.format(lengthliststart.get(index).snd[9]) +  "\n");
 						}
 					}
 					bw.close();
@@ -1886,8 +1912,7 @@ public class InteractiveMT implements PlugIn {
 						rt.addValue("NewX in real units",(float) lengthliststart.get(index).snd[6] );
 						rt.addValue("NewY in real units",(float) lengthliststart.get(index).snd[7] );
 						rt.addValue("Length in real units",(float) lengthliststart.get(index).snd[8] );
-						rt.addValue("VelocityX in real units",(float) lengthliststart.get(index).snd[9] );
-						rt.addValue("VelocityY in real units",(float) lengthliststart.get(index).snd[10] );
+						rt.addValue("Cummulative Length in real units",(float) lengthliststart.get(index).snd[9] );
 						
 						
 						
@@ -1903,8 +1928,7 @@ public class InteractiveMT implements PlugIn {
 						rtAll.addValue("NewX in real units", lengthliststart.get(index).snd[6] );
 						rtAll.addValue("NewY in real units", lengthliststart.get(index).snd[7] );
 						rtAll.addValue("Length in real units", lengthliststart.get(index).snd[8] );
-						rtAll.addValue("VelocityX in real units", lengthliststart.get(index).snd[9] );
-						rtAll.addValue("VelocityY in real units", lengthliststart.get(index).snd[10] );
+						rtAll.addValue("Cummulative Length in real units", lengthliststart.get(index).snd[9] );
 						
 						
 						}
@@ -1920,8 +1944,7 @@ public class InteractiveMT implements PlugIn {
 			
 			}
 					
-					
-					
+				double endlength = 0;
 			ArrayList<Pair<Integer[], double[]>> lengthlistend = new ArrayList<Pair<Integer[], double[]>>();
 			for (int index = 0; index < Allend.size(); ++index) {
 
@@ -1931,6 +1954,7 @@ public class InteractiveMT implements PlugIn {
 				for (int frameindex = 0; frameindex < currentframe.size(); ++frameindex) {
 					final Integer SeedID = currentframe.get(frameindex).seedlabel;
 					final Integer[] FrameID = {framenumber, SeedID};
+					final double[] originalpoint = currentframe.get(frameindex).originalpoint;
 					final double[] newpoint = currentframe.get(frameindex).newpoint;
 					final double[] oldpoint = currentframe.get(frameindex).oldpoint;
 					
@@ -1940,12 +1964,32 @@ public class InteractiveMT implements PlugIn {
 							currentframe.get(frameindex).oldpoint[1] * calibration[1]};
 					
 					final double length = util.Boundingboxes.Distance(newpointCal, oldpointCal);
-					final double VelocityX = util.Boundingboxes.VelocityX(oldpointCal, newpointCal);
-					final double VelocityY = util.Boundingboxes.VelocityY(oldpointCal, newpointCal);
+					
+					final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, newpoint);
+					final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
+					
+					
+					
+					
+					if (seedtoold > seedtocurrent && framenumber > next + 5){
+						
+						// MT shrank
+						
+                    endlength-=length;					
+						
+					}
+					else{
+						
+						
+						// MT grew
+						
+						endlength+=length;
+						
+					}
+					
 					
 					final double[] endinfo = { oldpoint[0], oldpoint[1], newpoint[0], newpoint[1],
-							oldpointCal[0], oldpointCal[1], newpointCal[0], newpointCal[1], length, VelocityX,
-							VelocityY};
+							oldpointCal[0], oldpointCal[1], newpointCal[0], newpointCal[1], length, endlength};
 					Pair<Integer[], double[]> lengthpair = new Pair<Integer[], double[]>(FrameID, endinfo);
 
 					lengthlistend.add(lengthpair);
@@ -1953,7 +1997,7 @@ public class InteractiveMT implements PlugIn {
 				}
 
 			}
-			
+               
 			
 			for (int seedID = MinSeedLabel; seedID <= MaxSeedLabel; ++seedID){
 				ResultsTable rtend = new ResultsTable();
@@ -1964,7 +2008,7 @@ public class InteractiveMT implements PlugIn {
 					BufferedWriter bw = new BufferedWriter(fw);
 					bw.write("\tFramenumber\tSeedLabel\tOldX (px)\tOldY (px)\tNewX (px)\tNewY (px)\tOldX (real)\tOldY (real)"
 							+ "\tNewX (real)\tNewY (real)"
-							+ "\tLength ( real)\tVelocityX (real)\tVelocityY (real)\n");
+							+ "\tLength ( real)\tCummulativeLength (real)\n");
 					for (int index = 0; index < Allend.size(); ++index) {
 						if (lengthlistend.get(index).fst[1] == seedID){
 						bw.write(  "\t" + lengthlistend.get(index).fst[0] + "\t" + "\t"
@@ -1978,8 +2022,7 @@ public class InteractiveMT implements PlugIn {
 								+ nf.format(lengthlistend.get(index).snd[6]) + "\t" + "\t"
 								+ nf.format(lengthlistend.get(index).snd[7]) + "\t" + "\t"
 								+ nf.format(lengthlistend.get(index).snd[8]) + "\t" + "\t"
-								+ nf.format(lengthlistend.get(index).snd[9]) + "\t" + "\t"
-								+ nf.format(lengthlistend.get(index).snd[10]) + "\n");
+								+ nf.format(lengthlistend.get(index).snd[9]) + "\n");
 						}
 						
 					}
@@ -2005,8 +2048,7 @@ public class InteractiveMT implements PlugIn {
 						rtend.addValue("NewX in real units",(float) lengthlistend.get(index).snd[6] );
 						rtend.addValue("NewY in real units",(float) lengthlistend.get(index).snd[7] );
 						rtend.addValue("Length in real units",(float) lengthlistend.get(index).snd[8] );
-						rtend.addValue("VelocityX in real units",(float) lengthlistend.get(index).snd[9] );
-						rtend.addValue("VelocityY in real units",(float) lengthlistend.get(index).snd[10] );
+						rtend.addValue("Cummulative Length in real units",(float) lengthlistend.get(index).snd[9] );
 						
 						
 						rtAll.incrementCounter();
@@ -2021,8 +2063,7 @@ public class InteractiveMT implements PlugIn {
 						rtAll.addValue("NewX in real units",(float) lengthlistend.get(index).snd[6] );
 						rtAll.addValue("NewY in real units",(float) lengthlistend.get(index).snd[7] );
 						rtAll.addValue("Length in real units",(float) lengthlistend.get(index).snd[8] );
-						rtAll.addValue("VelocityX in real units",(float) lengthlistend.get(index).snd[9] );
-						rtAll.addValue("VelocityY in real units",(float) lengthlistend.get(index).snd[10] );
+						rtAll.addValue("Cummulative Length in real units",(float) lengthlistend.get(index).snd[9] );
 						
 						
 						}
