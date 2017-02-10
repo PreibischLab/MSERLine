@@ -64,6 +64,7 @@ import ij.ImageStack;
 import ij.WindowManager;
 import ij.gui.EllipseRoi;
 import ij.gui.GenericDialog;
+import ij.gui.Line;
 import ij.gui.Overlay;
 import ij.gui.Roi;
 import ij.io.Opener;
@@ -233,6 +234,7 @@ public class InteractiveMT implements PlugIn {
 	int channel = 0;
 	RandomAccessibleInterval<FloatType> originalimg;
 	RandomAccessibleInterval<FloatType> originalPreprocessedimg;
+	RandomAccessibleInterval<FloatType> Kymoimg;
 	int inix = 20;
 	int iniy = 20;
 	double[] calibration;
@@ -247,6 +249,7 @@ public class InteractiveMT implements PlugIn {
 	ImagePlus preprocessedimp;
 	final double[] psf;
 	final int minlength;
+	 boolean displaySeedLabels = true;
 	int MaxFrames;
 	int Maxlabel;
 	private int ndims;
@@ -261,8 +264,8 @@ public class InteractiveMT implements PlugIn {
 	RandomAccessibleInterval<UnsignedByteType> newimg;
 	ArrayList<double[]> AllmeanCovar;
 	String usefolder = IJ.getDirectory("imagej");
-	String addToName = "DummyMT";
-	String addTrackToName = "TrackedMTID";
+	String addToName = "MT2";
+	String addTrackToName = "SeedTrackedMT2ID";
 	// first and last slice to process
 	int endStack, currentframe;
 
@@ -436,6 +439,10 @@ public class InteractiveMT implements PlugIn {
 
 	@Override
 	public void run(String arg) {
+		
+		Kymoimg = util.ImgLib2Util
+				.openAs32Bit(new File("/Users/varunkapoor/res/MaskKymo5.tif"), new ArrayImgFactory<FloatType>());
+		
 		MaxFrames = preprocessedimp.getNFrames();
 		output = new ArrayList<CommonOutputHF>();
 		endStack = MaxFrames;
@@ -663,7 +670,7 @@ public class InteractiveMT implements PlugIn {
 		final GridBagConstraints c = new GridBagConstraints();
 		
 		CheckboxGroup Finders = new CheckboxGroup();
-		final Checkbox Normalize = new Checkbox("Normailze Image Intensity (recommended)", NormalizeImage);
+		final Checkbox Normalize = new Checkbox("Normailze Image Intensity ", NormalizeImage);
 		final Checkbox MedFiltercur = new Checkbox("Apply Median Filter to current Frame", Mediancurr);
 		final Checkbox MedFilterAll = new Checkbox("Apply Median Filter to Stack", MedianAll);
 		
@@ -678,6 +685,7 @@ public class InteractiveMT implements PlugIn {
 		final Checkbox hough = new Checkbox("HOUGH", Finders, FindLinesViaHOUGH);
 		final Checkbox mserwhough = new Checkbox("MSERwHOUGH", Finders, FindLinesViaMSERwHOUGH);
 		
+		final Checkbox displaySeedID = new Checkbox("Display Seed IDs", displaySeedLabels);
 		final Checkbox txtfile = new Checkbox("Save tracks as TXT file", SaveTxt);
 		final Checkbox xlsfile = new Checkbox("Save tracks as XLS file", SaveXLS);
       
@@ -741,6 +749,10 @@ public class InteractiveMT implements PlugIn {
 
 		++c.gridy;
 		c.insets = new Insets(10, 10, 0, 0);
+		frame.add(displaySeedID, c);
+		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
 		frame.add(txtfile, c);
 		
 		++c.gridy;
@@ -765,6 +777,8 @@ public class InteractiveMT implements PlugIn {
 
 		txtfile.addItemListener(new SaveasTXT());
 		xlsfile.addItemListener(new SaveasXLS());
+		displaySeedID.addItemListener(new DisplaySeedID());
+		
 		frame.setVisible(true);
 		MTText.setFont(MTText.getFont().deriveFont(Font.BOLD));
 		MTTextHF.setFont(MTTextHF.getFont().deriveFont(Font.BOLD));
@@ -1070,6 +1084,20 @@ public class InteractiveMT implements PlugIn {
 		 }
 		 
 	 }
+     
+    protected class DisplaySeedID implements ItemListener{
+		 
+		 @Override
+	  		public void itemStateChanged(ItemEvent arg0) {
+			 if (arg0.getStateChange() == ItemEvent.DESELECTED)
+				displaySeedLabels= false;
+			 
+			  else if (arg0.getStateChange() == ItemEvent.SELECTED)
+				  displaySeedLabels = true;
+			 
+		 }
+		 
+	 }
 	 
 	    protected class MediancurrListener implements ItemListener{
 
@@ -1126,7 +1154,7 @@ public class InteractiveMT implements PlugIn {
 	      	
 	      	
 	      }
-	    
+	    public ImagePlus getImp() { return this.imp; } 
 	protected class SkipFramesandTrackendsListener implements ActionListener {
 
 		@Override
@@ -1277,6 +1305,8 @@ public class InteractiveMT implements PlugIn {
 			SimpleWeightedGraph<double[], DefaultWeightedEdge> graphstart = trackerstart.getResult();
 			ArrayList<Subgraphs> subgraphstart = trackerstart.getFramedgraph();
 			
+		
+			
 			DisplaysubGraphstart displaytrackstart = new DisplaysubGraphstart(impstart, subgraphstart, next - 1);
 			displaytrackstart.getImp();
 			impstart.draw();
@@ -1355,7 +1385,30 @@ public class InteractiveMT implements PlugIn {
 
 					lengthliststart.add(lengthpair);
 					
+					
+					if (displaySeedLabels){
+						
+						
+						Overlay o = imp.getOverlay();
+						
+						if( getImp().getOverlay() == null )
+						{
+							o = new Overlay();
+							getImp().setOverlay( o ); 
+						}
 
+						o.clear();
+						
+						EllipseRoi newellipse = new EllipseRoi((int) originalpoint[0], (int) originalpoint[1], imp);
+						newellipse.setStrokeColor(inactiveColor);
+						newellipse.setStrokeWidth(1);
+						newellipse.setName("Seed ID: " + SeedID);
+						o.add(newellipse);
+						o.drawLabels(true);
+						o.drawNames(true);
+						
+						imp.updateAndDraw();
+						}
 				}
 				
 				
@@ -1402,6 +1455,46 @@ public class InteractiveMT implements PlugIn {
 				} catch (IOException e) {
 				}
 				}
+				
+				
+				if (Kymoimg!= null){
+					File fichier = new File(usefolder + "//" + addToName + "KymoWill-start" + ".txt");
+					
+					
+					
+					 try {
+						ExtractKymo.ReadFromKymo(Kymoimg, fichier);
+					} catch (IOException e) {
+
+						e.printStackTrace();
+					}
+					 
+				}
+					 File fichierMy = new File(usefolder + "//" + addToName + "KymoVarun-start" + ".txt");
+					try {
+						FileWriter fwmy = new FileWriter(fichierMy);
+						BufferedWriter bwmy = new BufferedWriter(fwmy);
+
+						bwmy.write(
+								"\tFramenumber\tLength\n");
+						for (int index = 0; index < lengthliststart.size(); ++index) {
+							if (lengthliststart.get(index).fst[1] == seedID){
+								
+								bwmy.write(  "\t" + lengthliststart.get(index).fst[0] + "\t" + "\t"
+										+ nf.format(lengthliststart.get(index).snd[9])  + "\n");
+								
+								
+							}
+						
+						}
+						bwmy.close();
+						fwmy.close();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+						
+				
 					for (int index = 0; index < lengthliststart.size(); ++index) {
 						if (lengthliststart.get(index).fst[1] == seedID){
 						rt.incrementCounter();
@@ -1493,6 +1586,31 @@ public class InteractiveMT implements PlugIn {
 					Pair<Integer[], double[]> lengthpair = new Pair<Integer[], double[]>(FrameID, endinfo);
 					
 					lengthlistend.add(lengthpair);
+					
+					
+					if (displaySeedLabels){
+						
+						
+					Overlay o = imp.getOverlay();
+					
+					if( getImp().getOverlay() == null )
+					{
+						o = new Overlay();
+						getImp().setOverlay( o ); 
+					}
+
+					o.clear();
+					
+					EllipseRoi newellipse = new EllipseRoi((int) originalpoint[0], (int) originalpoint[1], imp);
+					newellipse.setStrokeColor(inactiveColor);
+					newellipse.setStrokeWidth(1);
+					newellipse.setName("Seed ID: " + SeedID);
+					o.add(newellipse);
+					o.drawLabels(true);
+					o.drawNames(true);
+					
+					imp.updateAndDraw();
+					}
 
 				}
 
@@ -1533,6 +1651,48 @@ public class InteractiveMT implements PlugIn {
 				} catch (IOException e) {
 				}
 				}
+				
+				if (Kymoimg!= null){
+					File fichier = new File(usefolder + "//" + addToName + "KymoWill-end" + ".txt");
+					
+					
+					
+					 try {
+						ExtractKymo.ReadFromKymo(Kymoimg, fichier);
+					} catch (IOException e) {
+
+						e.printStackTrace();
+					}
+				}
+					 File fichierMy = new File(usefolder + "//" + addToName + "KymoVarun-end" + ".txt");
+					try {
+						FileWriter fwmy = new FileWriter(fichierMy);
+						BufferedWriter bwmy = new BufferedWriter(fwmy);
+
+						bwmy.write(
+								"\tFramenumber\tLength\n");
+						for (int index = 0; index < lengthlistend.size(); ++index) {
+							if (lengthlistend.get(index).fst[1] == seedID){
+								
+								bwmy.write(  "\t" + lengthlistend.get(index).fst[0] + "\t" + "\t"
+										+ nf.format(lengthlistend.get(index).snd[9])  + "\n");
+								
+								
+							}
+						
+						}
+						bwmy.close();
+						fwmy.close();
+						
+						
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+						
+				
+				
+				
 					for (int index = 0; index < lengthlistend.size(); ++index) {
 						if (lengthlistend.get(index).fst[1] == seedID){
 						rtend.incrementCounter();
@@ -1850,6 +2010,30 @@ public class InteractiveMT implements PlugIn {
 					Pair<Integer[], double[]> lengthpair = new Pair<Integer[], double[]>(FrameID, startinfo);
 
 					lengthliststart.add(lengthpair);
+					
+					if (displaySeedLabels){
+						
+						
+						Overlay o = imp.getOverlay();
+						
+						if( getImp().getOverlay() == null )
+						{
+							o = new Overlay();
+							getImp().setOverlay( o ); 
+						}
+
+						o.clear();
+						
+						EllipseRoi newellipse = new EllipseRoi((int) originalpoint[0], (int) originalpoint[1], imp);
+						newellipse.setStrokeColor(inactiveColor);
+						newellipse.setStrokeWidth(1);
+						newellipse.setName("Seed ID: " + SeedID);
+						o.add(newellipse);
+						o.drawLabels(true);
+						o.drawNames(true);
+						
+						imp.updateAndDraw();
+						}
 
 				}
 				
@@ -1898,6 +2082,48 @@ public class InteractiveMT implements PlugIn {
 				} catch (IOException e) {
 				}
 				}
+				
+				if (Kymoimg!= null){
+					File fichier = new File(usefolder + "//" + addToName + "KymoWill-start" + ".txt");
+				
+					
+					
+					 try {
+						ExtractKymo.ReadFromKymo(Kymoimg, fichier);
+					} catch (IOException e) {
+
+						e.printStackTrace();
+					}
+				}
+				File fichierMy = new File(usefolder + "//" + addToName + "KymoVarun-start" + ".txt");
+					try {
+						FileWriter fwmy = new FileWriter(fichierMy);
+						BufferedWriter bwmy = new BufferedWriter(fwmy);
+
+						bwmy.write(
+								"\tFramenumber\tLength\n");
+						for (int index = 0; index < lengthliststart.size(); ++index) {
+							if (lengthliststart.get(index).fst[1] == seedID){
+								
+								bwmy.write(  "\t" + lengthliststart.get(index).fst[0] + "\t" + "\t"
+										+ nf.format(lengthliststart.get(index).snd[9])  + "\n");
+								
+								
+							}
+						
+						}
+						bwmy.close();
+						fwmy.close();
+						
+						
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+						
+				
+				
+				
 					for (int index = 0; index < Allstart.size(); ++index) {
 						if (lengthliststart.get(index).fst[1] == seedID){
 						rt.incrementCounter();
@@ -1993,6 +2219,30 @@ public class InteractiveMT implements PlugIn {
 					Pair<Integer[], double[]> lengthpair = new Pair<Integer[], double[]>(FrameID, endinfo);
 
 					lengthlistend.add(lengthpair);
+					
+					if (displaySeedLabels){
+						
+						
+						Overlay o = imp.getOverlay();
+						
+						if( getImp().getOverlay() == null )
+						{
+							o = new Overlay();
+							getImp().setOverlay( o ); 
+						}
+
+						o.clear();
+						
+						EllipseRoi newellipse = new EllipseRoi((int) originalpoint[0], (int) originalpoint[1], imp);
+						newellipse.setStrokeColor(inactiveColor);
+						newellipse.setStrokeWidth(1);
+						newellipse.setName("Seed ID: " + SeedID);
+						o.add(newellipse);
+						o.drawLabels(true);
+						o.drawNames(true);
+						
+						imp.updateAndDraw();
+						}
 
 				}
 
@@ -2031,6 +2281,46 @@ public class InteractiveMT implements PlugIn {
 				} catch (IOException e) {
 				}
 				}
+				
+				
+				if (Kymoimg!= null){
+					File fichier = new File(usefolder + "//" + addToName + "KymoWill-end" + ".txt");
+					
+					
+					
+					 try {
+						ExtractKymo.ReadFromKymo(Kymoimg, fichier);
+					} catch (IOException e) {
+
+						e.printStackTrace();
+					}
+				} 
+					 File fichierMy = new File(usefolder + "//" + addToName + "KymoVarun-end" + ".txt");
+					try {
+						
+						FileWriter fwmy = new FileWriter(fichierMy);
+						BufferedWriter bwmy = new BufferedWriter(fwmy);
+						bwmy.write(
+								"\tFramenumber\tLength\n");
+						for (int index = 0; index < lengthlistend.size(); ++index) {
+							if (lengthlistend.get(index).fst[1] == seedID){
+								
+								bwmy.write(  "\t" + lengthlistend.get(index).fst[0] + "\t" + "\t"
+										+ nf.format(lengthlistend.get(index).snd[9])  + "\n");
+								
+								
+							}
+						
+						}
+						
+						bwmy.close();
+						fwmy.close();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+						
+				
 				
 					for (int index = 0; index < Allend.size(); ++index) {
 						
@@ -3774,8 +4064,8 @@ public class InteractiveMT implements PlugIn {
 	public static void main(String[] args) {
 		new ImageJ();
 // MT2012017
-		ImagePlus imp = new Opener().openImage("/Users/varunkapoor/res/2017B.tif");
-		ImagePlus Preprocessedimp = new Opener().openImage("/Users/varunkapoor/res/BG2017B.tif");
+		ImagePlus imp = new Opener().openImage("/Users/varunkapoor/res/2017C.tif");
+		ImagePlus Preprocessedimp = new Opener().openImage("/Users/varunkapoor/res/BG2017C.tif");
 		imp.show();
 		Preprocessedimp.show();
 		final double[] psf = { 1.65, 1.47 };
