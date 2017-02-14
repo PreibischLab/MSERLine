@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import net.imglib2.AbstractEuclideanSpace;
 import net.imglib2.RealLocalizable;
 
-public class Trackproperties extends AbstractEuclideanSpace implements RealLocalizable, Comparable<Trackproperties> {
+public class KalmanTrackproperties extends AbstractEuclideanSpace implements RealLocalizable, Comparable<KalmanTrackproperties> {
 
 	
 	/*
@@ -30,9 +30,7 @@ public class Trackproperties extends AbstractEuclideanSpace implements RealLocal
 	 * 
 	 * @param Label
 	 *            the label of the MT
-	 * @param oldpoint
-	 *            the co-ordinates of the old point of the end of MT.
-	 * @param newpoint
+	 * @param currentpoint
 	 *            the co-ordinates of the new point of the end of MT.
 	 * @param newslope
 	 *            the newslope of the MT line.
@@ -52,8 +50,8 @@ public class Trackproperties extends AbstractEuclideanSpace implements RealLocal
 	
 	public final int Framenumber;
 	public final int Label;
-	public final double[] oldpoint;
-	public final double[] newpoint;
+	public final double size;
+	public final double[] currentpoint;
 	public final double newslope;
 	public final double newintercept;
 	public final double originalslope;
@@ -66,24 +64,23 @@ public class Trackproperties extends AbstractEuclideanSpace implements RealLocal
 	 * CONSTRUCTORS
 	 */
 	
-	public Trackproperties(final int Framenumber, final int Label, 
-			final double[] oldpoint, final double[] newpoint, final double newslope, final double newintercept,
+	public KalmanTrackproperties(final int Framenumber, final int Label,  final double size,
+			 final double[] currentpoint, final double newslope, final double newintercept,
 			final double originalslope, final double originalintercept, final int seedlabel, final double[] originalpoint, final double[] originalds ) {
 		super( 3 );
 		this.ID = IDcounter.incrementAndGet();
 		putFeature( FRAME, Double.valueOf( Framenumber ) );
 		putFeature( LABEL, Double.valueOf( Label ) );
-		putFeature( OLDXPOSITION, Double.valueOf( oldpoint[0] ) );
-		putFeature( OLDYPOSITION, Double.valueOf( oldpoint[1] ) );
-		putFeature( NEWXPOSITION, Double.valueOf( newpoint[0] ) );
-		putFeature( NEWYPOSITION, Double.valueOf( newpoint[1] ) );
+		
+		putFeature( CurrentXPOSITION, Double.valueOf( currentpoint[0] ) );
+		putFeature( CurrentYPOSITION, Double.valueOf( currentpoint[1] ) );
 		putFeature( NEWSLOPE, Double.valueOf( newslope ) );
 		putFeature( ORIGINALSLOPE, Double.valueOf( originalslope ) );
 		
 		this.Label = Label;
 		this.Framenumber = Framenumber;
-		this.oldpoint = oldpoint;
-		this.newpoint = newpoint;
+		this.size = size;
+		this.currentpoint = currentpoint;
 		this.newslope = newslope;
 		this.newintercept = newintercept;
 		this.originalslope = originalslope;
@@ -99,7 +96,7 @@ public class Trackproperties extends AbstractEuclideanSpace implements RealLocal
 
 	
 	@Override
-	public int compareTo(Trackproperties o) {
+	public int compareTo(KalmanTrackproperties o) {
 
 		return hashCode() - o.hashCode();
 	}
@@ -132,7 +129,7 @@ public class Trackproperties extends AbstractEuclideanSpace implements RealLocal
 	@Override
 	public int numDimensions() {
 
-		return oldpoint.length;
+		return currentpoint.length;
 	}
 
 	
@@ -146,10 +143,10 @@ public class Trackproperties extends AbstractEuclideanSpace implements RealLocal
 
 
 	/** The name of the blob X position feature. */
-	public static final String OLDXPOSITION = "OLDXPOSITION";
+	public static final String CurrentXPOSITION = "CurrentXPOSITION";
 
 	/** The name of the blob Y position feature. */
-	public static final String OLDYPOSITION = "OLDYPOSITION";
+	public static final String CurrentYPOSITION = "CurrentYPOSITION";
 	
 	/** The name of the blob X position feature. */
 	public static final String ORIGINALSLOPE = "OLDSLOPE";
@@ -157,11 +154,6 @@ public class Trackproperties extends AbstractEuclideanSpace implements RealLocal
 	/** The name of the blob Y position feature. */
 	public static final String NEWSLOPE = "NEWSLOPE";
 	
-	/** The name of the blob X position feature. */
-	public static final String NEWXPOSITION = "NEWXPOSITION";
-
-	/** The name of the blob Y position feature. */
-	public static final String NEWYPOSITION = "NEWYPOSITION";
 	
 	/** The label of the blob position feature. */
 	public static final String LABEL = "LABEL";
@@ -187,8 +179,20 @@ public class Trackproperties extends AbstractEuclideanSpace implements RealLocal
 		features.put( feature, value );
 	}
 
+	/**
+	 * Returns the difference between the location of two blobs, this operation
+	 * returns ( <code>A.diffTo(B) = - B.diffTo(A)</code>)
+	 *
+	 * @param target
+	 *            the Blob to compare to.
+	 * @param int
+	 *            n n = 0 for X- coordinate, n = 1 for Y- coordinate
+	 * @return the difference in co-ordinate specified.
+	 */
+	public double diffTo(final KalmanTrackproperties target, int n) {
 
-
-
-	
+		final double thisMTlocation = currentpoint[n];
+		final double targetMTlocation = target.currentpoint[n];
+		return thisMTlocation - targetMTlocation;
+	}
 }

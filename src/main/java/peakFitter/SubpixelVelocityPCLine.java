@@ -675,6 +675,13 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 				UserChoiceFunction = new GaussianSplinethirdorder();
 
 			}
+			final double[] inistartpos = { LMparam[0], LMparam[1] };
+			final double[] iniendpos = { LMparam[2], LMparam[3] };
+
+			double inicutoffdistance = Math.abs(inistartpos[1] - iniendpos[1]);
+
+			// LM solver part
+			if (inicutoffdistance > 2) {
 			// LM solver part
 
 			try {
@@ -683,7 +690,16 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			} catch (Exception e1) {
 				e1.printStackTrace();
 			}
-
+			}
+			else
+			{
+				for (int j = 0; j < LMparam.length; j++) {
+						
+					LMparam[j] = safeparam[j];
+				}
+				
+			}
+			
 			for (int j = 0; j < LMparam.length; j++) {
 				if (Double.isNaN(LMparam[j]))
 					LMparam[j] = safeparam[j];
@@ -698,7 +714,6 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 			}
 
-			final double maxintensityline = GetLocalmaxmin.computeMaxIntensity(currentimg);
 
 			System.out.println("Frame: " + framenumber);
 
@@ -1474,6 +1489,11 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 				}
 			}
+			
+		
+			
+			
+			
 			else
 				return null;
 

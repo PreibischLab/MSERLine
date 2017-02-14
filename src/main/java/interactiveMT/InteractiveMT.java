@@ -455,7 +455,8 @@ public class InteractiveMT implements PlugIn {
 
 	}
 	
-	public InteractiveMT(final RandomAccessibleInterval<FloatType> originalimg, final RandomAccessibleInterval<FloatType> originalPreprocessedimg, final double[] psf, final int minlength){
+	public InteractiveMT(final RandomAccessibleInterval<FloatType> originalimg, final RandomAccessibleInterval<FloatType> originalPreprocessedimg, final double[] psf,
+			final double[] imgCal , final int minlength){
 		
 		this.originalimg = originalimg;
 		this.originalPreprocessedimg = originalPreprocessedimg;
@@ -465,7 +466,9 @@ public class InteractiveMT implements PlugIn {
 				(int) originalimg.dimension(1) - 2 * iniy);
 		imp = ImageJFunctions.show(originalimg);
 		impcopy = imp.duplicate();
-		calibration = new double[]{imp.getCalibration().pixelWidth, imp.getCalibration().pixelHeight};
+		
+		calibration = imgCal;
+		System.out.println(calibration[0] + " " + calibration[1]);
 		
 	}
 
@@ -1269,32 +1272,8 @@ public class InteractiveMT implements PlugIn {
 		public void actionPerformed(final ActionEvent arg0) {
 
 		
-			sliceObserver = new SliceObserver(preprocessedimp, new ImagePlusListener());
 			
-			boolean dialogmove = moveDialogue();
-			if (dialogmove) {
-				// add listener to the imageplus slice slider
-				
-				preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame());
-				imp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame());
-
-				if (thirdDimension <= thirdDimensionSize) {
-					preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), thirdDimension);
-					imp.setPosition(channel, imp.getSlice(), thirdDimension);
-				} else {
-					IJ.log("Max frame number exceeded, moving to last frame instead");
-					preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), thirdDimensionSize);
-					imp.setPosition(channel, imp.getSlice(), thirdDimensionSize);
-					thirdDimension = thirdDimensionSize;
-				}
-
-			
-			}
-			updatePreview(ValueChange.THIRDDIM);
-			isStarted = true;
-			
-
-			
+			 moveDialogue();
 			
 
 			int next = thirdDimension;
@@ -1471,7 +1450,7 @@ public class InteractiveMT implements PlugIn {
 					
 					
 					
-					if (seedtoold > seedtocurrent && framenumber > next + 5){
+					if (seedtoold > seedtocurrent && framenumber > next + 2){
 						
 						// MT shrank
 						
@@ -1506,12 +1485,12 @@ public class InteractiveMT implements PlugIn {
 							getImp().setOverlay( o ); 
 						}
 
-						o.clear();
+					
 						
 						EllipseRoi newellipse = new EllipseRoi((int) originalpoint[0], (int) originalpoint[1], imp);
 						newellipse.setStrokeColor(inactiveColor);
 						newellipse.setStrokeWidth(1);
-						newellipse.setName("Seed ID: " + SeedID);
+						newellipse.setName("ID: " + SeedID);
 						o.add(newellipse);
 						o.drawLabels(true);
 						o.drawNames(true);
@@ -1675,7 +1654,7 @@ public class InteractiveMT implements PlugIn {
 					
 					
 					
-					if (seedtoold > seedtocurrent && framenumber > next + 5){
+					if (seedtoold > seedtocurrent && framenumber > next + 2){
 						
 						// MT shrank
 						
@@ -1708,12 +1687,12 @@ public class InteractiveMT implements PlugIn {
 						getImp().setOverlay( o ); 
 					}
 
-					o.clear();
+					
 					
 					EllipseRoi newellipse = new EllipseRoi((int) originalpoint[0], (int) originalpoint[1], imp);
 					newellipse.setStrokeColor(inactiveColor);
 					newellipse.setStrokeWidth(1);
-					newellipse.setName("Seed ID: " + SeedID);
+					newellipse.setName("ID: " + SeedID);
 					o.add(newellipse);
 					o.drawLabels(true);
 					o.drawNames(true);
@@ -1933,7 +1912,7 @@ public class InteractiveMT implements PlugIn {
 
 			
 			
-		   int next = thirdDimension;
+		   int next = 1;
 		   
 		
 			
@@ -2086,7 +2065,7 @@ public class InteractiveMT implements PlugIn {
 					
 					
 					
-					if (seedtoold > seedtocurrent && framenumber > next + 5){
+					if (seedtoold > seedtocurrent && framenumber > next + 2){
 						
 						// MT shrank
 						
@@ -2119,12 +2098,11 @@ public class InteractiveMT implements PlugIn {
 							getImp().setOverlay( o ); 
 						}
 
-						o.clear();
 						
 						EllipseRoi newellipse = new EllipseRoi((int) originalpoint[0], (int) originalpoint[1], imp);
 						newellipse.setStrokeColor(inactiveColor);
 						newellipse.setStrokeWidth(1);
-						newellipse.setName("Seed ID: " + SeedID);
+						newellipse.setName("ID: " + SeedID);
 						o.add(newellipse);
 						o.drawLabels(true);
 						o.drawNames(true);
@@ -2294,7 +2272,7 @@ public class InteractiveMT implements PlugIn {
 					
 					
 					
-					if (seedtoold > seedtocurrent && framenumber > next + 5){
+					if (seedtoold > seedtocurrent && framenumber > next + 2){
 						
 						// MT shrank
 						
@@ -2328,12 +2306,11 @@ public class InteractiveMT implements PlugIn {
 							getImp().setOverlay( o ); 
 						}
 
-						o.clear();
 						
 						EllipseRoi newellipse = new EllipseRoi((int) originalpoint[0], (int) originalpoint[1], imp);
 						newellipse.setStrokeColor(inactiveColor);
 						newellipse.setStrokeWidth(1);
-						newellipse.setName("Seed ID: " + SeedID);
+						newellipse.setName("ID: " + SeedID);
 						o.add(newellipse);
 						o.drawLabels(true);
 						o.drawNames(true);
@@ -4220,11 +4197,13 @@ public class InteractiveMT implements PlugIn {
 	public static void main(String[] args) {
 		new ImageJ();
 		
-		RandomAccessibleInterval<FloatType> originalimg = util.ImgLib2Util
-				.openAs32Bit(new File("/Users/varunkapoor/Documents/MT-Dummy/testlengthB.tif"), new ArrayImgFactory<FloatType>());
-		RandomAccessibleInterval<FloatType> originalPreprocessedimg = util.ImgLib2Util
-				.openAs32Bit(new File("/Users/varunkapoor/Documents/MT-Dummy/testlengthB.tif"), new ArrayImgFactory<FloatType>());
+		ImagePlus imp = new Opener().openImage("/Users/varunkapoor/res/2017C.tif");
+		ImagePlus Preprocessedimp = new Opener().openImage("/Users/varunkapoor/res/BG2017C.tif");
 		
+		RandomAccessibleInterval<FloatType> originalimg = ImageJFunctions.convertFloat(imp);
+		RandomAccessibleInterval<FloatType> originalPreprocessedimg = ImageJFunctions.convertFloat(Preprocessedimp);
+		
+		double[] calibration = new double[] {imp.getCalibration().pixelWidth, imp.getCalibration().pixelHeight};
 // MT2012017
 	
 		final double[] psf = { 1.65, 1.47 };
@@ -4235,7 +4214,7 @@ public class InteractiveMT implements PlugIn {
 		final int minlength = (int) (radius);
 
 
-		new InteractiveMT(originalimg, originalPreprocessedimg, psf, minlength).run(null);
+		new InteractiveMT(originalimg, originalPreprocessedimg, psf, calibration,  minlength).run(null);
 
 	}
 }

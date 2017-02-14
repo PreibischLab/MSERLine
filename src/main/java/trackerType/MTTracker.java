@@ -5,6 +5,7 @@ package trackerType;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
 
+import graphconstructs.KalmanTrackproperties;
 import graphconstructs.Logger;
 import net.imglib2.algorithm.MultiThreaded;
 import net.imglib2.algorithm.OutputAlgorithm;
@@ -18,7 +19,7 @@ import graphconstructs.Trackproperties;
  */
 
 
-public interface BlobTracker extends OutputAlgorithm< SimpleWeightedGraph< Trackproperties, DefaultWeightedEdge > >
+public interface MTTracker extends OutputAlgorithm< SimpleWeightedGraph< KalmanTrackproperties, DefaultWeightedEdge > >
 	{
 		/**
 		 * Sets the {@link Logger} instance that will receive messages from this
@@ -28,6 +29,7 @@ public interface BlobTracker extends OutputAlgorithm< SimpleWeightedGraph< Track
 		 *            the logger to echo messages to.
 		 */
 		public void setLogger( final Logger logger );
+		public void reset();
 	}
 	
 
