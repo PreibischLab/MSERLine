@@ -152,9 +152,8 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 		final int oldframenumber = PrevFrameparamstart.get(PrevFrameparamstart.size() - 1).framenumber;
 		final int framediff = framenumber - oldframenumber;
-
+		System.out.println(PrevFrameparamstart.size());
 		for (int index = 0; index < PrevFrameparamstart.size(); ++index) {
-
 			final double originalslope = PrevFrameparamstart.get(index).originalslope;
 
 			final double originalintercept = PrevFrameparamstart.get(index).originalintercept;

@@ -10,6 +10,7 @@ public final class KalmanIndexedlength {
 		public final double lineintensity;
 		public final double background;
 		public final double[] currentpos;
+		public final double[] fixedpos;
 		public final double slope;
 		public final double intercept;
 		public final double originalslope;
@@ -21,7 +22,7 @@ public final class KalmanIndexedlength {
 
 		public KalmanIndexedlength(final int currentLabel, final int seedLabel, final int framenumber,
 				final double ds, final double lineintensity, final double background,
-				final double[] currentpos, 
+				final double[] currentpos, final double[] fixedpos, 
 				final double slope, final double intercept, final double originalslope, final double originalintercept, final double[] originalds) {
 			this.currentLabel = currentLabel;
 			this.seedLabel = seedLabel;
@@ -30,6 +31,7 @@ public final class KalmanIndexedlength {
 			this.lineintensity = lineintensity;
 			this.background = background;
 			this.currentpos = currentpos;
+			this.fixedpos = fixedpos;
 			this.slope = slope;
 			this.intercept = intercept;
 			this.originalslope = originalslope;
@@ -43,7 +45,7 @@ public final class KalmanIndexedlength {
 
 		public KalmanIndexedlength(final int currentLabel, final int seedLabel, final int framenumber,
 				final double ds, final double lineintensity, final double background,
-				final double[] currentpos, 
+				final double[] currentpos, final double[] fixedpos, 
 				final double slope, final double intercept, final double originalslope, final double originalintercept, final double Curvature,
 				final double Inflection, final double[] originalds) {
 			this.currentLabel = currentLabel;
@@ -53,6 +55,7 @@ public final class KalmanIndexedlength {
 			this.lineintensity = lineintensity;
 			this.background = background;
 			this.currentpos = currentpos;
+			this.fixedpos = fixedpos;
 			this.slope = slope;
 			this.intercept = intercept;
 			this.originalslope = originalslope;

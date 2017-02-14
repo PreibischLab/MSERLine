@@ -48,8 +48,15 @@ import graphconstructs.Trackproperties;
 		private final int framenumber;
 		private ArrayList<KalmanIndexedlength> final_paramliststart;
 		private ArrayList<KalmanIndexedlength> final_paramlistend;
-		private ArrayList<KalmanTrackproperties> startinframe;
-		private ArrayList<KalmanTrackproperties> endinframe;
+		private ArrayList<KalmanTrackproperties> startinprevframe;
+		private ArrayList<KalmanTrackproperties> endinprevframe;
+		
+		private ArrayList<KalmanTrackproperties> startincurrframe;
+		private ArrayList<KalmanTrackproperties> endincurrframe;
+		
+		private ArrayList<ArrayList<KalmanTrackproperties>> Allstart;
+		private ArrayList<ArrayList<KalmanTrackproperties>> Allend;
+		
 		private final double[] psf;
 	    private final boolean DoMask;
 	    private boolean Maskfail = false;
@@ -150,13 +157,15 @@ import graphconstructs.Trackproperties;
 			final_paramliststart = new ArrayList<KalmanIndexedlength>();
 			final_paramlistend = new ArrayList<KalmanIndexedlength>();
 
-			startinframe = new ArrayList<KalmanTrackproperties>();
-			endinframe = new ArrayList<KalmanTrackproperties>();
+			startinprevframe = new ArrayList<KalmanTrackproperties>();
+			endinprevframe = new ArrayList<KalmanTrackproperties>();
+			
+			startincurrframe = new ArrayList<KalmanTrackproperties>();
+			endincurrframe = new ArrayList<KalmanTrackproperties>();
 
 			double size = Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1]);
 			final int oldframenumber = PrevFrameparamstart.get(PrevFrameparamstart.size() - 1).framenumber;
 			final int framediff = framenumber - oldframenumber;
-
 			for (int index = 0; index < PrevFrameparamstart.size(); ++index) {
 
 				final double originalslope = PrevFrameparamstart.get(index).originalslope;
@@ -169,9 +178,11 @@ import graphconstructs.Trackproperties;
 				final Point linepoint = new Point(ndims);
 				linepoint.setPosition(new long[] { (long) PrevFrameparamstart.get(index).currentpos[0],
 						(long) PrevFrameparamstart.get(index).currentpos[1] });
-			
+				final Point fixedstartpoint = new Point(ndims);
+				fixedstartpoint.setPosition(new long[] { (long) PrevFrameparamstart.get(index).fixedpos[0],
+						(long) PrevFrameparamstart.get(index).fixedpos[1] });
 
-				ArrayList<Integer> labelstart = Getlabel(linepoint, originalslope, originalintercept);
+				ArrayList<Integer> labelstart = Getlabel(fixedstartpoint, originalslope, originalintercept);
 				KalmanIndexedlength paramnextframestart;
 
 				for (int labelstartindex = 0; labelstartindex < labelstart.size(); ++labelstartindex){
@@ -206,13 +217,17 @@ import graphconstructs.Trackproperties;
 						newstartslope, newstartintercept, originalslope, originalintercept,
 						PrevFrameparamstart.get(index).seedLabel, PrevFrameparamstart.get(index).originalds);
 				
-				startinframe.add(startedge);
-				startinframe.add(startedgeCurrent);
+				startinprevframe.add(startedge);
+				startincurrframe.add(startedgeCurrent);
 				
 				
 				}
 
 			}
+			
+			if (Allstart.size() == 0)
+				Allstart.add(startinprevframe);
+			    Allstart.add(startincurrframe);
 			for (int index = 0; index < PrevFrameparamend.size(); ++index) {
 
 				Point secondlinepoint = new Point(ndims);
@@ -262,10 +277,15 @@ import graphconstructs.Trackproperties;
 						 PrevFrameparamend.get(index).originalds);
 		
 
-				endinframe.add(endedge);
-				endinframe.add(endedgeCurrent);
+				endinprevframe.add(endedge);
+				endincurrframe.add(endedgeCurrent);
 				}
 			}
+			if (Allend.size() == 0)
+				Allend.add(endinprevframe);
+			    Allend.add(endincurrframe);
+			
+			
 
 			return true;
 		}
@@ -279,13 +299,22 @@ import graphconstructs.Trackproperties;
 			return listpair;
 		}
 
-		public ArrayList<KalmanTrackproperties> getstartStateVectors() {
-			return startinframe;
+		public ArrayList<KalmanTrackproperties> getprevstartStateVectors() {
+			return startinprevframe;
 		}
 
-		public ArrayList<KalmanTrackproperties> getendStateVectors() {
-			return endinframe;
+		public ArrayList<KalmanTrackproperties> getprevendStateVectors() {
+			return endinprevframe;
 		}
+		
+		public ArrayList<KalmanTrackproperties> getcurrstartStateVectors() {
+			return startincurrframe;
+		}
+
+		public ArrayList<KalmanTrackproperties> getcurrendStateVectors() {
+			return endincurrframe;
+		}
+
 
 		private final double[] MakerepeatedLineguess(KalmanIndexedlength iniparam, int label) {
 			long[] newposition = new long[ndims];
@@ -795,7 +824,7 @@ import graphconstructs.Trackproperties;
 						}
 						}
 						KalmanIndexedlength PointofInterest = new KalmanIndexedlength(label, seedLabel, framenumber, LMparam[2 * ndims],
-								LMparam[2 * ndims + 1], LMparam[2 * ndims + 2], startfit, newslope,
+								LMparam[2 * ndims + 1], LMparam[2 * ndims + 2], startfit, iniparam.fixedpos, newslope,
 								newintercept, iniparam.originalslope, iniparam.originalintercept, iniparam.originalds);
 						if (Maskfail == true)
 						System.out.println("New XLM: " + startfit[0] + " New YLM: " + startfit[1]);
@@ -852,7 +881,7 @@ import graphconstructs.Trackproperties;
 						}
 						}
 						KalmanIndexedlength PointofInterest = new KalmanIndexedlength(label, seedLabel, framenumber, LMparam[2 * ndims],
-								LMparam[2 * ndims + 1], LMparam[2 * ndims + 2], endfit, newslope,
+								LMparam[2 * ndims + 1], LMparam[2 * ndims + 2], endfit,iniparam.fixedpos, newslope,
 								newintercept, iniparam.originalslope, iniparam.originalintercept, iniparam.originalds);
 						
 						if (Maskfail == true)
@@ -910,7 +939,7 @@ import graphconstructs.Trackproperties;
 						}
 						}
 						KalmanIndexedlength PointofInterest = new KalmanIndexedlength(label, seedLabel, framenumber, ds,
-								LMparam[2 * ndims], LMparam[2 * ndims + 1], startfit, newslope,
+								LMparam[2 * ndims], LMparam[2 * ndims + 1], startfit,iniparam.fixedpos, newslope,
 								newintercept, iniparam.originalslope, iniparam.originalintercept, iniparam.originalds);
 						
 						if (Maskfail == true)
@@ -965,7 +994,7 @@ import graphconstructs.Trackproperties;
 						}
 						}
 						KalmanIndexedlength PointofInterest = new KalmanIndexedlength(label, seedLabel, framenumber, ds,
-								LMparam[2 * ndims], LMparam[2 * ndims + 1], endfit, newslope,
+								LMparam[2 * ndims], LMparam[2 * ndims + 1], endfit,iniparam.fixedpos, newslope,
 								newintercept, iniparam.originalslope, iniparam.originalintercept, iniparam.originalds);
 
 						if (Maskfail == true)
@@ -1028,7 +1057,7 @@ import graphconstructs.Trackproperties;
 						}
 						}
 						KalmanIndexedlength PointofInterest = new KalmanIndexedlength(label, seedLabel, framenumber, ds, lineIntensity,
-								background, startfit, newslope, newintercept, iniparam.originalslope,
+								background, startfit,iniparam.fixedpos, newslope, newintercept, iniparam.originalslope,
 								iniparam.originalintercept, iniparam.originalds);
 						if (Maskfail == true)
 							System.out.println("New XLM: " + startfit[0] + " New YLM: " + startfit[1]);
@@ -1081,7 +1110,7 @@ import graphconstructs.Trackproperties;
 						}
 						}
 						KalmanIndexedlength PointofInterest = new KalmanIndexedlength(label, seedLabel, framenumber, ds, lineIntensity,
-								background, endfit, newslope, newintercept, iniparam.originalslope,
+								background, endfit,iniparam.fixedpos, newslope, newintercept, iniparam.originalslope,
 								iniparam.originalintercept, iniparam.originalds);
 						if (Maskfail == true)
 							System.out.println("New XLM: " + endfit[0] + " New YLM: " + endfit[1]);
@@ -1151,7 +1180,7 @@ import graphconstructs.Trackproperties;
 						System.out.println("Curvature: " + Curvature);
 
 						KalmanIndexedlength PointofInterest = new KalmanIndexedlength(label, seedLabel, framenumber, ds, lineIntensity,
-								background, startfit, newslope, currentintercept,
+								background, startfit,iniparam.fixedpos, newslope, currentintercept,
 								iniparam.originalslope, iniparam.originalintercept, Curvature, 0, iniparam.originalds);
 						
 						if (Maskfail == true)
@@ -1216,7 +1245,7 @@ import graphconstructs.Trackproperties;
 						}
 						}
 						KalmanIndexedlength PointofInterest = new KalmanIndexedlength(label, seedLabel, framenumber, ds, lineIntensity,
-								background, endfit, newslope, currentintercept,
+								background, endfit,iniparam.fixedpos, newslope, currentintercept,
 								iniparam.originalslope, iniparam.originalintercept, Curvature, 0, iniparam.originalds);
 						if (Maskfail == true)
 							System.out.println("New XLM: " + endfit[0] + " New YLM: " + endfit[1]);
@@ -1287,7 +1316,7 @@ import graphconstructs.Trackproperties;
 						System.out.println("Curvature: " + Curvature);
 
 						KalmanIndexedlength PointofInterest = new KalmanIndexedlength(label, seedLabel, framenumber, ds, lineIntensity,
-								background, startfit, newslope, currentintercept,
+								background, startfit,iniparam.fixedpos, newslope, currentintercept,
 								iniparam.originalslope, iniparam.originalintercept, Curvature, 0, iniparam.originalds);
 						if (Maskfail == true)
 							System.out.println("New XLM: " + startfit[0] + " New YLM: " + startfit[1]);
@@ -1357,7 +1386,7 @@ import graphconstructs.Trackproperties;
 						}
 
 						KalmanIndexedlength PointofInterest = new KalmanIndexedlength(label, seedLabel, framenumber, ds, lineIntensity,
-								background, endfit, newslope, currentintercept,
+								background, endfit,iniparam.fixedpos, newslope, currentintercept,
 								iniparam.originalslope, iniparam.originalintercept, Curvature, 0, iniparam.originalds);
 						if (Maskfail == true)
 							System.out.println("New XLM: " + endfit[0] + " New YLM: " + endfit[1]);
@@ -1429,7 +1458,7 @@ import graphconstructs.Trackproperties;
 						System.out.println("Curvature: " + Curvature);
 						System.out.println("Inflection: " + Inflection);
 						KalmanIndexedlength PointofInterest = new KalmanIndexedlength(label, seedLabel, framenumber, ds, lineIntensity,
-								background, startfit, newslope, currentintercept,
+								background, startfit,iniparam.fixedpos, newslope, currentintercept,
 								iniparam.originalslope, iniparam.originalintercept, Curvature, Inflection, iniparam.originalds);
 						if (Maskfail == true)
 							System.out.println("New XLM: " + startfit[0] + " New YLM: " + startfit[1]);
@@ -1502,7 +1531,7 @@ import graphconstructs.Trackproperties;
 						}
 
 						KalmanIndexedlength PointofInterest = new KalmanIndexedlength(label, seedLabel, framenumber, ds, lineIntensity,
-								background, endfit, newslope, currentintercept,
+								background, endfit,iniparam.fixedpos, newslope, currentintercept,
 								iniparam.originalslope, iniparam.originalintercept, Curvature, Inflection, iniparam.originalds);
 						if (Maskfail == true)
 							System.out.println("New XLM: " + endfit[0] + " New YLM: " + endfit[1]);
