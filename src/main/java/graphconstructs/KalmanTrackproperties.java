@@ -57,7 +57,6 @@ public class KalmanTrackproperties extends AbstractEuclideanSpace implements Rea
 	public final double originalslope;
 	public final double originalintercept;
 	public final int seedlabel;
-	public final double[] originalpoint;
 	public final double[] originalds;
 	
 	/*
@@ -66,7 +65,7 @@ public class KalmanTrackproperties extends AbstractEuclideanSpace implements Rea
 	
 	public KalmanTrackproperties(final int Framenumber, final int Label,  final double size,
 			 final double[] currentpoint, final double newslope, final double newintercept,
-			final double originalslope, final double originalintercept, final int seedlabel, final double[] originalpoint, final double[] originalds ) {
+			final double originalslope, final double originalintercept, final int seedlabel, final double[] originalds ) {
 		super( 3 );
 		this.ID = IDcounter.incrementAndGet();
 		putFeature( FRAME, Double.valueOf( Framenumber ) );
@@ -86,7 +85,6 @@ public class KalmanTrackproperties extends AbstractEuclideanSpace implements Rea
 		this.originalslope = originalslope;
 		this.originalintercept = originalintercept;
 		this.seedlabel = seedlabel;
-		this.originalpoint = originalpoint;
 		this.originalds = originalds;
 		
 
