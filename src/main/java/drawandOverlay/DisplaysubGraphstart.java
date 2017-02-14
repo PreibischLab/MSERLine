@@ -54,7 +54,9 @@ public ImagePlus getImp() { return this.imp; }
 		public void sliceChanged(ImagePlus arg0)
 		{
 			
-			int maxFrame = frame + subgraph.get(subgraph.size() - 1).Currentframe + 1;
+			int maxFrame = 0;
+			if (subgraph.size() > 1)
+			maxFrame = frame + subgraph.get(subgraph.size() - 1).Currentframe + 1;
 			
 			imp.show();
 			

@@ -63,10 +63,10 @@ public class ExtractKymo {
 	public static void main(String[] args) throws IOException{
 		new ImageJ();
 		String usefolder = IJ.getDirectory("imagej");
-		String addToName = "Kymo2Will";
+		String addToName = "Kymo1Will";
 		
 		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util
-				.openAs32Bit(new File("/Users/varunkapoor/res/MaskKymo2.tif"), new ArrayImgFactory<FloatType>());
+				.openAs32Bit(new File("/Users/varunkapoor/res/MaskKymo1.tif"), new ArrayImgFactory<FloatType>());
 		Normalize.normalize(Views.iterable(img), new FloatType(0), new FloatType(1));
 		
 		

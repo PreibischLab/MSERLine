@@ -26,8 +26,8 @@ public class MovingLines {
 	public static void main (String[] args) throws IncompatibleTypeException, IOException{
         new ImageJ();
 		
-		final FinalInterval range = new FinalInterval(1212, 1212);
-		final FinalInterval smallrange = new FinalInterval(912, 912);
+		final FinalInterval range = new FinalInterval(512, 512);
+		final FinalInterval smallrange = new FinalInterval(112, 112);
 		
 		
 		
@@ -39,7 +39,7 @@ public class MovingLines {
 			Ci[d] = 1.0 / Math.pow(sigma[d],2);
 		
 		final int numframes = 50;
-		final int numlines = 4;
+		final int numlines = 1;
 
 		
 		
@@ -59,7 +59,7 @@ public class MovingLines {
 		FloatType maxval = new FloatType(1);
 		Normalize.normalize(Views.iterable(lineimage), minval, maxval);
 		Kernels.addBackground(Views.iterable(lineimage), 0.2);
-		noisylines = Poissonprocess.poissonProcess(lineimage, 5);
+		noisylines = Poissonprocess.poissonProcess(lineimage, 10);
 		ImageJFunctions.show(noisylines);
 		ArrayList<double[]> startseedscopy =  new ArrayList<double[]>();
 		ArrayList<double[]> endseedscopy = new ArrayList<double[]>();
@@ -75,7 +75,7 @@ public class MovingLines {
 		}
 		ArrayList<Indexofline> linestlist = new ArrayList<Indexofline>();
 		ArrayList<Indexofline> lineendlist = new ArrayList<Indexofline>();
-		for (int frame = 1; frame < numframes; ++frame){
+		for (int frame = 0; frame < numframes; ++frame){
 			
 			RandomAccessibleInterval<FloatType> noisylinesframe = new ArrayImgFactory<FloatType>().create(range, new FloatType());
 			RandomAccessibleInterval<FloatType> lineimageframe = new ArrayImgFactory<FloatType>().create(range, new FloatType());
@@ -94,10 +94,11 @@ public class MovingLines {
 				for (int d = 0; d < ndims; ++d){
 					
 					prevst[d] = pair.fst.fst.get(index).originalpoint[d];
+					
 					nextst[d] = pair.fst.fst.get(index).newpoint[d];
 					
 				}
-				Indexofline linest = new Indexofline(index, frame, nextst);
+				Indexofline linest = new Indexofline(index, frame, prevst, nextst);
 				linestlist.add(linest);	
 
 		
@@ -112,10 +113,11 @@ public class MovingLines {
 				for (int d = 0; d < ndims; ++d){
 					
 					preven[d] = pair.fst.snd.get(index).originalpoint[d];
+					
 					nexten[d] = pair.fst.snd.get(index).newpoint[d];
 				}
 				
-				Indexofline lineend = new Indexofline(index, frame, nexten);
+				Indexofline lineend = new Indexofline(index, frame,preven, nexten);
 				lineendlist.add(lineend);	
              	
 				
@@ -129,7 +131,7 @@ public class MovingLines {
 		
 		Normalize.normalize(Views.iterable(lineimageframe), minval, maxval);
 		Kernels.addBackground(Views.iterable(lineimageframe), 0.2);
-		noisylinesframe = Poissonprocess.poissonProcess(lineimageframe, 5);
+		noisylinesframe = Poissonprocess.poissonProcess(lineimageframe, 10);
 		
 	
 		ImageJFunctions.show(noisylinesframe);
@@ -143,39 +145,106 @@ public class MovingLines {
 		
 	
 		}
-		 FileWriter writerend = new FileWriter("../res/HHNActuallength-movingend.txt", true);
-		for (int i = 0; i < lineendlist.size() ; ++i){
-			for (int j = 0; j < lineendlist.size() ; ++j){
+		
+		
+		
+		double endlength = 0;
+		double[] olden = new double[ndims];
+		double[] newen = new double[ndims];
+		 FileWriter writerend = new FileWriter("../res/BtestlengthendSNR10.txt", true);
+		for (int i = 1; i < lineendlist.size() - 1 ; ++i){
 			
+			
+				for (int d = 0; d < ndims; ++d){
+					
+					olden[d] = lineendlist.get(i - 1).position[d];
+					newen[d] = lineendlist.get(i).position[d];
+				}
+			
+			
+			
+				double length = Distance(olden, newen);
 				
-			
-			
-			if (lineendlist.get(i).index == lineendlist.get(j).index && lineendlist.get(i).frame - lineendlist.get(j).frame == 1){
-				double length = Distance(lineendlist.get(i).position, lineendlist.get(j).position);
-				writerend.write( lineendlist.get(i).frame + " " + lineendlist.get(j).position[0] + " " + lineendlist.get(j).position[1]
-						+ " " + lineendlist.get(i).position[0] + " " + lineendlist.get(i).position[1] + " " +  length );
+				final double seedtocurrent = util.Boundingboxes.Distancesq(lineendlist.get(i).original, newen);
+				final double seedtoold = util.Boundingboxes.Distancesq(lineendlist.get(i).original, olden);
+				
+				
+				
+				
+				if (seedtoold > seedtocurrent && lineendlist.get(i).frame > 5 ){
+					
+					// MT shrank
+					
+                endlength-=length;					
+					
+				}
+				else{
+					
+					
+					// MT grew
+					
+				endlength+=length;
+					
+				}
+				
+				
+				
+				writerend.write( lineendlist.get(i-1).frame + 3+ " " + olden[0] + " " + olden[1]
+						+ " " + newen[0] + " " + newen[1] + " " +  endlength );
 				writerend.write("\r\n");
 				
-			}
-		}
+			
 		}
 		
-		 FileWriter writerstart = new FileWriter("../res/HHNActuallength-movingstart.txt", true);
-			for (int i = 0; i < linestlist.size() ; ++i){
-				for (int j = 0; j < linestlist.size() ; ++j){
+		
+		double startlength = 0;
+		double[] oldst = new double[ndims];
+		double[] newst = new double[ndims];
+		 FileWriter writerstart = new FileWriter("../res/BtestlengthstartSNR10.txt", true);
+			for (int i = 1; i < linestlist.size() - 1 ; ++i){
+				
+				
+               for (int d = 0; d < ndims; ++d){
+					
+					oldst[d] = linestlist.get(i - 1).position[d];
+					newst[d] = linestlist.get(i).position[d];
+				}
+			
+			
+			
+				double length = Distance(oldst, newst);
+				
+				final double seedtocurrent = util.Boundingboxes.Distancesq(lineendlist.get(i).original, newst);
+				final double seedtoold = util.Boundingboxes.Distancesq(lineendlist.get(i).original, oldst);
 				
 				
 				
-				
-				if (linestlist.get(i).index == linestlist.get(j).index && linestlist.get(i).frame - linestlist.get(j).frame == 1){
-					double length = Distance(linestlist.get(i).position, linestlist.get(j).position);
-					writerstart.write( linestlist.get(i).frame + " " + linestlist.get(j).position[0] + " " + linestlist.get(j).position[1]
-							+ " " + linestlist.get(i).position[0] + " " + linestlist.get(i).position[1] + " " + length );
+			
+					
+					
+					if (seedtoold > seedtocurrent && linestlist.get(i).frame > 5  ){
+						
+						// MT shrank
+						
+	                startlength-=length;					
+						
+					}
+					else{
+						
+						
+						// MT grew
+						
+					startlength+=length;
+						
+					}
+					
+					writerstart.write( linestlist.get(i-1).frame + 3 + " " + oldst[0] + " " + oldst[1]
+							+ " " + newst[0] + " " + newst[1] + " " + startlength );
 					writerstart.write("\r\n");
 					
 				}
-			}
-			}
+			
+			
 		
 		System.out.println("done");
 		

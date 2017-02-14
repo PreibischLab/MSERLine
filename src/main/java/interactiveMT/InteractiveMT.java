@@ -41,6 +41,8 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.swing.JFrame;
+import javax.swing.JScrollPane;
 import javax.swing.border.EmptyBorder;
 
 import org.jgrapht.graph.DefaultWeightedEdge;
@@ -177,6 +179,10 @@ public class InteractiveMT implements PlugIn {
 	long maxSizemin = 100;
 	long maxSizemax = 10000;
 
+	int thirdDimensionslider = 0;
+	int thirdDimensionsliderInit = 1;
+	int timeMin = 1;
+	
 	float minDiversityMin = 0;
 	float minDiversityMax = 1;
 
@@ -230,11 +236,13 @@ public class InteractiveMT implements PlugIn {
 	ArrayList<ArrayList<Trackproperties>> Allstart = new ArrayList<ArrayList<Trackproperties>>();
 	ArrayList<ArrayList<Trackproperties>> Allend = new ArrayList<ArrayList<Trackproperties>>();
 	
-	
 	int channel = 0;
+	int thirdDimensionSize = 0;
 	RandomAccessibleInterval<FloatType> originalimg;
 	RandomAccessibleInterval<FloatType> originalPreprocessedimg;
 	RandomAccessibleInterval<FloatType> Kymoimg;
+	RandomAccessibleInterval<FloatType> CurrentView;
+	RandomAccessibleInterval<FloatType> CurrentPreprocessedView;
 	int inix = 20;
 	int iniy = 20;
 	double[] calibration;
@@ -246,11 +254,11 @@ public class InteractiveMT implements PlugIn {
 	Color originalColor = new Color(0.8f, 0.8f, 0.8f);
 	Color inactiveColor = new Color(0.95f, 0.95f, 0.95f);
 	ImagePlus imp;
+	ImagePlus impcopy;
 	ImagePlus preprocessedimp;
 	final double[] psf;
 	final int minlength;
 	 boolean displaySeedLabels = true;
-	int MaxFrames;
 	int Maxlabel;
 	private int ndims;
 	Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> PrevFrameparam; 
@@ -264,14 +272,14 @@ public class InteractiveMT implements PlugIn {
 	RandomAccessibleInterval<UnsignedByteType> newimg;
 	ArrayList<double[]> AllmeanCovar;
 	String usefolder = IJ.getDirectory("imagej");
-	String addToName = "MT2";
-	String addTrackToName = "SeedTrackedMT2ID";
+	String addToName = "BTestMTSNR10";
+	String addTrackToName = "BTestSeedTrackedMTSNR10";
 	// first and last slice to process
-	int endStack, currentframe;
+	int endStack, thirdDimension;
 
 	public static enum ValueChange {
 		ROI, ALL, DELTA, FindLinesVia, MAXVAR, MINDIVERSITY, DARKTOBRIGHT, MINSIZE, MAXSIZE, SHOWMSER,
-		FRAME, SHOWHOUGH, thresholdHough, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, rhoPerPixel, thetaPerPixel;
+		FRAME, SHOWHOUGH, thresholdHough, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, rhoPerPixel, thetaPerPixel, THIRDDIM;
 	}
 
 	boolean isFinished = false;
@@ -287,6 +295,11 @@ public class InteractiveMT implements PlugIn {
 		return wasCanceled;
 	}
 
+	public void setTime(final int value) {
+		thirdDimensionslider = value;
+		thirdDimensionsliderInit = 1;
+	}
+	
 	public boolean getFindLinesViaMSER() {
 		return FindLinesViaMSER;
 	}
@@ -294,6 +307,11 @@ public class InteractiveMT implements PlugIn {
 	public boolean getRoisViaMSER() {
 
 		return RoisViaMSER;
+	}
+	
+	public int getTimeMax() {
+
+		return thirdDimensionSize;
 	}
 
 	public boolean getRoisViaWatershed() {
@@ -436,25 +454,57 @@ public class InteractiveMT implements PlugIn {
 		
 
 	}
+	
+	public InteractiveMT(final RandomAccessibleInterval<FloatType> originalimg, final RandomAccessibleInterval<FloatType> originalPreprocessedimg, final double[] psf, final int minlength){
+		
+		this.originalimg = originalimg;
+		this.originalPreprocessedimg = originalPreprocessedimg;
+		this.psf = psf;
+		this.minlength = minlength;
+		standardRectangle = new Rectangle(inix, iniy, (int) originalimg.dimension(0) - 2 * inix,
+				(int) originalimg.dimension(1) - 2 * iniy);
+		imp = ImageJFunctions.show(originalimg);
+		impcopy = imp.duplicate();
+		calibration = new double[]{imp.getCalibration().pixelWidth, imp.getCalibration().pixelHeight};
+		
+	}
 
 	@Override
 	public void run(String arg) {
 		
-		Kymoimg = util.ImgLib2Util
-				.openAs32Bit(new File("/Users/varunkapoor/res/MaskKymo5.tif"), new ArrayImgFactory<FloatType>());
 		
-		MaxFrames = preprocessedimp.getNFrames();
-		output = new ArrayList<CommonOutputHF>();
-		endStack = MaxFrames;
-		if (imp == null)
-			imp = WindowManager.getCurrentImage();
-		if (preprocessedimp == null)
-			preprocessedimp = WindowManager.getCurrentImage();
+		if (originalimg.numDimensions() < 3) {
 
-		if (imp.getType() == ImagePlus.COLOR_RGB || imp.getType() == ImagePlus.COLOR_256) {
-			IJ.log("Color images are not supported, please convert to 8, 16 or 32-bit grayscale");
+			thirdDimensionSize = 0;
+		}
+
+		if (originalimg.numDimensions() == 3) {
+
+			
+
+			thirdDimension = 1;
+			thirdDimensionSize = (int) originalimg.dimension(2);
+
+		}
+		
+		if (originalimg.numDimensions() > 3){
+			
+			System.out.println("Image has wrong dimensionality, upload an XYT image");
 			return;
 		}
+		
+	//	Kymoimg = util.ImgLib2Util
+	//			.openAs32Bit(new File("/Users/varunkapoor/res/MaskKymo5.tif"), new ArrayImgFactory<FloatType>());
+		
+		
+		CurrentView = getCurrentView();
+		CurrentPreprocessedView = getCurrentPreView();
+		
+		output = new ArrayList<CommonOutputHF>();
+		endStack = thirdDimensionSize;
+		preprocessedimp = ImageJFunctions.show(CurrentPreprocessedView);
+		
+	
 
 		Roi roi = preprocessedimp.getRoi();
 
@@ -470,10 +520,7 @@ public class InteractiveMT implements PlugIn {
 		}
 
 		
-		preprocessedimp.setPosition(preprocessedimp.getChannel(), preprocessedimp.getSlice(),
-				0);
-		imp.setPosition(preprocessedimp.getChannel(), preprocessedimp.getSlice(), 0);
-		currentframe = preprocessedimp.getFrame();
+	
 
 		// copy the ImagePlus into an ArrayImage<FloatType> for faster access
 		displaySliders();
@@ -486,8 +533,13 @@ public class InteractiveMT implements PlugIn {
 		// check whenever roi is modified to update accordingly
 		roiListener = new RoiListener();
 		preprocessedimp.getCanvas().addMouseListener(roiListener);
+		
+		IJ.log(" Third Dimension Size " + thirdDimensionSize);
 
 	}
+
+	
+	
 
 	/**
 	 * Updates the Preview with the current parameters (sigma, threshold, roi,
@@ -499,6 +551,19 @@ public class InteractiveMT implements PlugIn {
 
 	protected void updatePreview(final ValueChange change) {
 
+		
+		
+		if (change == ValueChange.THIRDDIM ) {
+
+			if (preprocessedimp != null)
+				preprocessedimp.close();
+			
+			preprocessedimp = ImageJFunctions.show(CurrentPreprocessedView);
+			preprocessedimp.setTitle("Preprocessed image Current View in third dimension: " + " " + thirdDimension );
+		}
+
+		
+		
 		// check if Roi changed
 		boolean roiChanged = false;
 
@@ -519,11 +584,11 @@ public class InteractiveMT implements PlugIn {
 			long[] min = { (long) standardRectangle.getMinX(), (long) standardRectangle.getMinY() };
 			long[] max = { (long) standardRectangle.getMaxX(), (long) standardRectangle.getMaxY() };
 			interval = new FinalInterval(min, max);
-			final long Cannyradius = (long) ( 2 * Math.ceil(Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1])));
-			if (ndims == 2) {
+			final long Cannyradius = (long) (  Math.ceil(Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1])));
+			
 
-				currentimg = extractImage(originalimg);
-				currentPreprocessedimg = extractImage(originalPreprocessedimg);
+				currentimg = extractImage(CurrentView);
+				currentPreprocessedimg = extractImage(CurrentPreprocessedView);
 				// Expand the image by 10 pixels
 				
 				Interval spaceinterval = Intervals.createMinMax(new long[] {currentimg.min(0),currentimg.min(1), currentimg.max(0), currentimg.max(1)});
@@ -536,20 +601,7 @@ public class InteractiveMT implements PlugIn {
 				
 
 				roiChanged = true;
-			}
-			if (ndims > 2) {
-
-				currentimg = extractImage(Views.hyperSlice(originalimg, ndims - 1, currentframe - 1));
-				currentPreprocessedimg = extractImage(
-						Views.hyperSlice(originalPreprocessedimg, ndims - 1, currentframe - 1));
-				Interval spaceinterval = Intervals.createMinMax(new long[] {currentimg.min(0),currentimg.min(1), currentimg.max(0), currentimg.max(1)});
-				Interval interval = Intervals.expand(spaceinterval, 10);
-				currentimg = Views.interval(Views.extendBorder(currentimg), interval);
-				currentPreprocessedimg = Views.interval(Views.extendBorder(currentPreprocessedimg), interval);
-				
-					newimg = copytoByteImage(Kernels.CannyEdgeandMean(currentPreprocessedimg, Cannyradius));
-				roiChanged = true;
-			}
+		
 		}
 
 		// if we got some mouse click but the ROI did not change we can return
@@ -645,16 +697,16 @@ public class InteractiveMT implements PlugIn {
 	
 	private boolean maxStack(){
 		GenericDialog gd = new GenericDialog("Choose Final Frame");
-		if (MaxFrames > 1) {
+		if (thirdDimensionSize > 1) {
 			
-			gd.addNumericField("Do till frame", MaxFrames, 0);
+			gd.addNumericField("Do till frame", thirdDimensionSize, 0);
 
 			assert (int) gd.getNextNumber() > 1;
 		}
 
 		gd.showDialog();
-		if (MaxFrames > 1) {
-			MaxFrames = (int) gd.getNextNumber();
+		if (thirdDimensionSize > 1) {
+			thirdDimensionSize = (int) gd.getNextNumber();
 
 		}
 		return !gd.wasCanceled();
@@ -663,17 +715,29 @@ public class InteractiveMT implements PlugIn {
 	
 	public void displaySliders() {
 
-		final Frame frame = new Frame("Find MTs and Track");
-		frame.setSize(550, 550);
+		final JFrame frame = new JFrame("Find MTs and Track");
+		frame.pack();
+		frame.setSize(new java.awt.Dimension(600, 600));
+		frame.validate();
+		frame.setIconImage(null);
+		
 		/* Instantiation */
 		final GridBagLayout layout = new GridBagLayout();
 		final GridBagConstraints c = new GridBagConstraints();
+		
+		
 		
 		CheckboxGroup Finders = new CheckboxGroup();
 		final Checkbox Normalize = new Checkbox("Normailze Image Intensity ", NormalizeImage);
 		final Checkbox MedFiltercur = new Checkbox("Apply Median Filter to current Frame", Mediancurr);
 		final Checkbox MedFilterAll = new Checkbox("Apply Median Filter to Stack", MedianAll);
-		
+		final Scrollbar thirdDimensionslider = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 0, 0,
+				thirdDimensionSize);
+		thirdDimensionslider.setBlockIncrement(1);
+		this.thirdDimensionslider = (int) computeIntValueFromScrollbarPosition(thirdDimensionsliderInit, timeMin,
+				thirdDimensionSize, thirdDimensionSize);
+		final Label timeText = new Label("Time index = " + this.thirdDimensionslider, Label.CENTER);
+		final Button JumpinTime = new Button("Jump in time :");
 		final Label MTText = new Label("Step 1) Determine end points of MT (start from seeds) ", Label.CENTER);
 		final Label MTTextHF = new Label("Step 2) Track both end points of MT over time ", Label.CENTER);
 		final Button MoveNext = new Button("Update parameters using First Red Channel image");
@@ -727,12 +791,24 @@ public class InteractiveMT implements PlugIn {
 		c.insets = new Insets(10, 10, 0, 0);
 		frame.add(mserwhough, c);
 		
+		if (thirdDimensionSize > 1) {
+			++c.gridy;
+			frame.add(thirdDimensionslider, c);
+
+			++c.gridy;
+			frame.add(timeText, c);
+
+			++c.gridy;
+			c.insets = new Insets(0, 175, 0, 175);
+			frame.add(JumpinTime, c);
+		}
+		
 		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 95);
+		c.insets = new Insets(10, 10, 0, 220);
 		frame.add(MoveNext, c);
 
 		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 75);
+		c.insets = new Insets(10, 10, 0, 180);
 		frame.add(JumptoFrame, c);
 		
 		++c.gridy;
@@ -772,9 +848,12 @@ public class InteractiveMT implements PlugIn {
 		JumptoFrame.addActionListener(new moveToFrameListener());
 		TrackEndPoints.addActionListener(new TrackendsListener());
 		SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
-
+		thirdDimensionslider
+		.addAdjustmentListener(new thirdDimensionsliderListener(timeText, timeMin, thirdDimensionSize));
 		frame.addWindowListener(new FrameListener(frame));
-
+		JumpinTime.addActionListener(
+				new moveInThirdDimListener(thirdDimensionslider, timeText, timeMin, thirdDimensionSize));
+		
 		txtfile.addItemListener(new SaveasTXT());
 		xlsfile.addItemListener(new SaveasXLS());
 		displaySeedID.addItemListener(new DisplaySeedID());
@@ -788,37 +867,27 @@ public class InteractiveMT implements PlugIn {
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
 
-			// add listener to the imageplus slice slider
-			sliceObserver = new SliceObserver(preprocessedimp, new ImagePlusListener());
-
-			preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame());
-			imp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame());
-			if (preprocessedimp.getFrame() + 1 <= MaxFrames) {
-				preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame() + 1);
-				imp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame());
-				IJ.log(" Current Frame: " + (preprocessedimp.getFrame()) + " MaxFrames: " + MaxFrames);
-			} else {
-				IJ.log("Max frame number exceeded, moving to last frame instead" + "MaxFrames: " + MaxFrames);
-				preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), MaxFrames);
-				imp.setPosition(channel, preprocessedimp.getSlice(), MaxFrames);
-				currentframe = MaxFrames;
-			}
-			currentframe = preprocessedimp.getFrame();
-
-			Roi roi = preprocessedimp.getRoi();
-			if (roi == null) {
-				// IJ.log( "A rectangular ROI is required to define the area..."
-				// );
-				preprocessedimp.setRoi(standardRectangle);
-				roi = preprocessedimp.getRoi();
-			}
-
-			updatePreview(ValueChange.FRAME);
-			isStarted = true;
 			
-			// check whenever roi is modified to update accordingly
-			roiListener = new RoiListener();
-			preprocessedimp.getCanvas().addMouseListener(roiListener);
+			
+			
+			if (thirdDimension > thirdDimensionSize) {
+				IJ.log("Max frame number exceeded, moving to last frame instead");
+				thirdDimension = thirdDimensionSize;
+				CurrentView = getCurrentView();
+				CurrentPreprocessedView = getCurrentPreView();
+			}
+			else{
+				
+				thirdDimension = thirdDimension + 1;
+				CurrentView = getCurrentView();
+				CurrentPreprocessedView = getCurrentPreView();
+				
+			}
+			
+		
+
+			updatePreview(ValueChange.THIRDDIM);
+	
 			
 			DialogueMethodChange();
 
@@ -828,21 +897,90 @@ public class InteractiveMT implements PlugIn {
 	private boolean moveDialogue() {
 		GenericDialog gd = new GenericDialog("Choose Frame");
 
-		if (MaxFrames > 1) {
-			gd.addNumericField("Move to frame", currentframe, 0);
+		if (thirdDimensionSize > 1) {
+			gd.addNumericField("Move to frame", thirdDimension, 0);
 
 		}
 
 		gd.showDialog();
-		if (MaxFrames > 1) {
-			currentframe = (int) gd.getNextNumber();
+		if (thirdDimensionSize > 1) {
+			thirdDimension = (int) gd.getNextNumber();
 
 		}
 		return !gd.wasCanceled();
 	}
+	private boolean Dialogue() {
+		GenericDialog gd = new GenericDialog("Move in time");
+
+		if (thirdDimensionSize > 1) {
+			gd.addNumericField("Move in time", thirdDimension, 0);
+
+		}
+
+		gd.showDialog();
+		if (thirdDimensionSize > 1) {
+			thirdDimension = (int) gd.getNextNumber();
+
+			if (thirdDimension < thirdDimensionSize)
+			    thirdDimensionslider = thirdDimension;
+			else
+				thirdDimensionslider = thirdDimensionSize;
+		}
+		return !gd.wasCanceled();
+	}
 	
-	
-	
+	protected static int computeIntScrollbarPositionFromValue(final float thirdDimensionslider, final float min,
+			final float max, final int scrollbarSize) {
+		return Util.round(((thirdDimensionslider - min) / (max - min)) * max);
+	}
+	protected class moveInThirdDimListener implements ActionListener {
+		final float min, max;
+		Label timeText;
+		final Scrollbar thirdDimensionScroll;
+
+		public moveInThirdDimListener(Scrollbar thirdDimensionScroll, Label timeText, float min, float max) {
+			this.thirdDimensionScroll = thirdDimensionScroll;
+			this.min = min;
+			this.max = max;
+			this.timeText = timeText;
+		}
+
+		@Override
+		public void actionPerformed(final ActionEvent arg0) {
+
+			boolean dialog = Dialogue();
+			if (dialog) {
+
+				thirdDimensionScroll
+						.setValue(computeIntScrollbarPositionFromValue(thirdDimension, min, max, scrollbarSize));
+				timeText.setText("Time index = " + thirdDimensionslider);
+
+				
+				
+
+				if (thirdDimension > thirdDimensionSize) {
+					IJ.log("Max frame number exceeded, moving to last frame instead");
+					thirdDimension = thirdDimensionSize;
+					CurrentView = getCurrentView();
+					CurrentPreprocessedView = getCurrentPreView();
+					
+				}
+				else {
+					
+					CurrentView = getCurrentView();
+					CurrentPreprocessedView = getCurrentPreView();
+					
+				}
+				
+
+				// compute first version
+				updatePreview(ValueChange.THIRDDIM);
+				
+
+			}
+		}
+	}
+
 
 	protected class moveToFrameListener implements ActionListener {
 		@Override
@@ -850,45 +988,28 @@ public class InteractiveMT implements PlugIn {
 
 			boolean dialog = moveDialogue();
 			if (dialog) {
-				// add listener to the imageplus slice slider
-				sliceObserver = new SliceObserver(preprocessedimp, new ImagePlusListener());
-				preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame());
-				imp.setPosition(channel, preprocessedimp.getSlice(), currentframe);
-				if (currentframe <= MaxFrames) {
-					preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), currentframe);
-					imp.setPosition(channel, preprocessedimp.getSlice(), currentframe);
-				} else {
+				
+				
+				if (thirdDimension > thirdDimensionSize) {
 					IJ.log("Max frame number exceeded, moving to last frame instead");
-					preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), MaxFrames);
-					imp.setPosition(channel, preprocessedimp.getSlice(), MaxFrames);
-					currentframe = MaxFrames;
+					thirdDimension = thirdDimensionSize;
+					CurrentView = getCurrentView();
+					CurrentPreprocessedView = getCurrentPreView();
 				}
-
-				if (preprocessedimp.getType() == ImagePlus.COLOR_RGB
-						|| preprocessedimp.getType() == ImagePlus.COLOR_256) {
-					IJ.log("Color images are not supported, please convert to 8, 16 or 32-bit grayscale");
-					return;
+				else{
+					
+					CurrentView = getCurrentView();
+					CurrentPreprocessedView = getCurrentPreView();
 				}
-
-				Roi roi = preprocessedimp.getRoi();
-				if (roi == null) {
-					// IJ.log( "A rectangular ROI is required to define the
-					// area..."
-					// );
-					preprocessedimp.setRoi(standardRectangle);
-					roi = preprocessedimp.getRoi();
-				}
-			}
-			updatePreview(ValueChange.FRAME);
-			isStarted = true;
+				
+				
+			
+			updatePreview(ValueChange.THIRDDIM);
 		
-			// check whenever roi is modified to update accordingly
-			roiListener = new RoiListener();
-			preprocessedimp.getCanvas().addMouseListener(roiListener);
 
 			
 			DialogueMethodChange();
-			
+			}
 			
 		}
 	}
@@ -899,73 +1020,11 @@ public class InteractiveMT implements PlugIn {
 		public void actionPerformed(final ActionEvent arg0) {
 
 			// add listener to the imageplus slice slider
-			sliceObserver = new SliceObserver(preprocessedimp, new ImagePlusListener());
-
 			IJ.log("Starting Chosen Line finder from the seed image (first frame should be seeds)");
-			preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), currentframe);
-			imp.setPosition(channel, preprocessedimp.getSlice(), currentframe);
-
-			updatePreview(ValueChange.FRAME);
-			isStarted = true;
-
-			Roi roi = preprocessedimp.getRoi();
-			if (roi == null) {
-				// IJ.log( "A rectangular ROI is required to define the area..."
-				// );
-				preprocessedimp.setRoi(standardRectangle);
-				roi = preprocessedimp.getRoi();
-			}
-			IJ.log("Current frame: " + currentframe);
-		//	updatePreview(ValueChange.ALL);
+		
+			IJ.log("Current frame: " + thirdDimension);
+			//updatePreview(ValueChange.THIRDDIM);
 	
-			
-			if (ndims == 2) {
-				if (FindLinesViaMSER) {
-					boolean dialog = DialogueModelChoice();
-					if (dialog) {
-
-						updatePreview(ValueChange.SHOWMSER);
-						LinefinderInteractiveMSER newlineMser = new LinefinderInteractiveMSER(currentimg,
-								currentPreprocessedimg, newtree, minlength, currentframe);
-
-						PrevFrameparam = FindlinesVia.LinefindingMethod(currentimg, currentPreprocessedimg, minlength,
-								currentframe, psf, newlineMser, userChoiceModel, Domask);
-					}
-
-				}
-				if (FindLinesViaHOUGH) {
-					boolean dialog = DialogueModelChoice();
-					if (dialog) {
-						updatePreview(ValueChange.SHOWHOUGH);
-						LinefinderInteractiveHough newlineHough = new LinefinderInteractiveHough(currentimg,
-								currentPreprocessedimg, intimg, Maxlabel, thetaPerPixel, rhoPerPixel, currentframe);
-
-						PrevFrameparam = FindlinesVia.LinefindingMethod(currentimg, currentPreprocessedimg, minlength,
-								currentframe, psf, newlineHough, userChoiceModel, Domask);
-					}
-				}
-
-				if (FindLinesViaMSERwHOUGH) {
-					boolean dialog = DialogueModelChoice();
-					if (dialog) {
-						updatePreview(ValueChange.SHOWMSER);
-						LinefinderInteractiveMSERwHough newlineMserwHough = new LinefinderInteractiveMSERwHough(
-								currentimg, currentPreprocessedimg, newtree, minlength, currentframe, thetaPerPixel, rhoPerPixel);
-						PrevFrameparam = FindlinesVia.LinefindingMethod(currentimg, currentPreprocessedimg, minlength,
-								currentframe, psf, newlineMserwHough, userChoiceModel, Domask);
-					}
-				}
-				// Draw the detected lines
-				RandomAccessibleInterval<FloatType> gaussimg = new ArrayImgFactory<FloatType>().create(currentimg,
-						new FloatType());
-				PushCurves.DrawstartLine(gaussimg, PrevFrameparam.fst, PrevFrameparam.snd, psf);
-				
-				ImageJFunctions.show(gaussimg).setTitle("Exact-line-start");
-
-			}
-
-			if (ndims > 2) {
-
 				RandomAccessibleInterval<FloatType> groundframe = currentimg;
 				RandomAccessibleInterval<FloatType> groundframepre = currentPreprocessedimg;
 				if (FindLinesViaMSER) {
@@ -973,9 +1032,9 @@ public class InteractiveMT implements PlugIn {
 					if (dialog) {
 						updatePreview(ValueChange.SHOWMSER);
 						LinefinderInteractiveMSER newlineMser = new LinefinderInteractiveMSER(groundframe,
-								groundframepre, newtree, minlength, currentframe);
+								groundframepre, newtree, minlength, thirdDimension);
 						PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength,
-								currentframe, psf, newlineMser, userChoiceModel, Domask);
+								thirdDimension, psf, newlineMser, userChoiceModel, Domask);
 					}
 
 				}
@@ -986,10 +1045,10 @@ public class InteractiveMT implements PlugIn {
 					if (dialog) {
 						updatePreview(ValueChange.SHOWHOUGH);
 						LinefinderInteractiveHough newlineHough = new LinefinderInteractiveHough(groundframe,
-								groundframepre, intimg, Maxlabel, thetaPerPixel, rhoPerPixel, currentframe);
+								groundframepre, intimg, Maxlabel, thetaPerPixel, rhoPerPixel, thirdDimension);
 
 						PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength,
-								currentframe, psf, newlineHough, userChoiceModel, Domask);
+								thirdDimension, psf, newlineHough, userChoiceModel, Domask);
 					}
 				}
 
@@ -998,17 +1057,66 @@ public class InteractiveMT implements PlugIn {
 					if (dialog) {
 						updatePreview(ValueChange.SHOWMSER);
 						LinefinderInteractiveMSERwHough newlineMserwHough = new LinefinderInteractiveMSERwHough(groundframe, groundframepre,
-								newtree, minlength, currentframe, thetaPerPixel, rhoPerPixel);
+								newtree, minlength, thirdDimension, thetaPerPixel, rhoPerPixel);
 						PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength,
-								currentframe, psf, newlineMserwHough, userChoiceModel, Domask);
+								thirdDimension, psf, newlineMserwHough, userChoiceModel, Domask);
 					}
 
-				}
+			
 
 			}
 
 		}
 	}
+	
+	public RandomAccessibleInterval<FloatType> getCurrentView() {
+
+		final FloatType type = originalimg.randomAccess().get().createVariable();
+		long[] dim = { originalimg.dimension(0), originalimg.dimension(1) };
+		final ImgFactory<FloatType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(originalimg, type);
+		RandomAccessibleInterval<FloatType> totalimg = factory.create(dim, type);
+
+		if (thirdDimensionSize == 0) {
+
+			totalimg = originalimg;
+		}
+
+		if ( thirdDimensionSize > 0) {
+
+			totalimg = Views.hyperSlice(originalimg, 2, thirdDimension - 1);
+
+		}
+
+		
+
+		return totalimg;
+
+	}
+	
+	public RandomAccessibleInterval<FloatType> getCurrentPreView() {
+
+		final FloatType type = originalPreprocessedimg.randomAccess().get().createVariable();
+		long[] dim = { originalPreprocessedimg.dimension(0), originalPreprocessedimg.dimension(1) };
+		final ImgFactory<FloatType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(originalPreprocessedimg, type);
+		RandomAccessibleInterval<FloatType> totalimg = factory.create(dim, type);
+
+		if (thirdDimensionSize == 0) {
+
+			totalimg = originalPreprocessedimg;
+		}
+
+		if ( thirdDimensionSize > 0) {
+
+			totalimg = Views.hyperSlice(originalPreprocessedimg, 2, thirdDimension - 1);
+
+		}
+
+		
+
+		return totalimg;
+
+	}
+	
 
 	 protected class NormalizeListener implements ItemListener{
 
@@ -1170,42 +1278,43 @@ public class InteractiveMT implements PlugIn {
 				preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame());
 				imp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame());
 
-				if (currentframe <= MaxFrames) {
-					preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), currentframe);
-					imp.setPosition(channel, imp.getSlice(), currentframe);
+				if (thirdDimension <= thirdDimensionSize) {
+					preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), thirdDimension);
+					imp.setPosition(channel, imp.getSlice(), thirdDimension);
 				} else {
 					IJ.log("Max frame number exceeded, moving to last frame instead");
-					preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), MaxFrames);
-					imp.setPosition(channel, imp.getSlice(), MaxFrames);
-					currentframe = MaxFrames;
+					preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), thirdDimensionSize);
+					imp.setPosition(channel, imp.getSlice(), thirdDimensionSize);
+					thirdDimension = thirdDimensionSize;
 				}
 
 			
 			}
-			updatePreview(ValueChange.FRAME);
+			updatePreview(ValueChange.THIRDDIM);
 			isStarted = true;
 			
 
 			
 			
 
-			int next = preprocessedimp.getFrame();
+			int next = thirdDimension;
 		
 			
 			 maxStack();
 			 
 			
 			 
-			for (int index = next; index <= MaxFrames; ++index) {
+			for (int index = next; index <= thirdDimensionSize; ++index) {
 			
 			
 				
-				currentframe = index;
-				preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), currentframe);
-				imp.setPosition(channel, preprocessedimp.getSlice(), currentframe);
+				thirdDimension = index;
 				
 				
-			updatePreview(ValueChange.FRAME);
+				 CurrentPreprocessedView = getCurrentPreView();
+					
+					updatePreview(ValueChange.THIRDDIM);
+				
 			isStarted = true;
 
 			Roi roi = preprocessedimp.getRoi();
@@ -1215,12 +1324,12 @@ public class InteractiveMT implements PlugIn {
 				preprocessedimp.setRoi(standardRectangle);
 				roi = preprocessedimp.getRoi();
 			}
-			IJ.log("Current frame: " + currentframe);
+			IJ.log("Current frame: " + thirdDimension);
 		
 			boolean dialog;
 			boolean dialogupdate;
 			
-			if (ndims > 2) {
+		
 
 				RandomAccessibleInterval<FloatType> groundframe = currentimg;
 				RandomAccessibleInterval<FloatType> groundframepre = currentPreprocessedimg;
@@ -1238,10 +1347,10 @@ public class InteractiveMT implements PlugIn {
 					updatePreview(ValueChange.SHOWMSER);
 
 						LinefinderInteractiveHFMSER newlineMser = new LinefinderInteractiveHFMSER(groundframe,
-								groundframepre, newtree, minlength, currentframe);
+								groundframepre, newtree, minlength, thirdDimension);
 
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
-								minlength, currentframe, psf, newlineMser, userChoiceModel, Domask);
+								minlength, thirdDimension, psf, newlineMser, userChoiceModel, Domask);
 						
 
 				}
@@ -1256,10 +1365,10 @@ public class InteractiveMT implements PlugIn {
 					
 					updatePreview(ValueChange.SHOWHOUGH);
 						LinefinderInteractiveHFHough newlineHough = new LinefinderInteractiveHFHough(groundframe,
-								groundframepre, intimg, Maxlabel, thetaPerPixel, rhoPerPixel, currentframe);
+								groundframepre, intimg, Maxlabel, thetaPerPixel, rhoPerPixel, thirdDimension);
 
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
-								minlength, currentframe, psf, newlineHough, userChoiceModel, Domask);
+								minlength, thirdDimension, psf, newlineHough, userChoiceModel, Domask);
 					
 				}
 
@@ -1270,15 +1379,15 @@ public class InteractiveMT implements PlugIn {
 					
 					updatePreview(ValueChange.SHOWMSER);
 						LinefinderInteractiveHFMSERwHough newlineMserwHough = new LinefinderInteractiveHFMSERwHough(
-								groundframe, groundframepre, newtree, minlength, currentframe, thetaPerPixel, rhoPerPixel);
+								groundframe, groundframepre, newtree, minlength, thirdDimension, thetaPerPixel, rhoPerPixel);
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
-								minlength, currentframe, psf, newlineMserwHough, userChoiceModel, Domask);
+								minlength, thirdDimension, psf, newlineMserwHough, userChoiceModel, Domask);
 						
 						
 
 				}
 
-			}
+			
 			
 
 			 NewFrameparam = returnVector.snd;
@@ -1299,8 +1408,8 @@ public class InteractiveMT implements PlugIn {
 
 			ImagePlus impstartsec = ImageJFunctions.show(originalimg);
 			ImagePlus impendsec = ImageJFunctions.show(originalPreprocessedimg);
-			final Trackstart trackerstart = new Trackstart(Allstart,MaxFrames - next);
-			final Trackend trackerend = new Trackend(Allend, MaxFrames - next);
+			final Trackstart trackerstart = new Trackstart(Allstart,thirdDimensionSize - next);
+			final Trackend trackerend = new Trackend(Allend, thirdDimensionSize - next);
 			trackerstart.process();
 			SimpleWeightedGraph<double[], DefaultWeightedEdge> graphstart = trackerstart.getResult();
 			ArrayList<Subgraphs> subgraphstart = trackerstart.getFramedgraph();
@@ -1340,20 +1449,20 @@ public class InteractiveMT implements PlugIn {
 			for (int index = 0; index < Allstart.size(); ++index) {
 
 				final int framenumber = index + next;
-				final ArrayList<Trackproperties> currentframe = Allstart.get(index);
+				final ArrayList<Trackproperties> thirdDimension = Allstart.get(index);
 
 				
-				for (int frameindex = 0; frameindex < currentframe.size(); ++frameindex) {
+				for (int frameindex = 0; frameindex < thirdDimension.size(); ++frameindex) {
 
-					final Integer SeedID = currentframe.get(frameindex).seedlabel;
+					final Integer SeedID = thirdDimension.get(frameindex).seedlabel;
 					final Integer[] FrameID = {framenumber, SeedID};
-					final double[] originalpoint = currentframe.get(frameindex).originalpoint;
-					final double[] newpoint = currentframe.get(frameindex).newpoint;
-					final double[] oldpoint = currentframe.get(frameindex).oldpoint;
-					final double[] newpointCal = new double [] {currentframe.get(frameindex).newpoint[0] * calibration[0],
-							currentframe.get(frameindex).newpoint[1] * calibration[1]};
-					final double[] oldpointCal = new double [] {currentframe.get(frameindex).oldpoint[0] * calibration[0],
-							currentframe.get(frameindex).oldpoint[1] * calibration[1]};
+					final double[] originalpoint = thirdDimension.get(frameindex).originalpoint;
+					final double[] newpoint = thirdDimension.get(frameindex).newpoint;
+					final double[] oldpoint = thirdDimension.get(frameindex).oldpoint;
+					final double[] newpointCal = new double [] {thirdDimension.get(frameindex).newpoint[0] * calibration[0],
+							thirdDimension.get(frameindex).newpoint[1] * calibration[1]};
+					final double[] oldpointCal = new double [] {thirdDimension.get(frameindex).oldpoint[0] * calibration[0],
+							thirdDimension.get(frameindex).oldpoint[1] * calibration[1]};
 					
 					final double length = util.Boundingboxes.Distance(newpointCal, oldpointCal);
 					final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, newpoint);
@@ -1544,19 +1653,19 @@ public class InteractiveMT implements PlugIn {
 			for (int index = 0; index < Allend.size(); ++index) {
 
 				final int framenumber = index + next;
-				final ArrayList<Trackproperties> currentframe = Allend.get(index);
+				final ArrayList<Trackproperties> thirdDimension = Allend.get(index);
 
-				for (int frameindex = 0; frameindex < currentframe.size(); ++frameindex) {
-					final Integer SeedID = currentframe.get(frameindex).seedlabel;
+				for (int frameindex = 0; frameindex < thirdDimension.size(); ++frameindex) {
+					final Integer SeedID = thirdDimension.get(frameindex).seedlabel;
 					final Integer[] FrameID = {framenumber, SeedID};
-					final double[] originalpoint = currentframe.get(frameindex).originalpoint;
-					final double[] newpoint = currentframe.get(frameindex).newpoint;
-					final double[] oldpoint = currentframe.get(frameindex).oldpoint;
+					final double[] originalpoint = thirdDimension.get(frameindex).originalpoint;
+					final double[] newpoint = thirdDimension.get(frameindex).newpoint;
+					final double[] oldpoint = thirdDimension.get(frameindex).oldpoint;
 					
-					final double[] newpointCal = new double [] {currentframe.get(frameindex).newpoint[0] * calibration[0],
-							currentframe.get(frameindex).newpoint[1] * calibration[1]};
-					final double[] oldpointCal = new double [] {currentframe.get(frameindex).oldpoint[0] * calibration[0],
-							currentframe.get(frameindex).oldpoint[1] * calibration[1]};
+					final double[] newpointCal = new double [] {thirdDimension.get(frameindex).newpoint[0] * calibration[0],
+							thirdDimension.get(frameindex).newpoint[1] * calibration[1]};
+					final double[] oldpointCal = new double [] {thirdDimension.get(frameindex).oldpoint[0] * calibration[0],
+							thirdDimension.get(frameindex).oldpoint[1] * calibration[1]};
 					
 					final double length = util.Boundingboxes.Distance(newpointCal, oldpointCal);
 					
@@ -1820,42 +1929,30 @@ public class InteractiveMT implements PlugIn {
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
 
-			// add listener to the imageplus slice slider
-			sliceObserver = new SliceObserver(preprocessedimp, new ImagePlusListener());
+		
 
-			preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame());
-			imp.setPosition(channel, preprocessedimp.getSlice(), preprocessedimp.getFrame());
-
-			int next = preprocessedimp.getFrame();
 			
+			
+		   int next = thirdDimension;
+		   
 		
 			
-			
 			 maxStack();
-			for (int index = next; index <= MaxFrames; ++index) {
+			for (int index = next; index <= thirdDimensionSize; ++index) {
 				
-				currentframe = index;
-				preprocessedimp.setPosition(channel, preprocessedimp.getSlice(), currentframe);
-				imp.setPosition(channel, preprocessedimp.getSlice(), currentframe);
+				thirdDimension = index;
+				isStarted = true;
+				 CurrentPreprocessedView = getCurrentPreView();
 				
-				
-			updatePreview(ValueChange.FRAME);
-			isStarted = true;
-
-			Roi roi = preprocessedimp.getRoi();
-			if (roi == null) {
-				// IJ.log( "A rectangular ROI is required to define the area..."
-				// );
-				preprocessedimp.setRoi(standardRectangle);
-				roi = preprocessedimp.getRoi();
-			}
-			IJ.log("Current frame: " + currentframe);
+			updatePreview(ValueChange.THIRDDIM);
+			
+			IJ.log("Current frame: " + thirdDimension);
 			
 			boolean dialog;
 			boolean dialogupdate;
 			
 
-			if (ndims > 2) {
+		
 
 				RandomAccessibleInterval<FloatType> groundframe = currentimg;
 				RandomAccessibleInterval<FloatType> groundframepre = currentPreprocessedimg;
@@ -1870,10 +1967,10 @@ public class InteractiveMT implements PlugIn {
 					updatePreview(ValueChange.SHOWMSER);
 
 						LinefinderInteractiveHFMSER newlineMser = new LinefinderInteractiveHFMSER(groundframe,
-								groundframepre, newtree, minlength, currentframe);
+								groundframepre, newtree, minlength, thirdDimension);
 
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
-								minlength, currentframe, psf, newlineMser, userChoiceModel, Domask);
+								minlength, thirdDimension, psf, newlineMser, userChoiceModel, Domask);
 						
 
 				}
@@ -1889,10 +1986,10 @@ public class InteractiveMT implements PlugIn {
 					
 					updatePreview(ValueChange.SHOWHOUGH);
 						LinefinderInteractiveHFHough newlineHough = new LinefinderInteractiveHFHough(groundframe,
-								groundframepre, intimg, Maxlabel, thetaPerPixel, rhoPerPixel, currentframe);
+								groundframepre, intimg, Maxlabel, thetaPerPixel, rhoPerPixel, thirdDimension);
 
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
-								minlength, currentframe, psf, newlineHough, userChoiceModel, Domask);
+								minlength, thirdDimension, psf, newlineHough, userChoiceModel, Domask);
 					
 				}
 
@@ -1903,15 +2000,15 @@ public class InteractiveMT implements PlugIn {
 					
 					updatePreview(ValueChange.SHOWMSER);
 						LinefinderInteractiveHFMSERwHough newlineMserwHough = new LinefinderInteractiveHFMSERwHough(
-								groundframe, groundframepre, newtree, minlength, currentframe, thetaPerPixel, rhoPerPixel);
+								groundframe, groundframepre, newtree, minlength, thirdDimension, thetaPerPixel, rhoPerPixel);
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
-								minlength, currentframe, psf, newlineMserwHough, userChoiceModel, Domask);
+								minlength, thirdDimension, psf, newlineMserwHough, userChoiceModel, Domask);
 						
 						
 
 				}
 
-			}
+			
 			
 
 			 NewFrameparam = returnVector.snd;
@@ -1934,8 +2031,8 @@ public class InteractiveMT implements PlugIn {
 			ImagePlus impstart = ImageJFunctions.show(originalimg);
 			ImagePlus impend = ImageJFunctions.show(originalPreprocessedimg);
 			
-			final Trackstart trackerstart = new Trackstart(Allstart,MaxFrames - next);
-			final Trackend trackerend = new Trackend(Allend, MaxFrames - next);
+			final Trackstart trackerstart = new Trackstart(Allstart,thirdDimensionSize - next);
+			final Trackend trackerend = new Trackend(Allend, thirdDimensionSize - next);
 			trackerstart.process();
 			SimpleWeightedGraph<double[], DefaultWeightedEdge> graphstart = trackerstart.getResult();
 			DisplayGraph displaygraphtrackstart = new DisplayGraph(impstartsec, graphstart);
@@ -1967,20 +2064,20 @@ public class InteractiveMT implements PlugIn {
 			for (int index = 0; index < Allstart.size(); ++index) {
 
 				final int framenumber = index + next;
-				final ArrayList<Trackproperties> currentframe = Allstart.get(index);
+				final ArrayList<Trackproperties> thirdDimension = Allstart.get(index);
 
 				
-				for (int frameindex = 0; frameindex < currentframe.size(); ++frameindex) {
+				for (int frameindex = 0; frameindex < thirdDimension.size(); ++frameindex) {
 
-					final Integer SeedID = currentframe.get(frameindex).seedlabel;
+					final Integer SeedID = thirdDimension.get(frameindex).seedlabel;
 					final Integer[] FrameID = {framenumber, SeedID};
-					final double[] originalpoint = currentframe.get(frameindex).originalpoint;
-					final double[] newpoint = currentframe.get(frameindex).newpoint;
-					final double[] oldpoint = currentframe.get(frameindex).oldpoint;
-					final double[] newpointCal = new double [] {currentframe.get(frameindex).newpoint[0] * calibration[0],
-							currentframe.get(frameindex).newpoint[1] * calibration[1]};
-					final double[] oldpointCal = new double [] {currentframe.get(frameindex).oldpoint[0] * calibration[0],
-							currentframe.get(frameindex).oldpoint[1] * calibration[1]};
+					final double[] originalpoint = thirdDimension.get(frameindex).originalpoint;
+					final double[] newpoint = thirdDimension.get(frameindex).newpoint;
+					final double[] oldpoint = thirdDimension.get(frameindex).oldpoint;
+					final double[] newpointCal = new double [] {thirdDimension.get(frameindex).newpoint[0] * calibration[0],
+							thirdDimension.get(frameindex).newpoint[1] * calibration[1]};
+					final double[] oldpointCal = new double [] {thirdDimension.get(frameindex).oldpoint[0] * calibration[0],
+							thirdDimension.get(frameindex).oldpoint[1] * calibration[1]};
 					
 					final double length = util.Boundingboxes.Distance(newpointCal, oldpointCal);
 					final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, newpoint);
@@ -2175,19 +2272,19 @@ public class InteractiveMT implements PlugIn {
 			for (int index = 0; index < Allend.size(); ++index) {
 
 				final int framenumber = index + next;
-				final ArrayList<Trackproperties> currentframe = Allend.get(index);
+				final ArrayList<Trackproperties> thirdDimension = Allend.get(index);
 
-				for (int frameindex = 0; frameindex < currentframe.size(); ++frameindex) {
-					final Integer SeedID = currentframe.get(frameindex).seedlabel;
+				for (int frameindex = 0; frameindex < thirdDimension.size(); ++frameindex) {
+					final Integer SeedID = thirdDimension.get(frameindex).seedlabel;
 					final Integer[] FrameID = {framenumber, SeedID};
-					final double[] originalpoint = currentframe.get(frameindex).originalpoint;
-					final double[] newpoint = currentframe.get(frameindex).newpoint;
-					final double[] oldpoint = currentframe.get(frameindex).oldpoint;
+					final double[] originalpoint = thirdDimension.get(frameindex).originalpoint;
+					final double[] newpoint = thirdDimension.get(frameindex).newpoint;
+					final double[] oldpoint = thirdDimension.get(frameindex).oldpoint;
 					
-					final double[] newpointCal = new double [] {currentframe.get(frameindex).newpoint[0] * calibration[0],
-							currentframe.get(frameindex).newpoint[1] * calibration[1]};
-					final double[] oldpointCal = new double [] {currentframe.get(frameindex).oldpoint[0] * calibration[0],
-							currentframe.get(frameindex).oldpoint[1] * calibration[1]};
+					final double[] newpointCal = new double [] {thirdDimension.get(frameindex).newpoint[0] * calibration[0],
+							thirdDimension.get(frameindex).newpoint[1] * calibration[1]};
+					final double[] oldpointCal = new double [] {thirdDimension.get(frameindex).oldpoint[0] * calibration[0],
+							thirdDimension.get(frameindex).oldpoint[1] * calibration[1]};
 					
 					final double length = util.Boundingboxes.Distance(newpointCal, oldpointCal);
 					
@@ -3313,7 +3410,62 @@ public class InteractiveMT implements PlugIn {
 			
 		}
 	}
-	
+
+	protected class thirdDimensionsliderListener implements AdjustmentListener {
+		final Label label;
+		final float min, max;
+
+		public thirdDimensionsliderListener(final Label label, final float min, final float max) {
+			this.label = label;
+			this.min = min;
+			this.max = max;
+		}
+
+		@Override
+		public void adjustmentValueChanged(final AdjustmentEvent event) {
+			thirdDimensionslider = (int) computeIntValueFromScrollbarPosition(event.getValue(), min, max,
+					scrollbarSize);
+			label.setText("Time index = " + thirdDimensionslider);
+
+			thirdDimension = thirdDimensionslider;
+
+			
+			
+			if (thirdDimension > thirdDimensionSize) {
+				IJ.log("Max frame number exceeded, moving to last frame instead");
+				thirdDimension = thirdDimensionSize;
+				CurrentView = getCurrentView();
+				CurrentPreprocessedView = getCurrentPreView();
+			}
+			else{
+				CurrentView = getCurrentView();
+				CurrentPreprocessedView = getCurrentPreView();
+				
+			}
+
+		
+			
+		
+		
+			/*
+			 * if ((change == ValueChange.ROI || change == ValueChange.SIGMA ||
+			 * change == ValueChange.MINMAX || change == ValueChange.FOURTHDIM
+			 * || change == ValueChange.THRESHOLD && RoisOrig != null)) {
+			 */
+			if (!event.getValueIsAdjusting()) {
+				// compute first version
+				while (isComputing) {
+					SimpleMultiThreading.threadWait(10);
+				}
+				updatePreview(ValueChange.THIRDDIM);
+
+			}
+			
+			
+
+		}
+	}
+
 	protected class ComputeTreeListener implements ActionListener {
 
 		@Override
@@ -3391,6 +3543,11 @@ public class InteractiveMT implements PlugIn {
 		}
 	}
 
+	protected static float computeIntValueFromScrollbarPosition(final int scrollbarPosition, final float min,
+			final float max, final int scrollbarSize) {
+		return min + (scrollbarPosition / (max)) * (max - min);
+	}
+	
 	protected class FrameListener extends WindowAdapter {
 		final Frame parent;
 
@@ -4009,8 +4166,7 @@ public class InteractiveMT implements PlugIn {
 		// note that the input provides the size for the new image as it
 		// implements
 		// the Interval interface
-		final RandomAccessibleInterval<FloatType> img = Views.interval( input, interval );
-		Normalize.normalize(Views.iterable(img), new FloatType(0), new FloatType(255));
+		Normalize.normalize(Views.iterable(input), new FloatType(0), new FloatType(255));
 		final UnsignedByteType type = new UnsignedByteType();
 		final ImgFactory<UnsignedByteType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(input, type);
 		final Img<UnsignedByteType> output = factory.create(input, type);
@@ -4063,11 +4219,14 @@ public class InteractiveMT implements PlugIn {
 
 	public static void main(String[] args) {
 		new ImageJ();
+		
+		RandomAccessibleInterval<FloatType> originalimg = util.ImgLib2Util
+				.openAs32Bit(new File("/Users/varunkapoor/Documents/MT-Dummy/testlengthB.tif"), new ArrayImgFactory<FloatType>());
+		RandomAccessibleInterval<FloatType> originalPreprocessedimg = util.ImgLib2Util
+				.openAs32Bit(new File("/Users/varunkapoor/Documents/MT-Dummy/testlengthB.tif"), new ArrayImgFactory<FloatType>());
+		
 // MT2012017
-		ImagePlus imp = new Opener().openImage("/Users/varunkapoor/res/2017C.tif");
-		ImagePlus Preprocessedimp = new Opener().openImage("/Users/varunkapoor/res/BG2017C.tif");
-		imp.show();
-		Preprocessedimp.show();
+	
 		final double[] psf = { 1.65, 1.47 };
 		final long radius = (long) (Math.ceil(Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1])));
 
@@ -4076,7 +4235,7 @@ public class InteractiveMT implements PlugIn {
 		final int minlength = (int) (radius);
 
 
-		new InteractiveMT(imp, Preprocessedimp, psf, minlength).run(null);
+		new InteractiveMT(originalimg, originalPreprocessedimg, psf, minlength).run(null);
 
 	}
 }

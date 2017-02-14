@@ -19,8 +19,8 @@ public class Dummylines {
 
 			final Interval range, final int numlines, final double[] sigma) throws IncompatibleTypeException {
 
-		final Random rnd = new Random(-40);
-		final Random rndsec = new Random(80);
+		final Random rnd = new Random(40);
+		final Random rndsec = new Random(8);
 		final int n = outimg.numDimensions();
 
 		for (int index = 0; index < numlines; ++index) {
@@ -118,7 +118,7 @@ public class Dummylines {
 		
 		final int n = outimg.numDimensions();
 		
-        double growrate = 12* Math.sin(0.2 * frame) ;
+        double growrate = 22* Math.sin(0.2 * frame) ;
 
 		ArrayList<Dummyprops> newstlist = new ArrayList<Dummyprops>();
 		ArrayList<Dummyprops> newendlist = new ArrayList<Dummyprops>();
@@ -139,7 +139,7 @@ public class Dummylines {
 	             oldpos[0] = startseeds.get(index)[0];
 	             oldpos[1] = slope * oldpos[0] + intercept;
 	             
-				 startpos[0] = startseeds.get(index)[0] -  1.5* Math.abs((growrate)) - 10.5 ;
+				 startpos[0] = startseeds.get(index)[0] -  3.5* Math.abs((growrate)) - 15.5 ;
 				 startpos[1] = slope * startpos[0] + intercept;
 				
 			 
