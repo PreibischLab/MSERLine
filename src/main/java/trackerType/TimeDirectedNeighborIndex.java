@@ -17,26 +17,26 @@ import org.jgrapht.event.GraphVertexChangeEvent;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.util.ModifiableInteger;
 
-import graphconstructs.Trackproperties;
+import graphconstructs.KalmanTrackproperties;
 
 
 
-public class TimeDirectedNeighborIndex extends NeighborIndex< Trackproperties, DefaultWeightedEdge >
+public class TimeDirectedNeighborIndex extends NeighborIndex< KalmanTrackproperties, DefaultWeightedEdge >
 {
 
 	// ~ Instance fields
 	// --------------------------------------------------------
 
-	Map< Trackproperties, Neighbors< Trackproperties, DefaultWeightedEdge > > predecessorMap = new HashMap< Trackproperties, Neighbors< Trackproperties, DefaultWeightedEdge > >();
+	Map< KalmanTrackproperties, Neighbors< KalmanTrackproperties, DefaultWeightedEdge > > predecessorMap = new HashMap< KalmanTrackproperties, Neighbors< KalmanTrackproperties, DefaultWeightedEdge > >();
 
-	Map< Trackproperties, Neighbors< Trackproperties, DefaultWeightedEdge > > successorMap = new HashMap< Trackproperties, Neighbors< Trackproperties, DefaultWeightedEdge > >();
+	Map< KalmanTrackproperties, Neighbors< KalmanTrackproperties, DefaultWeightedEdge > > successorMap = new HashMap< KalmanTrackproperties, Neighbors< KalmanTrackproperties, DefaultWeightedEdge > >();
 
-	private final Graph< Trackproperties, DefaultWeightedEdge > graph;
+	private final Graph< KalmanTrackproperties, DefaultWeightedEdge > graph;
 
 	// ~ Constructors
 	// -----------------------------------------------------------
 
-	public TimeDirectedNeighborIndex( final Graph< Trackproperties, DefaultWeightedEdge > g )
+	public TimeDirectedNeighborIndex( final Graph< KalmanTrackproperties, DefaultWeightedEdge > g )
 	{
 		super( g );
 		this.graph = g;
@@ -56,7 +56,7 @@ public class TimeDirectedNeighborIndex extends NeighborIndex< Trackproperties, D
 	 *
 	 * @return all unique predecessors of the specified vertex
 	 */
-	public Set< Trackproperties > predecessorsOf( final Trackproperties v )
+	public Set< KalmanTrackproperties > predecessorsOf( final KalmanTrackproperties v )
 	{
 		return getPredecessors( v ).getNeighbors();
 	}
@@ -67,14 +67,14 @@ public class TimeDirectedNeighborIndex extends NeighborIndex< Trackproperties, D
 	 * in the returned list. Because a list of predecessors can not be
 	 * efficiently maintained, it is reconstructed on every invocation by
 	 * duplicating entries in the neighbor set. It is thus more efficient to use
-	 * {@link #predecessorsOf(Trackproperties)} unless duplicate neighbors are required.
+	 * {@link #predecessorsOf(KalmanTrackproperties)} unless duplicate neighbors are required.
 	 *
 	 * @param v
 	 *            the vertex whose predecessors are desired
 	 *
 	 * @return all predecessors of the specified vertex
 	 */
-	public List< Trackproperties > predecessorListOf( final Trackproperties v )
+	public List< KalmanTrackproperties > predecessorListOf( final KalmanTrackproperties v )
 	{
 		return getPredecessors( v ).getNeighborList();
 	}
@@ -90,7 +90,7 @@ public class TimeDirectedNeighborIndex extends NeighborIndex< Trackproperties, D
 	 *
 	 * @return all unique successors of the specified vertex
 	 */
-	public Set< Trackproperties > successorsOf( final Trackproperties v )
+	public Set< KalmanTrackproperties > successorsOf( final KalmanTrackproperties v )
 	{
 		return getSuccessors( v ).getNeighbors();
 	}
@@ -101,14 +101,14 @@ public class TimeDirectedNeighborIndex extends NeighborIndex< Trackproperties, D
 	 * in the returned list. Because a list of successors can not be efficiently
 	 * maintained, it is reconstructed on every invocation by duplicating
 	 * entries in the neighbor set. It is thus more efficient to use
-	 * {@link #successorsOf(Trackproperties)} unless duplicate neighbors are required.
+	 * {@link #successorsOf(KalmanTrackproperties)} unless duplicate neighbors are required.
 	 *
 	 * @param v
 	 *            the vertex whose successors are desired
 	 *
 	 * @return all successors of the specified vertex
 	 */
-	public List< Trackproperties > successorListOf( final Trackproperties v )
+	public List< KalmanTrackproperties > successorListOf( final KalmanTrackproperties v )
 	{
 		return getSuccessors( v ).getNeighborList();
 	}
@@ -117,11 +117,11 @@ public class TimeDirectedNeighborIndex extends NeighborIndex< Trackproperties, D
 	 * @see org.jgrapht.event.GraphListener#edgeAdded(GraphEdgeChangeEvent)
 	 */
 	@Override
-	public void edgeAdded( final GraphEdgeChangeEvent< Trackproperties, DefaultWeightedEdge > e )
+	public void edgeAdded( final GraphEdgeChangeEvent< KalmanTrackproperties, DefaultWeightedEdge > e )
 	{
 		final DefaultWeightedEdge edge = e.getEdge();
-		final Trackproperties source = graph.getEdgeSource( edge );
-		final Trackproperties target = graph.getEdgeTarget( edge );
+		final KalmanTrackproperties source = graph.getEdgeSource( edge );
+		final KalmanTrackproperties target = graph.getEdgeTarget( edge );
 
 		// if a map does not already contain an entry,
 		// then skip addNeighbor, since instantiating the map
@@ -150,11 +150,11 @@ public class TimeDirectedNeighborIndex extends NeighborIndex< Trackproperties, D
 	 * @see org.jgrapht.event.GraphListener#edgeRemoved(GraphEdgeChangeEvent)
 	 */
 	@Override
-	public void edgeRemoved( final GraphEdgeChangeEvent< Trackproperties, DefaultWeightedEdge > e )
+	public void edgeRemoved( final GraphEdgeChangeEvent< KalmanTrackproperties, DefaultWeightedEdge > e )
 	{
 		final DefaultWeightedEdge edge = e.getEdge();
-		final Trackproperties source = graph.getEdgeSource( edge );
-		final Trackproperties target = graph.getEdgeTarget( edge );
+		final KalmanTrackproperties source = graph.getEdgeSource( edge );
+		final KalmanTrackproperties target = graph.getEdgeTarget( edge );
 		if ( successorMap.containsKey( source ) )
 		{
 			successorMap.get( source ).removeNeighbor( target );
@@ -169,7 +169,7 @@ public class TimeDirectedNeighborIndex extends NeighborIndex< Trackproperties, D
 	 * @see org.jgrapht.event.VertexSetListener#vertexAdded(GraphVertexChangeEvent)
 	 */
 	@Override
-	public void vertexAdded( final GraphVertexChangeEvent< Trackproperties > e )
+	public void vertexAdded( final GraphVertexChangeEvent< KalmanTrackproperties > e )
 	{
 		// nothing to cache until there are edges
 	}
@@ -178,51 +178,51 @@ public class TimeDirectedNeighborIndex extends NeighborIndex< Trackproperties, D
 	 * @see org.jgrapht.event.VertexSetListener#vertexRemoved(GraphVertexChangeEvent)
 	 */
 	@Override
-	public void vertexRemoved( final GraphVertexChangeEvent< Trackproperties > e )
+	public void vertexRemoved( final GraphVertexChangeEvent< KalmanTrackproperties > e )
 	{
 		predecessorMap.remove( e.getVertex() );
 		successorMap.remove( e.getVertex() );
 	}
 
-	private Neighbors< Trackproperties, DefaultWeightedEdge > getPredecessors( final Trackproperties v )
+	private Neighbors< KalmanTrackproperties, DefaultWeightedEdge > getPredecessors( final KalmanTrackproperties v )
 	{
-		Neighbors< Trackproperties, DefaultWeightedEdge > neighbors = predecessorMap.get( v );
+		Neighbors< KalmanTrackproperties, DefaultWeightedEdge > neighbors = predecessorMap.get( v );
 		if ( neighbors == null )
 		{
-			final List< Trackproperties > nl = Graphs.neighborListOf( graph, v );
-			final List< Trackproperties > bnl = new ArrayList< Trackproperties >();
-			final int ts = v.getFeature( Trackproperties.FRAME ).intValue();
-			for ( final Trackproperties Trackproperties : nl )
+			final List< KalmanTrackproperties > nl = Graphs.neighborListOf( graph, v );
+			final List< KalmanTrackproperties > bnl = new ArrayList< KalmanTrackproperties >();
+			final int ts = v.getFeature( KalmanTrackproperties.FRAME ).intValue();
+			for ( final KalmanTrackproperties KalmanTrackproperties : nl )
 			{
-				final int tt = Trackproperties.getFeature( Trackproperties.FRAME ).intValue();
+				final int tt = KalmanTrackproperties.getFeature( KalmanTrackproperties.FRAME ).intValue();
 				if ( tt < ts )
 				{
-					bnl.add( Trackproperties );
+					bnl.add( KalmanTrackproperties );
 				}
 			}
-			neighbors = new Neighbors< Trackproperties, DefaultWeightedEdge >( v, bnl );
+			neighbors = new Neighbors< KalmanTrackproperties, DefaultWeightedEdge >( v, bnl );
 			predecessorMap.put( v, neighbors );
 		}
 		return neighbors;
 	}
 
-	private Neighbors< Trackproperties, DefaultWeightedEdge > getSuccessors( final Trackproperties v )
+	private Neighbors< KalmanTrackproperties, DefaultWeightedEdge > getSuccessors( final KalmanTrackproperties v )
 	{
-		Neighbors< Trackproperties, DefaultWeightedEdge > neighbors = successorMap.get( v );
+		Neighbors< KalmanTrackproperties, DefaultWeightedEdge > neighbors = successorMap.get( v );
 		if ( neighbors == null )
 		{
-			final List< Trackproperties > nl = Graphs.neighborListOf( graph, v );
-			final List< Trackproperties > bnl = new ArrayList< Trackproperties >();
-			final int ts = v.getFeature( Trackproperties.FRAME ).intValue();
-			for ( final Trackproperties Trackproperties : nl )
+			final List< KalmanTrackproperties > nl = Graphs.neighborListOf( graph, v );
+			final List< KalmanTrackproperties > bnl = new ArrayList< KalmanTrackproperties >();
+			final int ts = v.getFeature( KalmanTrackproperties.FRAME ).intValue();
+			for ( final KalmanTrackproperties KalmanTrackproperties : nl )
 			{
-				final int tt = Trackproperties.getFeature( Trackproperties.FRAME ).intValue();
+				final int tt = KalmanTrackproperties.getFeature( KalmanTrackproperties.FRAME ).intValue();
 				if ( tt > ts )
 				{
-					bnl.add( Trackproperties );
+					bnl.add( KalmanTrackproperties );
 				}
 			}
-			neighbors = new Neighbors< Trackproperties, DefaultWeightedEdge >( v, bnl );
+			neighbors = new Neighbors< KalmanTrackproperties, DefaultWeightedEdge >( v, bnl );
 			successorMap.put( v, neighbors );
 		}
 		return neighbors;

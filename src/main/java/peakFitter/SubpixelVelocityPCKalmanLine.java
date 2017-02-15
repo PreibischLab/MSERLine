@@ -48,17 +48,15 @@ import graphconstructs.Trackproperties;
 		private final int framenumber;
 		private ArrayList<KalmanIndexedlength> final_paramliststart;
 		private ArrayList<KalmanIndexedlength> final_paramlistend;
-		private ArrayList<KalmanTrackproperties> startinprevframe;
-		private ArrayList<KalmanTrackproperties> endinprevframe;
+		
 		
 		private ArrayList<KalmanTrackproperties> startincurrframe;
 		private ArrayList<KalmanTrackproperties> endincurrframe;
 		
-		private ArrayList<ArrayList<KalmanTrackproperties>> Allstart;
-		private ArrayList<ArrayList<KalmanTrackproperties>> Allend;
 		
 		private final double[] psf;
 	    private final boolean DoMask;
+	    private final int KalmanCount;
 	    private boolean Maskfail = false;
 		// LM solver iteration params
 		public int maxiter = 200;
@@ -117,7 +115,7 @@ import graphconstructs.Trackproperties;
 
 		public SubpixelVelocityPCKalmanLine(final RandomAccessibleInterval<FloatType> source, final LinefinderHF linefinder,
 				final ArrayList<KalmanIndexedlength> PrevFrameparamstart, final ArrayList<KalmanIndexedlength> PrevFrameparamend,
-				final double[] psf, final int framenumber, final UserChoiceModel model, final boolean DoMask) {
+				final double[] psf, final int framenumber, final UserChoiceModel model, final boolean DoMask, final int KalmanCount) {
 
 			linefinder.checkInput();
 			linefinder.process();
@@ -130,6 +128,7 @@ import graphconstructs.Trackproperties;
 			this.ndims = source.numDimensions();
 			this.model = model;
 			this.DoMask = DoMask;
+			this.KalmanCount = KalmanCount;
 			assert (PrevFrameparamend.size() == PrevFrameparamstart.size());
 		}
 
@@ -157,8 +156,6 @@ import graphconstructs.Trackproperties;
 			final_paramliststart = new ArrayList<KalmanIndexedlength>();
 			final_paramlistend = new ArrayList<KalmanIndexedlength>();
 
-			startinprevframe = new ArrayList<KalmanTrackproperties>();
-			endinprevframe = new ArrayList<KalmanTrackproperties>();
 			
 			startincurrframe = new ArrayList<KalmanTrackproperties>();
 			endincurrframe = new ArrayList<KalmanTrackproperties>();
@@ -182,13 +179,12 @@ import graphconstructs.Trackproperties;
 				fixedstartpoint.setPosition(new long[] { (long) PrevFrameparamstart.get(index).fixedpos[0],
 						(long) PrevFrameparamstart.get(index).fixedpos[1] });
 
-				ArrayList<Integer> labelstart = Getlabel(fixedstartpoint, originalslope, originalintercept);
+				int labelstart = Getlabel(fixedstartpoint, originalslope, originalintercept);
 				KalmanIndexedlength paramnextframestart;
 
-				for (int labelstartindex = 0; labelstartindex < labelstart.size(); ++labelstartindex){
-				if (labelstart.get(labelstartindex) != Integer.MIN_VALUE)
+				if (labelstart != Integer.MIN_VALUE)
 
-					paramnextframestart = Getfinaltrackparam(PrevFrameparamstart.get(index), labelstart.get(labelstartindex), psf, framenumber,
+					paramnextframestart = Getfinaltrackparam(PrevFrameparamstart.get(index), labelstart, psf, framenumber,
 							StartorEnd.Start);
 				else
 					paramnextframestart = PrevFrameparamstart.get(index);
@@ -197,43 +193,44 @@ import graphconstructs.Trackproperties;
 
 				final_paramliststart.add(paramnextframestart);
 
+				final double[] originalposition = PrevFrameparamstart.get(index).fixedpos;
 				final double[] oldstartpoint = PrevFrameparamstart.get(index).currentpos;
 
+				final double oldstartslope = PrevFrameparamstart.get(index).slope;
+				final double oldstartintercept = PrevFrameparamstart.get(index).intercept;
+				
 				final double[] newstartpoint = paramnextframestart.currentpos;
-
 				final double newstartslope = paramnextframestart.slope;
 				final double newstartintercept = paramnextframestart.intercept;
 
 				final double[] directionstart = { (newstartpoint[0] - oldstartpoint[0]) / framediff,
 						(newstartpoint[1] - oldstartpoint[1]) / framediff };
 
-				final KalmanTrackproperties startedge = new KalmanTrackproperties(oldframenumber,labelstart.get(labelstartindex), size, oldstartpoint,
-						oldslope, oldintercept, originalslope, originalintercept,
+				final KalmanTrackproperties startedgePrevious = new KalmanTrackproperties(framenumber,labelstart, size, oldstartpoint, originalposition,
+						oldstartslope, oldstartintercept, originalslope, originalintercept,
 						PrevFrameparamstart.get(index).seedLabel, PrevFrameparamstart.get(index).originalds);
-
 				
-				
-				final KalmanTrackproperties startedgeCurrent = new KalmanTrackproperties(framenumber,labelstart.get(labelstartindex), size, newstartpoint,
+				final KalmanTrackproperties startedgeCurrent = new KalmanTrackproperties(framenumber,labelstart, size, newstartpoint, originalposition,
 						newstartslope, newstartintercept, originalslope, originalintercept,
 						PrevFrameparamstart.get(index).seedLabel, PrevFrameparamstart.get(index).originalds);
 				
-				startinprevframe.add(startedge);
+				if (KalmanCount == 1)
+				startincurrframe.add(startedgePrevious);	
+				
 				startincurrframe.add(startedgeCurrent);
 				
 				
-				}
 
 			}
 			
-			if (Allstart.size() == 0)
-				Allstart.add(startinprevframe);
-			    Allstart.add(startincurrframe);
 			for (int index = 0; index < PrevFrameparamend.size(); ++index) {
 
 				Point secondlinepoint = new Point(ndims);
 				secondlinepoint.setPosition(new long[] { (long) PrevFrameparamend.get(index).currentpos[0],
 						(long) PrevFrameparamend.get(index).currentpos[1] });
-			
+				Point fixedendpoint = new Point(ndims);
+				fixedendpoint.setPosition(new long[] { (long) PrevFrameparamend.get(index).fixedpos[0],
+						(long) PrevFrameparamend.get(index).fixedpos[1] });
 
 				final double originalslopeend = PrevFrameparamend.get(index).originalslope;
 
@@ -242,12 +239,11 @@ import graphconstructs.Trackproperties;
 				final double oldslope = PrevFrameparamend.get(index).slope;
 				final double oldintercept = PrevFrameparamend.get(index).intercept;
 				
-				ArrayList<Integer> labelend = Getlabel(secondlinepoint, originalslopeend, originalinterceptend);
+				int labelend = Getlabel(fixedendpoint, originalslopeend, originalinterceptend);
 				KalmanIndexedlength paramnextframeend;
 
-				for (int labelendindex = 0; labelendindex < labelend.size(); ++labelendindex){
-				if (labelend.get(labelendindex) != Integer.MIN_VALUE)
-					paramnextframeend = Getfinaltrackparam(PrevFrameparamend.get(index), labelend.get(labelendindex), psf, framenumber,
+				if (labelend!= Integer.MIN_VALUE)
+					paramnextframeend = Getfinaltrackparam(PrevFrameparamend.get(index), labelend, psf, framenumber,
 							StartorEnd.End);
 				else
 					paramnextframeend = PrevFrameparamend.get(index);
@@ -257,9 +253,11 @@ import graphconstructs.Trackproperties;
 				final_paramlistend.add(paramnextframeend);
 
 				final double[] oldendpoint = PrevFrameparamend.get(index).currentpos;
-
+				final double[] originalpoint = PrevFrameparamend.get(index).fixedpos;
+				final double oldstartslope = PrevFrameparamend.get(index).slope;
+				final double oldstartintercept = PrevFrameparamend.get(index).intercept;
+				
 				double[] newendpoint = paramnextframeend.currentpos;
-
 				final double newendslope = paramnextframeend.slope;
 				final double newendintercept = paramnextframeend.intercept;
 
@@ -267,23 +265,22 @@ import graphconstructs.Trackproperties;
 						(newendpoint[1] - oldendpoint[1]) / framediff };
 
 				
-
-				final KalmanTrackproperties endedge = new KalmanTrackproperties(oldframenumber, labelend.get(labelendindex), size, oldendpoint, oldslope,
-						oldintercept, originalslopeend, originalinterceptend, PrevFrameparamend.get(index).seedLabel,
-						 PrevFrameparamend.get(index).originalds);
+				final KalmanTrackproperties startedgePrevious = new KalmanTrackproperties(framenumber,labelend, size, oldendpoint, originalpoint,
+						oldstartslope, oldstartintercept, originalslopeend, originalinterceptend,
+						PrevFrameparamstart.get(index).seedLabel, PrevFrameparamstart.get(index).originalds);
 				
-				final KalmanTrackproperties endedgeCurrent = new KalmanTrackproperties(framenumber, labelend.get(labelendindex), size, newendpoint, newendslope,
+				final KalmanTrackproperties endedgeCurrent = new KalmanTrackproperties(framenumber, labelend, size, newendpoint, originalpoint, newendslope,
 						newendintercept, originalslopeend, originalinterceptend, PrevFrameparamend.get(index).seedLabel,
 						 PrevFrameparamend.get(index).originalds);
 		
 
-				endinprevframe.add(endedge);
+				if (KalmanCount == 1)
+				endincurrframe.add(startedgePrevious);
+				
 				endincurrframe.add(endedgeCurrent);
-				}
+				
 			}
-			if (Allend.size() == 0)
-				Allend.add(endinprevframe);
-			    Allend.add(endincurrframe);
+		
 			
 			
 
@@ -299,13 +296,7 @@ import graphconstructs.Trackproperties;
 			return listpair;
 		}
 
-		public ArrayList<KalmanTrackproperties> getprevstartStateVectors() {
-			return startinprevframe;
-		}
-
-		public ArrayList<KalmanTrackproperties> getprevendStateVectors() {
-			return endinprevframe;
-		}
+	
 		
 		public ArrayList<KalmanTrackproperties> getcurrstartStateVectors() {
 			return startincurrframe;
@@ -737,7 +728,7 @@ import graphconstructs.Trackproperties;
 				double inicutoffdistance = Math.abs(inistartpos[1] - iniendpos[1]);
 
 				// LM solver part
-				if (inicutoffdistance > 2) {
+				if (inicutoffdistance > 0) {
 				// LM solver part
 
 				try {
@@ -1579,7 +1570,7 @@ import graphconstructs.Trackproperties;
 			return datalist;
 		}
 
-		public ArrayList<Integer> Getlabel(final Point fixedpoint, final double originalslope, final double originalintercept) {
+		public int Getlabel(final Point fixedpoint, final double originalslope, final double originalintercept) {
 
 			
 			
@@ -1599,8 +1590,7 @@ import graphconstructs.Trackproperties;
 					intranac.setPosition(fixedpoint);
 					finallabel = intranac.get().get();
 
-					currentlabel.add(finallabel);
-					return currentlabel;
+					return finallabel;
 					
 				}
 				else{
@@ -1616,8 +1606,6 @@ import graphconstructs.Trackproperties;
 						&& fixedpoint.getIntPosition(1) <= interval.max(1)) {
 
 					finallabel = imgs.get(index).roilabel;
-					currentlabel.add(finallabel);
-					
 				}
 				
 
@@ -1626,9 +1614,8 @@ import graphconstructs.Trackproperties;
 
 			
 
-			return currentlabel;
+			return finallabel;
 		}
-
 		public static double Distance(final double[] cordone, final double[] cordtwo) {
 
 			double distance = 0;

@@ -25,7 +25,7 @@ public class KalmanTrackproperties extends AbstractEuclideanSpace implements Rea
 	private final int ID;
 	
 	/**
-	 * @param Framenumber
+	 * @param thirdDimension
 	 *            the current frame
 	 * 
 	 * @param Label
@@ -48,10 +48,11 @@ public class KalmanTrackproperties extends AbstractEuclideanSpace implements Rea
 	 *            the original magnitude of the ds vector determined.
 	 */
 	
-	public final int Framenumber;
+	public final int thirdDimension;
 	public final int Label;
 	public final double size;
 	public final double[] currentpoint;
+	public final double[] originalpoint;
 	public final double newslope;
 	public final double newintercept;
 	public final double originalslope;
@@ -63,23 +64,28 @@ public class KalmanTrackproperties extends AbstractEuclideanSpace implements Rea
 	 * CONSTRUCTORS
 	 */
 	
-	public KalmanTrackproperties(final int Framenumber, final int Label,  final double size,
-			 final double[] currentpoint, final double newslope, final double newintercept,
+	public KalmanTrackproperties(final int thirdDimension, final int Label,  final double size,
+			 final double[] currentpoint,final double[] originalpoint, final double newslope, final double newintercept,
 			final double originalslope, final double originalintercept, final int seedlabel, final double[] originalds ) {
 		super( 3 );
 		this.ID = IDcounter.incrementAndGet();
-		putFeature( FRAME, Double.valueOf( Framenumber ) );
+		putFeature( FRAME, Double.valueOf( thirdDimension ) );
 		putFeature( LABEL, Double.valueOf( Label ) );
 		
 		putFeature( CurrentXPOSITION, Double.valueOf( currentpoint[0] ) );
 		putFeature( CurrentYPOSITION, Double.valueOf( currentpoint[1] ) );
+		
+		putFeature( OriginalXPOSITION, Double.valueOf( originalpoint[0] ) );
+		putFeature( OriginalYPOSITION, Double.valueOf( originalpoint[1] ) );
+		
 		putFeature( NEWSLOPE, Double.valueOf( newslope ) );
 		putFeature( ORIGINALSLOPE, Double.valueOf( originalslope ) );
 		
 		this.Label = Label;
-		this.Framenumber = Framenumber;
+		this.thirdDimension = thirdDimension;
 		this.size = size;
 		this.currentpoint = currentpoint;
+		this.originalpoint = originalpoint;
 		this.newslope = newslope;
 		this.newintercept = newintercept;
 		this.originalslope = originalslope;
@@ -147,6 +153,12 @@ public class KalmanTrackproperties extends AbstractEuclideanSpace implements Rea
 	public static final String CurrentYPOSITION = "CurrentYPOSITION";
 	
 	/** The name of the blob X position feature. */
+	public static final String OriginalXPOSITION = "OriginalXPOSITION";
+
+	/** The name of the blob Y position feature. */
+	public static final String OriginalYPOSITION = "OriginalYPOSITION";
+	
+	/** The name of the blob X position feature. */
 	public static final String ORIGINALSLOPE = "OLDSLOPE";
 
 	/** The name of the blob Y position feature. */
@@ -192,5 +204,38 @@ public class KalmanTrackproperties extends AbstractEuclideanSpace implements Rea
 		final double thisMTlocation = currentpoint[n];
 		final double targetMTlocation = target.currentpoint[n];
 		return thisMTlocation - targetMTlocation;
+	}
+
+
+	/**
+	 * Returns the squared distance between two blobs.
+	 *
+	 * @param target
+	 *            the MT location to compare to.
+	 *
+	 * @return the distance to the current MT to target MT specified.
+	 */
+
+	public double squareDistanceTo(KalmanTrackproperties target) {
+		// Returns squared distance between the source Blob and the target Blob.
+
+		final double[] sourceLocation = this.currentpoint;
+		final double[] targetLocation = target.currentpoint;
+
+		
+    final double sourceslope =	this.originalslope;
+    final double sourceintercept = this.originalintercept;
+ 
+    
+    double distance = 0;
+		
+		
+		for (int d = 0; d < sourceLocation.length; ++d) {
+
+			distance += (sourceLocation[d] - targetLocation[d]) * (sourceLocation[d] - targetLocation[d]);
+		}
+
+		return distance;
+	
 	}
 }

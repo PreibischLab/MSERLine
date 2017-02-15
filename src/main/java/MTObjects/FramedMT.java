@@ -4,17 +4,17 @@ import java.util.ArrayList;
 
 import graphconstructs.KalmanTrackproperties;
 
-public class FramedBlob {
+public class FramedMT {
 
 	
 	public final int frame;
-	public  KalmanTrackproperties Blobs;
+	public  KalmanTrackproperties MT;
 	
 	
-	public FramedBlob( final int frame, KalmanTrackproperties Blobs ){
+	public FramedMT( final int frame, KalmanTrackproperties MT ){
 		
 		this.frame = frame;
-		this.Blobs = Blobs;
+		this.MT = MT;
 		
 	}
 	

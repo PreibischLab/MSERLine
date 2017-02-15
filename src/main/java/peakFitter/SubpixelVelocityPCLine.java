@@ -680,7 +680,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			double inicutoffdistance = Math.abs(inistartpos[1] - iniendpos[1]);
 
 			// LM solver part
-			if (inicutoffdistance > 2) {
+			if (inicutoffdistance > 0) {
 			// LM solver part
 
 			try {

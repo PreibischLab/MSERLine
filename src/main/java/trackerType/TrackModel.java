@@ -34,7 +34,7 @@ import org.jgrapht.traverse.BreadthFirstIterator;
 import org.jgrapht.traverse.DepthFirstIterator;
 import org.jgrapht.traverse.GraphIterator;
 
-import graphconstructs.Trackproperties;
+import graphconstructs.KalmanTrackproperties;
 
 
 
@@ -50,11 +50,11 @@ public class TrackModel
 	/**
 	 * The mother graph, from which all subsequent fields are calculated. This
 	 * graph is not made accessible to the outside world. Editing it must be
-	 * trough the model methods {@link #addEdge(Trackproperties, Trackproperties, double)},
-	 * {@link #removeEdge(DefaultWeightedEdge)}, {@link #removeEdge(Trackproperties, Trackproperties)}
+	 * trough the model methods {@link #addEdge(KalmanTrackproperties, KalmanTrackproperties, double)},
+	 * {@link #removeEdge(DefaultWeightedEdge)}, {@link #removeEdge(KalmanTrackproperties, KalmanTrackproperties)}
 	 * .
 	 */
-	private ListenableUndirectedGraph< Trackproperties, DefaultWeightedEdge > graph;
+	private ListenableUndirectedGraph< KalmanTrackproperties, DefaultWeightedEdge > graph;
 
 	private final MyGraphListener mgl;
 
@@ -64,7 +64,7 @@ public class TrackModel
 
 	/**
 	 * The edges that have been added to this model by
-	 * {@link #addEdge(Trackproperties, Trackproperties, double)}.
+	 * {@link #addEdge(KalmanTrackproperties, KalmanTrackproperties, double)}.
 	 * <p>
 	 * It is the parent instance responsibility to clear this field when it is
 	 * fit to do so.
@@ -74,7 +74,7 @@ public class TrackModel
 	/**
 	 * The edges that have removed from this model by
 	 * {@link #removeEdge(DefaultWeightedEdge)} or
-	 * {@link #removeEdge(Trackproperties, Trackproperties)}.
+	 * {@link #removeEdge(KalmanTrackproperties, KalmanTrackproperties)}.
 	 * <p>
 	 * It is the parent instance responsibility to clear this field when it is
 	 * fit to do so.
@@ -84,7 +84,7 @@ public class TrackModel
 	/**
 	 * The edges that have been modified in this model by changing its cost
 	 * using {@link #setEdgeWeight(DefaultWeightedEdge, double)} or modifying
-	 * the Trackpropertiess it links elsewhere.
+	 * the KalmanTrackpropertiess it links elsewhere.
 	 * <p>
 	 * It is the parent instance responsibility to clear this field when it is
 	 * fit to do so.
@@ -93,9 +93,9 @@ public class TrackModel
 
 	/**
 	 * The track IDs that have been modified, updated or created, <b>solely</b>
-	 * by removing or adding an edge. Possibly after the removal of a Trackproperties.
+	 * by removing or adding an edge. Possibly after the removal of a KalmanTrackproperties.
 	 * Tracks having edges that are <b>modified</b>, for instance by modifying a
-	 * Trackproperties it contains, will not be listed here, but must be sought from the
+	 * KalmanTrackproperties it contains, will not be listed here, but must be sought from the
 	 * {@link #edgesModified} field.
 	 * <p>
 	 * It is the parent instance responsibility to clear this field when it is
@@ -114,9 +114,9 @@ public class TrackModel
 
 	Map< DefaultWeightedEdge, Integer > edgeToID;
 
-	private Map< Integer, HashSet< Trackproperties > > connectedVertexSets;
+	private Map< Integer, HashSet< KalmanTrackproperties > > connectedVertexSets;
 
-	Map< Trackproperties, Integer > vertexToID;
+	Map< KalmanTrackproperties, Integer > vertexToID;
 
 	private Map< Integer, Boolean > visibility;
 
@@ -130,10 +130,10 @@ public class TrackModel
 
 	public TrackModel()
 	{
-		this( new SimpleWeightedGraph< Trackproperties, DefaultWeightedEdge >( DefaultWeightedEdge.class ) );
+		this( new SimpleWeightedGraph< KalmanTrackproperties, DefaultWeightedEdge >( DefaultWeightedEdge.class ) );
 	}
 
-	public TrackModel( final SimpleWeightedGraph< Trackproperties, DefaultWeightedEdge > graph )
+	public TrackModel( final SimpleWeightedGraph< KalmanTrackproperties, DefaultWeightedEdge > graph )
 	{
 		this.mgl = new MyGraphListener();
 		setGraph( graph );
@@ -152,13 +152,13 @@ public class TrackModel
 	 * @param graph
 	 *            the graph to parse for tracks.
 	 */
-	void setGraph( final SimpleWeightedGraph< Trackproperties, DefaultWeightedEdge > graph )
+	void setGraph( final SimpleWeightedGraph< KalmanTrackproperties, DefaultWeightedEdge > graph )
 	{
 		if ( null != this.graph )
 		{
 			this.graph.removeGraphListener( mgl );
 		}
-		this.graph = new ListenableUndirectedGraph< Trackproperties, DefaultWeightedEdge >( graph );
+		this.graph = new ListenableUndirectedGraph< KalmanTrackproperties, DefaultWeightedEdge >( graph );
 		this.graph.addGraphListener( mgl );
 		init( graph );
 	}
@@ -168,7 +168,7 @@ public class TrackModel
 	 */
 	void clear()
 	{
-		setGraph( new SimpleWeightedGraph< Trackproperties, DefaultWeightedEdge >( DefaultWeightedEdge.class ) );
+		setGraph( new SimpleWeightedGraph< KalmanTrackproperties, DefaultWeightedEdge >( DefaultWeightedEdge.class ) );
 	}
 
 	/**
@@ -176,16 +176,16 @@ public class TrackModel
 	 * such as a saved file. It allows specifying the exact mapping of track IDs
 	 * to the connected sets. The model content is completely replaced by the
 	 * specified parameters, including the global graph, its connected
-	 * components (both in Trackpropertiess and edges), visibility and naming.
+	 * components (both in KalmanTrackpropertiess and edges), visibility and naming.
 	 * <p>
 	 * It is the caller responsibility to ensure that the graph and provided
 	 * component are coherent. Unexpected behavior might result otherwise.
 	 *
 	 * @param graph
 	 *            the mother graph for the model.
-	 * @param trackTrackpropertiess
+	 * @param trackKalmanTrackpropertiess
 	 *            the mapping of track IDs vs the connected components as sets
-	 *            of Trackpropertiess.
+	 *            of KalmanTrackpropertiess.
 	 * @param trackEdges
 	 *            the mapping of track IDs vs the connected components as sets
 	 *            of edges.
@@ -194,14 +194,14 @@ public class TrackModel
 	 * @param trackNames
 	 *            the track names.
 	 */
-	public void from( final SimpleWeightedGraph< Trackproperties, DefaultWeightedEdge > graph, final Map<Integer, HashSet<Trackproperties>> trackTrackpropertiess, final Map< Integer, Set< DefaultWeightedEdge > > trackEdges, final Map< Integer, Boolean > trackVisibility, final Map< Integer, String > trackNames )
+	public void from( final SimpleWeightedGraph< KalmanTrackproperties, DefaultWeightedEdge > graph, final Map<Integer, HashSet<KalmanTrackproperties>> trackKalmanTrackpropertiess, final Map< Integer, Set< DefaultWeightedEdge > > trackEdges, final Map< Integer, Boolean > trackVisibility, final Map< Integer, String > trackNames )
 	{
 
 		if ( null != this.graph )
 		{
 			this.graph.removeGraphListener( mgl );
 		}
-		this.graph = new ListenableUndirectedGraph< Trackproperties, DefaultWeightedEdge >( graph );
+		this.graph = new ListenableUndirectedGraph< KalmanTrackproperties, DefaultWeightedEdge >( graph );
 		this.graph.addGraphListener( mgl );
 
 		edgesAdded.clear();
@@ -211,17 +211,17 @@ public class TrackModel
 
 		visibility = trackVisibility;
 		names = trackNames;
-		connectedVertexSets = trackTrackpropertiess;
+		connectedVertexSets = trackKalmanTrackpropertiess;
 		connectedEdgeSets = trackEdges;
 
 		// Rebuild the id maps
 		IDcounter = 0;
-		vertexToID = new HashMap< Trackproperties, Integer >();
-		for ( final Integer id : trackTrackpropertiess.keySet() )
+		vertexToID = new HashMap< KalmanTrackproperties, Integer >();
+		for ( final Integer id : trackKalmanTrackpropertiess.keySet() )
 		{
-			for ( final Trackproperties Trackproperties : trackTrackpropertiess.get( id ) )
+			for ( final KalmanTrackproperties KalmanTrackproperties : trackKalmanTrackpropertiess.get( id ) )
 			{
-				vertexToID.put( Trackproperties, id );
+				vertexToID.put( KalmanTrackproperties, id );
 			}
 			if ( id > IDcounter )
 			{
@@ -245,17 +245,17 @@ public class TrackModel
 	 * DEFAULT VISIBILIT METHODS made to be called from the mother model.
 	 */
 
-	void addTrackproperties( final Trackproperties TrackpropertiesToAdd )
+	void addKalmanTrackproperties( final KalmanTrackproperties KalmanTrackpropertiesToAdd )
 	{
-		graph.addVertex( TrackpropertiesToAdd );
+		graph.addVertex( KalmanTrackpropertiesToAdd );
 	}
 
-	void removeTrackproperties( final Trackproperties TrackpropertiesToRemove )
+	void removeKalmanTrackproperties( final KalmanTrackproperties KalmanTrackpropertiesToRemove )
 	{
-		graph.removeVertex( TrackpropertiesToRemove );
+		graph.removeVertex( KalmanTrackpropertiesToRemove );
 	}
 
-	DefaultWeightedEdge addEdge( final Trackproperties source, final Trackproperties target, final double weight )
+	DefaultWeightedEdge addEdge( final KalmanTrackproperties source, final KalmanTrackproperties target, final double weight )
 	{
 		if ( !graph.containsVertex( source ) )
 		{
@@ -270,7 +270,7 @@ public class TrackModel
 		return edge;
 	}
 
-	DefaultWeightedEdge removeEdge( final Trackproperties source, final Trackproperties target )
+	DefaultWeightedEdge removeEdge( final KalmanTrackproperties source, final KalmanTrackproperties target )
 	{
 		return graph.removeEdge( source, target );
 	}
@@ -309,24 +309,24 @@ public class TrackModel
 	 *            graph
 	 * @param function
 	 *            the function used to set values of a new vertex in the new
-	 *            graph, from the matching Trackproperties
+	 *            graph, from the matching KalmanTrackproperties
 	 * @param mappings
-	 *            a map that will receive mappings from {@link Trackproperties} to the new
+	 *            a map that will receive mappings from {@link KalmanTrackproperties} to the new
 	 *            vertices. Can be <code>null</code> if you do not want to get
 	 *            the mappings
 	 * @param <V>
 	 *            the type of the vertices.
 	 * @return a new {@link SimpleDirectedWeightedGraph}.
 	 */
-	public < V > SimpleDirectedWeightedGraph< V, DefaultWeightedEdge > copy( final VertexFactory< V > factory, final Function1< Trackproperties, V > function, final Map< Trackproperties, V > mappings )
+	public < V > SimpleDirectedWeightedGraph< V, DefaultWeightedEdge > copy( final VertexFactory< V > factory, final Function1< KalmanTrackproperties, V > function, final Map< KalmanTrackproperties, V > mappings )
 	{
 		final SimpleDirectedWeightedGraph< V, DefaultWeightedEdge > copy = new SimpleDirectedWeightedGraph< V, DefaultWeightedEdge >( DefaultWeightedEdge.class );
-		final Set< Trackproperties > Trackpropertiess = graph.vertexSet();
+		final Set< KalmanTrackproperties > KalmanTrackpropertiess = graph.vertexSet();
 		// To store mapping of old graph vs new graph
-		Map< Trackproperties, V > map;
+		Map< KalmanTrackproperties, V > map;
 		if ( null == mappings )
 		{
-			map = new HashMap< Trackproperties, V >( Trackpropertiess.size() );
+			map = new HashMap< KalmanTrackproperties, V >( KalmanTrackpropertiess.size() );
 		}
 		else
 		{
@@ -334,11 +334,11 @@ public class TrackModel
 		}
 
 		// Generate new vertices
-		for ( final Trackproperties Trackproperties : Collections.unmodifiableCollection( Trackpropertiess ) )
+		for ( final KalmanTrackproperties KalmanTrackproperties : Collections.unmodifiableCollection( KalmanTrackpropertiess ) )
 		{
 			final V vertex = factory.createVertex();
-			function.compute( Trackproperties, vertex );
-			map.put( Trackproperties, vertex );
+			function.compute( KalmanTrackproperties, vertex );
+			map.put( KalmanTrackproperties, vertex );
 			copy.addVertex( vertex );
 		}
 
@@ -363,7 +363,7 @@ public class TrackModel
 	 * 
 	 * @see org.jgrapht.Graph#containsEdge(Object, Object)
 	 */
-	public boolean containsEdge( final Trackproperties source, final Trackproperties target )
+	public boolean containsEdge( final KalmanTrackproperties source, final KalmanTrackproperties target )
 	{
 		return graph.containsEdge( source, target );
 	}
@@ -379,26 +379,26 @@ public class TrackModel
 	 * 
 	 * @see org.jgrapht.Graph#getEdge(Object, Object)
 	 */
-	public DefaultWeightedEdge getEdge( final Trackproperties source, final Trackproperties target )
+	public DefaultWeightedEdge getEdge( final KalmanTrackproperties source, final KalmanTrackproperties target )
 	{
 		return graph.getEdge( source, target );
 	}
 
 	/**
-	 * Returns the set of edges of a Trackproperties.
+	 * Returns the set of edges of a KalmanTrackproperties.
 	 * 
-	 * @param Trackproperties
-	 *            the Trackproperties.
-	 * @return the set of edges connected to this Trackproperties. Can be empty if the Trackproperties
+	 * @param KalmanTrackproperties
+	 *            the KalmanTrackproperties.
+	 * @return the set of edges connected to this KalmanTrackproperties. Can be empty if the KalmanTrackproperties
 	 *         does not have any edge.
 	 * 
 	 * @see org.jgrapht.Graph#edgesOf(Object)
 	 */
-	public Set< DefaultWeightedEdge > edgesOf( final Trackproperties Trackproperties )
+	public Set< DefaultWeightedEdge > edgesOf( final KalmanTrackproperties KalmanTrackproperties )
 	{
-		if ( graph.containsVertex( Trackproperties ) )
+		if ( graph.containsVertex( KalmanTrackproperties ) )
 		{
-			return graph.edgesOf( Trackproperties );
+			return graph.edgesOf( KalmanTrackproperties );
 		}
 		else
 		{
@@ -431,35 +431,35 @@ public class TrackModel
 	 * 
 	 * @see org.jgrapht.Graph#vertexSet()
 	 */
-	public Set< Trackproperties > vertexSet()
+	public Set< KalmanTrackproperties > vertexSet()
 	{
 		return graph.vertexSet();
 	}
 
 	/**
-	 * Returns the source Trackproperties of the specified edge.
+	 * Returns the source KalmanTrackproperties of the specified edge.
 	 * 
 	 * @param e
 	 *            the edge.
-	 * @return the source Trackproperties of this edge.
+	 * @return the source KalmanTrackproperties of this edge.
 	 * 
 	 * @see org.jgrapht.Graph#getEdgeSource(Object)
 	 */
-	public Trackproperties getEdgeSource( final DefaultWeightedEdge e )
+	public KalmanTrackproperties getEdgeSource( final DefaultWeightedEdge e )
 	{
 		return graph.getEdgeSource( e );
 	}
 
 	/**
-	 * Returns the target Trackproperties of the specified edge.
+	 * Returns the target KalmanTrackproperties of the specified edge.
 	 * 
 	 * @param e
 	 *            the edge.
-	 * @return the target Trackproperties of this edge.
+	 * @return the target KalmanTrackproperties of this edge.
 	 * 
 	 * @see org.jgrapht.Graph#getEdgeTarget(Object)
 	 */
-	public Trackproperties getEdgeTarget( final DefaultWeightedEdge e )
+	public KalmanTrackproperties getEdgeTarget( final DefaultWeightedEdge e )
 	{
 		return graph.getEdgeTarget( e );
 	}
@@ -616,13 +616,13 @@ public class TrackModel
 	}
 
 	/**
-	 * Returns the Trackpropertiess of the track with the specified ID.
+	 * Returns the KalmanTrackpropertiess of the track with the specified ID.
 	 *
 	 * @param trackID
 	 *            the track ID.
-	 * @return the set of Trackpropertiess.
+	 * @return the set of KalmanTrackpropertiess.
 	 */
-	public HashSet< Trackproperties > trackTrackpropertiess( final Integer trackID )
+	public HashSet< KalmanTrackproperties > trackKalmanTrackpropertiess( final Integer trackID )
 	{
 		return connectedVertexSets.get( trackID );
 	}
@@ -661,17 +661,17 @@ public class TrackModel
 	}
 
 	/**
-	 * Returns the track ID the specified Trackproperties belong to, or <code>null</code>
-	 * if the specified Trackproperties cannot be found in this model.
+	 * Returns the track ID the specified KalmanTrackproperties belong to, or <code>null</code>
+	 * if the specified KalmanTrackproperties cannot be found in this model.
 	 * 
-	 * @param Trackproperties
-	 *            the Trackproperties to search for.
+	 * @param KalmanTrackproperties
+	 *            the KalmanTrackproperties to search for.
 	 *
 	 * @return the track ID it belongs to.
 	 */
-	public Integer trackIDOf( final Trackproperties Trackproperties )
+	public Integer trackIDOf( final KalmanTrackproperties KalmanTrackproperties )
 	{
-		return vertexToID.get( Trackproperties );
+		return vertexToID.get( KalmanTrackproperties );
 	}
 
 	/*
@@ -685,14 +685,14 @@ public class TrackModel
 	 * @param graph
 	 *            the graph to read edges and vertices from.
 	 */
-	private void init( final UndirectedGraph< Trackproperties, DefaultWeightedEdge > graph )
+	private void init( final UndirectedGraph< KalmanTrackproperties, DefaultWeightedEdge > graph )
 	{
-		vertexToID = new HashMap< Trackproperties, Integer >();
+		vertexToID = new HashMap< KalmanTrackproperties, Integer >();
 		edgeToID = new HashMap< DefaultWeightedEdge, Integer >();
 		IDcounter = 0;
 		visibility = new HashMap< Integer, Boolean >();
 		names = new HashMap< Integer, String >();
-		connectedVertexSets = new HashMap< Integer, HashSet< Trackproperties > >();
+		connectedVertexSets = new HashMap< Integer, HashSet< KalmanTrackproperties > >();
 		connectedEdgeSets = new HashMap< Integer, Set< DefaultWeightedEdge > >();
 
 		edgesAdded.clear();
@@ -700,10 +700,10 @@ public class TrackModel
 		edgesRemoved.clear();
 		tracksUpdated.clear();
 
-		final Set< Trackproperties > vertexSet = graph.vertexSet();
+		final Set< KalmanTrackproperties > vertexSet = graph.vertexSet();
 		if ( vertexSet.size() > 0 )
 		{
-			final BreadthFirstIterator< Trackproperties, DefaultWeightedEdge > i = new BreadthFirstIterator< Trackproperties, DefaultWeightedEdge >( graph, null );
+			final BreadthFirstIterator< KalmanTrackproperties, DefaultWeightedEdge > i = new BreadthFirstIterator< KalmanTrackproperties, DefaultWeightedEdge >( graph, null );
 			i.addTraversalListener( new MyTraversalListener() );
 
 			while ( i.hasNext() )
@@ -763,20 +763,20 @@ public class TrackModel
 	 */
 
 	/**
-	 * Returns a new depth first iterator over the Trackpropertiess connected by links in
+	 * Returns a new depth first iterator over the KalmanTrackpropertiess connected by links in
 	 * this model. A boolean flag allow to set whether the returned iterator
 	 * does take into account the edge direction. If true, the iterator will not
 	 * be able to iterate backward in time.
 	 *
 	 * @param start
-	 *            the Trackproperties to start iteration with. Can be <code>null</code>,
+	 *            the KalmanTrackproperties to start iteration with. Can be <code>null</code>,
 	 *            then the start will be taken randomly and will traverse all
 	 *            the links.
 	 * @param directed
 	 *            if true returns a directed iterator, undirected if false.
 	 * @return a new depth-first iterator.
 	 */
-	public GraphIterator< Trackproperties, DefaultWeightedEdge > getDepthFirstIterator( final Trackproperties start, final boolean directed )
+	public GraphIterator< KalmanTrackproperties, DefaultWeightedEdge > getDepthFirstIterator( final KalmanTrackproperties start, final boolean directed )
 	{
 		if ( directed )
 		{
@@ -784,19 +784,19 @@ public class TrackModel
 		}
 		else
 		{
-			return new DepthFirstIterator< Trackproperties, DefaultWeightedEdge >( graph, start );
+			return new DepthFirstIterator< KalmanTrackproperties, DefaultWeightedEdge >( graph, start );
 		}
 	}
 
 	/**
-	 * Returns a new depth first iterator over the Trackpropertiess connected by links in
+	 * Returns a new depth first iterator over the KalmanTrackpropertiess connected by links in
 	 * this model. This iterator is sorted: when branching, it chooses the next
 	 * vertex according to a specified comparator. A boolean flag allow to set
 	 * whether the returned iterator does take into account the edge direction.
 	 * If true, the iterator will not be able to iterate backward in time.
 	 *
 	 * @param start
-	 *            the Trackproperties to start iteration with. Can be <code>null</code>,
+	 *            the KalmanTrackproperties to start iteration with. Can be <code>null</code>,
 	 *            then the start will be taken randomly and will traverse all
 	 *            the links.
 	 * @param directed
@@ -806,7 +806,7 @@ public class TrackModel
 	 *            branching.
 	 * @return a new depth-first iterator.
 	 */
-	public SortedDepthFirstIterator< Trackproperties, DefaultWeightedEdge > getSortedDepthFirstIterator( final Trackproperties start, final Comparator< Trackproperties > comparator, final boolean directed )
+	public SortedDepthFirstIterator< KalmanTrackproperties, DefaultWeightedEdge > getSortedDepthFirstIterator( final KalmanTrackproperties start, final Comparator< KalmanTrackproperties > comparator, final boolean directed )
 	{
 		if ( directed )
 		{
@@ -814,7 +814,7 @@ public class TrackModel
 		}
 		else
 		{
-			return new SortedDepthFirstIterator< Trackproperties, DefaultWeightedEdge >( graph, start, comparator );
+			return new SortedDepthFirstIterator< KalmanTrackproperties, DefaultWeightedEdge >( graph, start, comparator );
 		}
 	}
 
@@ -824,25 +824,25 @@ public class TrackModel
 	}
 
 	/**
-	 * Returns the shortest path between two connected Trackproperties, using Dijkstra's
+	 * Returns the shortest path between two connected KalmanTrackproperties, using Dijkstra's
 	 * algorithm. The edge weights, if any, are ignored here, meaning that the
 	 * returned path is the shortest in terms of number of edges.
 	 * <p>
-	 * Returns <code>null</code> if the two Trackpropertiess are not connected by a track,
-	 * or if one of the Trackproperties do not belong to the graph, or if the graph field
+	 * Returns <code>null</code> if the two KalmanTrackpropertiess are not connected by a track,
+	 * or if one of the KalmanTrackproperties do not belong to the graph, or if the graph field
 	 * is <code>null</code>.
 	 *
 	 * @param source
-	 *            the Trackproperties to start the path with
+	 *            the KalmanTrackproperties to start the path with
 	 * @param target
-	 *            the Trackproperties to stop the path with
+	 *            the KalmanTrackproperties to stop the path with
 	 * @return the shortest path, as a list of edges.
 	 */
-	public List< DefaultWeightedEdge > dijkstraShortestPath( final Trackproperties source, final Trackproperties target )
+	public List< DefaultWeightedEdge > dijkstraShortestPath( final KalmanTrackproperties source, final KalmanTrackproperties target )
 	{
 		if ( null == graph ) { return null; }
-		final AsUnweightedGraph< Trackproperties, DefaultWeightedEdge > unWeightedGrah = new AsUnweightedGraph< Trackproperties, DefaultWeightedEdge >( graph );
-		final DijkstraShortestPath< Trackproperties, DefaultWeightedEdge > pathFinder = new DijkstraShortestPath< Trackproperties, DefaultWeightedEdge >( unWeightedGrah, source, target );
+		final AsUnweightedGraph< KalmanTrackproperties, DefaultWeightedEdge > unWeightedGrah = new AsUnweightedGraph< KalmanTrackproperties, DefaultWeightedEdge >( graph );
+		final DijkstraShortestPath< KalmanTrackproperties, DefaultWeightedEdge > pathFinder = new DijkstraShortestPath< KalmanTrackproperties, DefaultWeightedEdge >( unWeightedGrah, source, target );
 		final List< DefaultWeightedEdge > path = pathFinder.getPathEdgeList();
 		return path;
 	}
@@ -851,9 +851,9 @@ public class TrackModel
 	 * Inner Classes
 	 */
 
-	private class MyTraversalListener implements TraversalListener< Trackproperties, DefaultWeightedEdge >
+	private class MyTraversalListener implements TraversalListener< KalmanTrackproperties, DefaultWeightedEdge >
 	{
-		private HashSet<Trackproperties> currentConnectedVertexSet;
+		private HashSet<KalmanTrackproperties> currentConnectedVertexSet;
 
 		private Set< DefaultWeightedEdge > currentConnectedEdgeSet;
 
@@ -874,7 +874,7 @@ public class TrackModel
 				{
 					edgeToID.remove( e );
 				}
-				for ( final Trackproperties v : currentConnectedVertexSet )
+				for ( final KalmanTrackproperties v : currentConnectedVertexSet )
 				{
 					vertexToID.remove( v );
 				}
@@ -893,7 +893,7 @@ public class TrackModel
 		@Override
 		public void connectedComponentStarted( final ConnectedComponentTraversalEvent e )
 		{
-			currentConnectedVertexSet = new HashSet< Trackproperties >();
+			currentConnectedVertexSet = new HashSet< KalmanTrackproperties >();
 			currentConnectedEdgeSet = new HashSet< DefaultWeightedEdge >();
 			ID = IDcounter++;
 		}
@@ -902,15 +902,15 @@ public class TrackModel
 		 * @see TraversalListenerAdapter#vertexTraversed(VertexTraversalEvent)
 		 */
 		@Override
-		public void vertexTraversed( final VertexTraversalEvent< Trackproperties > event )
+		public void vertexTraversed( final VertexTraversalEvent< KalmanTrackproperties > event )
 		{
-			final Trackproperties v = event.getVertex();
+			final KalmanTrackproperties v = event.getVertex();
 			currentConnectedVertexSet.add( v );
 			vertexToID.put( v, ID );
 		}
 
 		@Override
-		public void edgeTraversed( final EdgeTraversalEvent< Trackproperties, DefaultWeightedEdge > event )
+		public void edgeTraversed( final EdgeTraversalEvent< KalmanTrackproperties, DefaultWeightedEdge > event )
 		{
 			final DefaultWeightedEdge e = event.getEdge();
 			currentConnectedEdgeSet.add( e );
@@ -918,7 +918,7 @@ public class TrackModel
 		}
 
 		@Override
-		public void vertexFinished( final VertexTraversalEvent< Trackproperties > e )
+		public void vertexFinished( final VertexTraversalEvent< KalmanTrackproperties > e )
 		{}
 	}
 
@@ -928,16 +928,16 @@ public class TrackModel
 	 * <p>
 	 * By complex change, we mean the changes occurring in the graph caused by
 	 * another change that was initiated manually by the user. For instance,
-	 * imagine we have a simple track branch made of 5 Trackpropertiess that link linearly,
+	 * imagine we have a simple track branch made of 5 KalmanTrackpropertiess that link linearly,
 	 * like this:
 	 *
 	 * <pre>
 	 * S1 - S2 - S3 - S4 - S5
 	 * </pre>
 	 *
-	 * The user might want to remove the S3 Trackproperties, in the middle of the track. On
+	 * The user might want to remove the S3 KalmanTrackproperties, in the middle of the track. On
 	 * top of the track rearrangement, that is dealt with elsewhere in the model
-	 * class, this Trackproperties removal also triggers 2 edges removal: the links S2-S3
+	 * class, this KalmanTrackproperties removal also triggers 2 edges removal: the links S2-S3
 	 * and S3-S4 disappear. The only way for the {@link TrackModel} to be aware
 	 * of that, and to forward these events to its listener, is to listen itself
 	 * to the {@link #graph} that store links.
@@ -945,13 +945,13 @@ public class TrackModel
 	 * This is done through this class. This class is notified every time a
 	 * change occur in the {@link #graph}:
 	 * <ul>
-	 * <li>It ignores events triggered by Trackpropertiess being added or removed, because
+	 * <li>It ignores events triggered by KalmanTrackpropertiess being added or removed, because
 	 * they can't be triggered automatically, and are dealt with in the
-	 * {@link TrackModel#addTrackpropertiesTo(Trackproperties, Integer)} and
-	 * {@link TrackModel#removeTrackproperties(Trackproperties, Integer)} methods.
+	 * {@link TrackModel#addKalmanTrackpropertiesTo(KalmanTrackproperties, Integer)} and
+	 * {@link TrackModel#removeKalmanTrackproperties(KalmanTrackproperties, Integer)} methods.
 	 * <li>It catches all events triggered by a link being added or removed in
 	 * the graph, whether they are triggered manually through a call to a model
-	 * method such as {@link TrackModel#addEdge(Trackproperties, Trackproperties, double)}, or
+	 * method such as {@link TrackModel#addEdge(KalmanTrackproperties, KalmanTrackproperties, double)}, or
 	 * triggered by another call. They are used to build the
 	 * {@link TrackModel#edgesAdded} and {@link TrackModel#edgesRemoved} fields,
 	 * that will be used to notify listeners of the model.
@@ -959,24 +959,24 @@ public class TrackModel
 	 * @author Jean-Yves Tinevez &lt;jeanyves.tinevez@gmail.com&gt; Aug 12, 2011
 	 *
 	 */
-	private class MyGraphListener implements GraphListener< Trackproperties, DefaultWeightedEdge >
+	private class MyGraphListener implements GraphListener< KalmanTrackproperties, DefaultWeightedEdge >
 	{
 
 		@Override
-		public void vertexAdded( final GraphVertexChangeEvent< Trackproperties > event )
+		public void vertexAdded( final GraphVertexChangeEvent< KalmanTrackproperties > event )
 		{}
 
 		@Override
-		public void vertexRemoved( final GraphVertexChangeEvent< Trackproperties > event )
+		public void vertexRemoved( final GraphVertexChangeEvent< KalmanTrackproperties > event )
 		{
 			if ( null == connectedEdgeSets ) { return; }
 
-			final Trackproperties v = event.getVertex();
+			final KalmanTrackproperties v = event.getVertex();
 			vertexToID.remove( v );
 			final Integer id = vertexToID.get( v );
 			if ( id != null )
 			{
-				final Set< Trackproperties > set = connectedVertexSets.get( id );
+				final Set< KalmanTrackproperties > set = connectedVertexSets.get( id );
 				if ( null == set ) { return; // it was removed when removing the
 												// last edge of a track, most
 												// likely.
@@ -994,7 +994,7 @@ public class TrackModel
 		}
 
 		@Override
-		public void edgeAdded( final GraphEdgeChangeEvent< Trackproperties, DefaultWeightedEdge > event )
+		public void edgeAdded( final GraphEdgeChangeEvent< KalmanTrackproperties, DefaultWeightedEdge > event )
 		{
 			// To signal to ModelChangeListener
 			edgesAdded.add( event.getEdge() );
@@ -1009,9 +1009,9 @@ public class TrackModel
 			final DefaultWeightedEdge e = event.getEdge();
 
 			// Was it added to known tracks?
-			final Trackproperties sv = graph.getEdgeSource( e );
+			final KalmanTrackproperties sv = graph.getEdgeSource( e );
 			final Integer sid = vertexToID.get( sv );
-			final Trackproperties tv = graph.getEdgeTarget( e );
+			final KalmanTrackproperties tv = graph.getEdgeTarget( e );
 			final Integer tid = vertexToID.get( tv );
 
 			if ( null != tid && null != sid )
@@ -1044,9 +1044,9 @@ public class TrackModel
 					nes.add( e );
 
 					// Vertices:
-					final Set< Trackproperties > svs = connectedVertexSets.get( sid );
-					final Set< Trackproperties > tvs = connectedVertexSets.get( tid );
-					final HashSet< Trackproperties > nvs = new HashSet< Trackproperties >( ses.size() + tes.size() );
+					final Set< KalmanTrackproperties > svs = connectedVertexSets.get( sid );
+					final Set< KalmanTrackproperties > tvs = connectedVertexSets.get( tid );
+					final HashSet< KalmanTrackproperties > nvs = new HashSet< KalmanTrackproperties >( ses.size() + tes.size() );
 					nvs.addAll( svs );
 					nvs.addAll( tvs );
 
@@ -1055,7 +1055,7 @@ public class TrackModel
 					{
 						nid = sid;
 						rid = tid;
-						for ( final Trackproperties v : tvs )
+						for ( final KalmanTrackproperties v : tvs )
 						{
 							// Vertices of target set change id
 							vertexToID.put( v, nid );
@@ -1069,7 +1069,7 @@ public class TrackModel
 					{
 						nid = tid;
 						rid = sid;
-						for ( final Trackproperties v : svs )
+						for ( final KalmanTrackproperties v : svs )
 						{
 							// Vertices of source set change id
 							vertexToID.put( v, nid );
@@ -1105,7 +1105,7 @@ public class TrackModel
 			{
 				// Case 4: the edge was added between two lonely vertices.
 				// Create a new set id from this
-				final HashSet< Trackproperties > nvs = new HashSet< Trackproperties >( 2 );
+				final HashSet< KalmanTrackproperties > nvs = new HashSet< KalmanTrackproperties >( 2 );
 				nvs.add( graph.getEdgeSource( e ) );
 				nvs.add( graph.getEdgeTarget( e ) );
 
@@ -1159,7 +1159,7 @@ public class TrackModel
 		}
 
 		@Override
-		public void edgeRemoved( final GraphEdgeChangeEvent< Trackproperties, DefaultWeightedEdge > event )
+		public void edgeRemoved( final GraphEdgeChangeEvent< KalmanTrackproperties, DefaultWeightedEdge > event )
 		{
 			// To signal to ModelChangeListeners
 			edgesRemoved.add( event.getEdge() );
@@ -1191,11 +1191,11 @@ public class TrackModel
 				names.remove( id );
 				visibility.remove( id );
 				/* We need to remove also the vertices */
-				final Set< Trackproperties > vertexSet = connectedVertexSets.get( id );
+				final Set< KalmanTrackproperties > vertexSet = connectedVertexSets.get( id );
 				// Forget the vertices were in a set
-				for ( final Trackproperties Trackproperties : vertexSet )
+				for ( final KalmanTrackproperties KalmanTrackproperties : vertexSet )
 				{
-					vertexToID.remove( Trackproperties );
+					vertexToID.remove( KalmanTrackproperties );
 				}
 				// Forget the vertex set
 				connectedVertexSets.remove( id );
@@ -1213,29 +1213,29 @@ public class TrackModel
 				// So there are some edges remaining in the set.
 				// Look at the connected component of its source and target.
 				// Source
-				final HashSet< Trackproperties > sourceVCS = new HashSet< Trackproperties >();
+				final HashSet< KalmanTrackproperties > sourceVCS = new HashSet< KalmanTrackproperties >();
 				final HashSet< DefaultWeightedEdge > sourceECS = new HashSet< DefaultWeightedEdge >();
 				{
-					final Trackproperties source = graph.getEdgeSource( e );
+					final KalmanTrackproperties source = graph.getEdgeSource( e );
 					// Get its connected set
-					final BreadthFirstIterator< Trackproperties, DefaultWeightedEdge > i = new BreadthFirstIterator< Trackproperties, DefaultWeightedEdge >( graph, source );
+					final BreadthFirstIterator< KalmanTrackproperties, DefaultWeightedEdge > i = new BreadthFirstIterator< KalmanTrackproperties, DefaultWeightedEdge >( graph, source );
 					while ( i.hasNext() )
 					{
-						final Trackproperties sv = i.next();
+						final KalmanTrackproperties sv = i.next();
 						sourceVCS.add( sv );
 						sourceECS.addAll( graph.edgesOf( sv ) );
 					}
 				}
 				// Target
-				final HashSet< Trackproperties > targetVCS = new HashSet< Trackproperties >();
+				final HashSet< KalmanTrackproperties > targetVCS = new HashSet< KalmanTrackproperties >();
 				final HashSet< DefaultWeightedEdge > targetECS = new HashSet< DefaultWeightedEdge >();
 				{
-					final Trackproperties target = graph.getEdgeTarget( e );
+					final KalmanTrackproperties target = graph.getEdgeTarget( e );
 					// Get its connected set
-					final BreadthFirstIterator< Trackproperties, DefaultWeightedEdge > i = new BreadthFirstIterator< Trackproperties, DefaultWeightedEdge >( graph, target );
+					final BreadthFirstIterator< KalmanTrackproperties, DefaultWeightedEdge > i = new BreadthFirstIterator< KalmanTrackproperties, DefaultWeightedEdge >( graph, target );
 					while ( i.hasNext() )
 					{
-						final Trackproperties sv = i.next();
+						final KalmanTrackproperties sv = i.next();
 						targetVCS.add( sv );
 						targetECS.addAll( graph.edgesOf( sv ) );
 					}
@@ -1283,7 +1283,7 @@ public class TrackModel
 							edgeToID.put( te, newid );
 						}
 						connectedVertexSets.put( newid, sourceVCS );
-						for ( final Trackproperties tv : sourceVCS )
+						for ( final KalmanTrackproperties tv : sourceVCS )
 						{
 							vertexToID.put( tv, newid );
 						}
@@ -1301,7 +1301,7 @@ public class TrackModel
 						 * Nothing remains from the smallest part. The remaining
 						 * solitary vertex has no right to be called a track.
 						 */
-						final Trackproperties solitary = sourceVCS.iterator().next();
+						final KalmanTrackproperties solitary = sourceVCS.iterator().next();
 						vertexToID.remove( solitary );
 					}
 
@@ -1327,7 +1327,7 @@ public class TrackModel
 								edgeToID.put( te, newid );
 							}
 							connectedVertexSets.put( newid, targetVCS );
-							for ( final Trackproperties v : targetVCS )
+							for ( final KalmanTrackproperties v : targetVCS )
 							{
 								vertexToID.put( v, newid );
 							}
@@ -1345,7 +1345,7 @@ public class TrackModel
 							 * remaining solitary vertex has no right to be
 							 * called a track.
 							 */
-							final Trackproperties solitary = targetVCS.iterator().next();
+							final KalmanTrackproperties solitary = targetVCS.iterator().next();
 							vertexToID.remove( solitary );
 						}
 

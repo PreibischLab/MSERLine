@@ -11,12 +11,12 @@ import ij.gui.Line;
 import ij.gui.Overlay;
 
 
-public class DisplayGraph {
+public class DisplayGraphKalman {
 	// add listener to the imageplus slice slider
 	private ImagePlus imp;
-	private final SimpleWeightedGraph<double[], DefaultWeightedEdge> graph;
+	private final SimpleWeightedGraph<KalmanTrackproperties, DefaultWeightedEdge> graph;
 	
-	public DisplayGraph(final ImagePlus imp, SimpleWeightedGraph<double[], DefaultWeightedEdge> graph){
+	public DisplayGraphKalman(final ImagePlus imp, SimpleWeightedGraph<KalmanTrackproperties, DefaultWeightedEdge> graph){
 		
 		this.imp = imp;
 		this.graph = graph;
@@ -49,10 +49,10 @@ public class DisplayGraph {
 			o.clear();
 			for (DefaultWeightedEdge e : graph.edgeSet()) {
 				
-		        final double[] startedge = graph.getEdgeSource(e);
-		        final double[] targetedge = graph.getEdgeTarget(e);
+		        final KalmanTrackproperties startedge = graph.getEdgeSource(e);
+		        final KalmanTrackproperties targetedge = graph.getEdgeTarget(e);
 		        
-		        Line newline = new Line(startedge[0], startedge[1], targetedge[0], targetedge[1]);
+		        Line newline = new Line(startedge.currentpoint[0], startedge.currentpoint[1], targetedge.currentpoint[0], targetedge.currentpoint[1]);
 				newline.setStrokeColor(Color.RED);
 				newline.setStrokeWidth(0.8);
 				o.add(newline);
@@ -66,3 +66,4 @@ public class DisplayGraph {
 	}
 	
 }
+

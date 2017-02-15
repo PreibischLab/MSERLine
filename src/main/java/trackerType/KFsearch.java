@@ -15,7 +15,7 @@ import java.util.Iterator;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
 
-import MTObjects.FramedBlob;
+import MTObjects.FramedMT;
 import MTObjects.Subgraphs;
 import costMatrix.CostFunction;
 import costMatrix.JaqamanLinkingCostMatrixCreator;
@@ -41,7 +41,7 @@ public class KFsearch implements MTTracker {
 	private final int maxframeGap;
 
 	private SimpleWeightedGraph<KalmanTrackproperties, DefaultWeightedEdge> graph;
-	private ArrayList<FramedBlob> Allmeasured;
+	private ArrayList<FramedMT> Allmeasured;
 	private ArrayList<Subgraphs> Framedgraph;
 
 	protected Logger logger = Logger.DEFAULT_LOGGER;
@@ -64,7 +64,7 @@ public class KFsearch implements MTTracker {
 		return graph;
 	}
 
-	public ArrayList<FramedBlob> getFramelist() {
+	public ArrayList<FramedMT> getFramelist() {
 
 		return Allmeasured;
 	}
@@ -87,13 +87,13 @@ public class KFsearch implements MTTracker {
 		 */
 
 		graph = new SimpleWeightedGraph<KalmanTrackproperties, DefaultWeightedEdge>(DefaultWeightedEdge.class);
-		Allmeasured = new ArrayList<FramedBlob>();
+		Allmeasured = new ArrayList<FramedMT>();
 		Framedgraph = new ArrayList<Subgraphs>();
 
 		// Find first two non-zero frames containing blobs
 
 		int Firstframe = 0;
-		int Secondframe = 0;
+		int Secondframe = 1;
 
 		for (int frame = 0; frame < maxframe; ++frame) {
 
@@ -129,21 +129,19 @@ public class KFsearch implements MTTracker {
 		 * search radius, then the fluoctuations over predicted states are
 		 * large.
 		 */
-		final double positionProcessStd = maxsearchRadius / 3d;
-		final double velocityProcessStd = maxsearchRadius / 3d;
+		final double positionProcessStd = maxsearchRadius / 2d;
+		final double velocityProcessStd = maxsearchRadius / 2d;
 
 		
 		double meanSpotRadius = 0d;
 		for (final KalmanTrackproperties MT : Secondorphan) {
 			
 			
-			
-			
-			meanSpotRadius += MT.size ;
+			meanSpotRadius += MT.size  ;
 			
 		}
 		meanSpotRadius /= Secondorphan.size();
-		final double positionMeasurementStd = meanSpotRadius / 10d;
+		final double positionMeasurementStd =  meanSpotRadius ;
 
 		final Map<CVMKalmanFilter, KalmanTrackproperties> kalmanFiltersMap = new HashMap<CVMKalmanFilter, KalmanTrackproperties>(
 				Secondorphan.size());
@@ -158,8 +156,7 @@ public class KFsearch implements MTTracker {
 
 			List<KalmanTrackproperties> measurements = AllMT.get(frame);
 
-			System.out.println("Doing KF search in frame number: " + frame + " " + "Number of blobs:"
-					+ AllMT.get(frame).size());
+			System.out.println("Doing KF search in frame number: " + frame );
 
 			// Make the preditiction map
 			final Map<ComparableRealPoint, CVMKalmanFilter> predictionMap = new HashMap<ComparableRealPoint, CVMKalmanFilter>(
@@ -206,7 +203,6 @@ public class KFsearch implements MTTracker {
 					// Create links for found match.
 					final KalmanTrackproperties source = kalmanFiltersMap.get(kf);
 					final KalmanTrackproperties target = agnts.get(cm);
-
 					graph.addVertex(source);
 					graph.addVertex(target);
 					final DefaultWeightedEdge edge = graph.addEdge(source, target);
@@ -221,16 +217,16 @@ public class KFsearch implements MTTracker {
 					Subgraphs currentframegraph = new Subgraphs(frame - 1, frame, subgraph);
 
 					Framedgraph.add(currentframegraph);
-					final FramedBlob prevframedBlob = new FramedBlob(frame - 1, source);
+					final FramedMT prevframedMT = new FramedMT(frame - 1, source);
 
-					Allmeasured.add(prevframedBlob);
+					Allmeasured.add(prevframedMT);
 
-					final FramedBlob newframedBlob = new FramedBlob(frame, target);
+					final FramedMT newframedMT = new FramedMT(frame, target);
 
-					Allmeasured.add(newframedBlob);
+					Allmeasured.add(newframedMT);
 
 					// Update Kalman filter
-					kf.update(MeasureBlob(target));
+					kf.update(MeasureMT(target));
 
 					// Update Kalman track KalmanTrackproperties
 					kalmanFiltersMap.put(kf, target);
@@ -256,7 +252,7 @@ public class KFsearch implements MTTracker {
 				final JaqamanLinker<KalmanTrackproperties, KalmanTrackproperties> newLinker = new JaqamanLinker<KalmanTrackproperties, KalmanTrackproperties>(
 						ic);
 				if (!newLinker.checkInput() || !newLinker.process()) {
-					errorMessage = BASE_ERROR_MSG + "Error linking Blobs from frame " + (frame - 1) + " to frame "
+					errorMessage = BASE_ERROR_MSG + "Error linking MT from frame " + (frame - 1) + " to frame "
 							+ frame + ": " + newLinker.getErrorMessage();
 					return false;
 				}
@@ -272,6 +268,7 @@ public class KFsearch implements MTTracker {
 
 					// Derive initial state and create Kalman filter.
 					final double[] XP = estimateInitialState(source, target);
+					
 					final CVMKalmanFilter kt = new CVMKalmanFilter(XP, Double.MIN_NORMAL, positionProcessStd,
 							velocityProcessStd, positionMeasurementStd);
 					// We trust the initial state a lot.
@@ -295,13 +292,13 @@ public class KFsearch implements MTTracker {
 
 					Framedgraph.add(currentframegraph);
 
-					final FramedBlob prevframedBlob = new FramedBlob(frame - 1, source);
+					final FramedMT prevframedMT = new FramedMT(frame - 1, source);
 
-					Allmeasured.add(prevframedBlob);
+					Allmeasured.add(prevframedMT);
 
-					final FramedBlob newframedBlob = new FramedBlob(frame, target);
+					final FramedMT newframedMT = new FramedMT(frame, target);
 
-					Allmeasured.add(newframedBlob);
+					Allmeasured.add(newframedMT);
 
 				}
 			}
@@ -367,7 +364,7 @@ public class KFsearch implements MTTracker {
 	
 	
 
-	private static final double[] MeasureBlob(final KalmanTrackproperties target) {
+	private static final double[] MeasureMT(final KalmanTrackproperties target) {
 		final double[] location = new double[] { target.currentpoint[0], target.currentpoint[1] };
 		return location;
 	}
@@ -375,7 +372,7 @@ public class KFsearch implements MTTracker {
 
 	private static final double[] estimateInitialState(final KalmanTrackproperties first, final KalmanTrackproperties second) {
 		final double[] xp = new double[] { second.currentpoint[0], second.currentpoint[1], second.diffTo(first, 0),
-				second.diffTo(first, 1), second.diffTo(first, 2) };
+				second.diffTo(first, 1)};
 		return xp;
 	}
 

@@ -1,6 +1,6 @@
 package costMatrix;
 
-import graphconstructs.Trackproperties;
+import graphconstructs.KalmanTrackproperties;
 
 /**
  * Implementation of various cost functions
@@ -10,15 +10,14 @@ import graphconstructs.Trackproperties;
 
 // Cost function base don minimizing the squared distances
 
-public class SquareDistCostFunction implements CostFunction< Trackproperties, Trackproperties >
+public class SquareDistCostFunction implements CostFunction< KalmanTrackproperties, KalmanTrackproperties >
 {
 
 	@Override
-	public double linkingCost( final Trackproperties source, final Trackproperties target )
+	public double linkingCost( final KalmanTrackproperties source, final KalmanTrackproperties target )
 	{
 		
-		return 0;
-		//return source.squareDistanceTo(target );
+		return source.squareDistanceTo(target );
 	}
 	
 	
