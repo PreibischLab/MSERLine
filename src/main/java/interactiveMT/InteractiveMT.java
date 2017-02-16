@@ -2,6 +2,7 @@ package interactiveMT;
 
 import java.awt.BorderLayout;
 import java.awt.Button;
+import java.awt.CardLayout;
 import java.awt.Checkbox;
 import java.awt.CheckboxGroup;
 import java.awt.Color;
@@ -9,6 +10,7 @@ import java.awt.Font;
 import java.awt.Frame;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.Image;
 import java.awt.Insets;
 import java.awt.Label;
 import java.awt.Rectangle;
@@ -29,7 +31,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.security.spec.MGF1ParameterSpec;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,13 +39,26 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.imageio.ImageIO;
+import javax.swing.AbstractAction;
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JDialog;
+import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
-import javax.swing.JScrollPane;
-import javax.swing.border.EmptyBorder;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
+import javax.swing.text.PlainDocument;
 
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
@@ -53,13 +67,11 @@ import com.sun.tools.javac.util.Pair;
 
 import LineModels.UseLineModel.UserChoiceModel;
 import costMatrix.CostFunction;
-import costMatrix.IntensityDiffCostFunction;
 import costMatrix.SquareDistCostFunction;
 import drawandOverlay.DisplayGraph;
 import drawandOverlay.DisplayGraphKalman;
 import drawandOverlay.DisplaysubGraphend;
 import drawandOverlay.DisplaysubGraphstart;
-import drawandOverlay.PushCurves;
 import fiji.tool.SliceListener;
 import fiji.tool.SliceObserver;
 import graphconstructs.KalmanTrackproperties;
@@ -69,10 +81,8 @@ import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
 import ij.ImageStack;
-import ij.WindowManager;
 import ij.gui.EllipseRoi;
 import ij.gui.GenericDialog;
-import ij.gui.Line;
 import ij.gui.Overlay;
 import ij.gui.Roi;
 import ij.io.Opener;
@@ -80,25 +90,17 @@ import ij.measure.ResultsTable;
 import ij.plugin.PlugIn;
 import ij.plugin.frame.RoiManager;
 import ij.process.FloatProcessor;
-import labeledObjects.CommonOutput;
 import labeledObjects.CommonOutputHF;
 import labeledObjects.Indexedlength;
 import labeledObjects.KalmanIndexedlength;
 import labeledObjects.Subgraphs;
 import lineFinder.FindlinesVia;
-import lineFinder.LinefinderHFHough;
-import lineFinder.LinefinderHFMSER;
-import lineFinder.LinefinderHFMSERwHough;
-import lineFinder.LinefinderHough;
 import lineFinder.LinefinderInteractiveHFHough;
 import lineFinder.LinefinderInteractiveHFMSER;
 import lineFinder.LinefinderInteractiveHFMSERwHough;
 import lineFinder.LinefinderInteractiveHough;
 import lineFinder.LinefinderInteractiveMSER;
 import lineFinder.LinefinderInteractiveMSERwHough;
-import lineFinder.LinefinderMSER;
-import lineFinder.LinefinderMSERwHough;
-
 import org.apache.poi.hssf.usermodel.HSSFCell;
 import org.apache.poi.hssf.usermodel.HSSFCellStyle;
 import org.apache.poi.hssf.usermodel.HSSFDataFormat;
@@ -106,13 +108,6 @@ import org.apache.poi.hssf.usermodel.HSSFFont;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
-
-import mpicbg.imglib.container.array.ArrayContainerFactory;
-import mpicbg.imglib.cursor.LocalizableCursor;
-import mpicbg.imglib.image.Image;
-import mpicbg.imglib.image.ImageFactory;
 import mpicbg.imglib.multithreading.SimpleMultiThreading;
 import mpicbg.imglib.util.Util;
 import net.imglib2.Cursor;
@@ -123,9 +118,6 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.algorithm.componenttree.mser.Mser;
 import net.imglib2.algorithm.componenttree.mser.MserTree;
 import net.imglib2.algorithm.stats.Normalize;
-import net.imglib2.converter.Converter;
-import net.imglib2.converter.Converters;
-import net.imglib2.converter.RealFloatConverter;
 import net.imglib2.img.ImagePlusAdapter;
 import net.imglib2.img.Img;
 import net.imglib2.img.ImgFactory;
@@ -134,21 +126,16 @@ import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.img.imageplus.FloatImagePlus;
 import net.imglib2.type.Type;
 import net.imglib2.type.logic.BitType;
-import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
-import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import peakFitter.SortListbyproperty;
 import preProcessing.GetLocalmaxmin;
-import preProcessing.GlobalThresholding;
 import preProcessing.Kernels;
 import preProcessing.MedianFilter2D;
-import preProcessing.MedianFilterImg2D;
-import roiFinder.Roifinder;
-import roiFinder.RoifinderMSER;
+
 import trackerType.KFsearch;
 import trackerType.MTTracker;
 import trackerType.TrackModel;
@@ -207,6 +194,8 @@ public class InteractiveMT implements PlugIn {
 	float rhoPerPixelInit = new Float(0.5);
 	float thetaPerPixelInit = new Float(0.5);
 
+	
+	
 	public int minDiversityInit = 1;
 	public int radius = 1;
 	public long Size = 1;
@@ -231,8 +220,8 @@ public class InteractiveMT implements PlugIn {
 	boolean ShowHough = false;
     boolean update = false;
 	boolean Canny = false;
-	boolean showKalman;
-	boolean showDeterministic;
+	boolean showKalman = false;
+	boolean showDeterministic = true;
 	boolean RoisViaMSER = false;
 	boolean RoisViaWatershed = false;
     boolean displayTree = false;
@@ -247,10 +236,20 @@ public class InteractiveMT implements PlugIn {
 	MTTracker MTtrackerstart;
 	MTTracker MTtrackerend;
 	CostFunction<KalmanTrackproperties, KalmanTrackproperties> UserchosenCostFunction;
-	int initialSearchradius = 20;
-	int maxSearchradius = 15;
+	float initialSearchradius = 20;
+	float maxSearchradius = 15;
 	int missedframes = 1;
+	public int initialSearchradiusInit =  (int) initialSearchradius;
+	public float initialSearchradiusMin = 0;
+	public float initialSearchradiusMax = 100;
 	
+	public int maxSearchradiusInit =  (int)maxSearchradius;
+	public float maxSearchradiusMin = 10;
+	public float maxSearchradiusMax = 500;
+	
+	public int missedframesInit =  missedframes;
+	public float missedframesMin = 0;
+	public float missedframesMax = 100;
 	
 	ArrayList<ArrayList<Trackproperties>> Allstart = new ArrayList<ArrayList<Trackproperties>>();
 	ArrayList<ArrayList<Trackproperties>> Allend = new ArrayList<ArrayList<Trackproperties>>();
@@ -308,7 +307,7 @@ public class InteractiveMT implements PlugIn {
 
 	public static enum ValueChange {
 		ROI, ALL, DELTA, FindLinesVia, MAXVAR, MINDIVERSITY, DARKTOBRIGHT, MINSIZE, MAXSIZE, SHOWMSER,
-		FRAME, SHOWHOUGH, thresholdHough, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, rhoPerPixel, thetaPerPixel, THIRDDIM;
+		FRAME, SHOWHOUGH, thresholdHough, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, rhoPerPixel, thetaPerPixel, THIRDDIM, iniSearch, maxSearch, missedframes;
 	}
 
 	boolean isFinished = false;
@@ -389,6 +388,23 @@ public class InteractiveMT implements PlugIn {
 
 	}
 
+	public void setInitialsearchradius(final float value) {
+		initialSearchradius = value;
+		initialSearchradiusInit = computeScrollbarPositionFromValue(initialSearchradius, initialSearchradiusMin, initialSearchradiusMax, scrollbarSize);
+	}
+
+	
+	public void setInitialmaxsearchradius(final float value) {
+		maxSearchradius = value;
+		maxSearchradiusInit = computeScrollbarPositionFromValue(maxSearchradius, maxSearchradiusMin, maxSearchradiusMax, scrollbarSize);
+	}
+	
+	public double getInitialsearchradius(final float value) {
+
+		return delta;
+
+	}
+	
 	public void setInitialmaxVar(final float value) {
 		maxVar = value;
 		maxVarInit = computeScrollbarPositionFromValue(maxVar, maxVarMin, maxVarMax, scrollbarSize);
@@ -555,7 +571,8 @@ public class InteractiveMT implements PlugIn {
 	
 
 		// copy the ImagePlus into an ArrayImage<FloatType> for faster access
-		displaySliders();
+		//displaySliders();
+		Card();
 		// add listener to the imageplus slice slider
 		sliceObserver = new SliceObserver(preprocessedimp, new ImagePlusListener());
 		// compute first version#
@@ -744,6 +761,504 @@ public class InteractiveMT implements PlugIn {
 		return !gd.wasCanceled();
 		
 	}
+	
+	
+	// Making the card
+	JFrame Cardframe = new JFrame("MicroTubule Tracker");
+	JPanel panelCont = new JPanel();
+	JPanel panelFirst = new JPanel();
+	JPanel panelSecond = new JPanel();
+	JPanel panelThird = new JPanel();
+
+	
+	public void  Card() {
+		
+
+	
+		
+		
+		CardLayout cl = new CardLayout();
+		 
+		
+        panelCont.setLayout(cl);
+    	
+     
+		
+    	panelCont.add(panelFirst, "1");
+		panelCont.add(panelSecond, "2");
+		panelCont.add(panelThird, "3");
+		
+		// First Panel
+        panelFirst.setName("Preprocess and Determine Seeds");
+
+		CheckboxGroup Finders = new CheckboxGroup();
+		final Checkbox Normalize = new Checkbox("Normailze Image Intensity ", NormalizeImage);
+		final Checkbox MedFiltercur = new Checkbox("Apply Median Filter to current Frame", Mediancurr);
+		final Checkbox MedFilterAll = new Checkbox("Apply Median Filter to Stack", MedianAll);
+		final Scrollbar thirdDimensionslider = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 0, 0,
+				thirdDimensionSize);
+		thirdDimensionslider.setBlockIncrement(1);
+		InteractiveMT.this.thirdDimensionslider = (int) computeIntValueFromScrollbarPosition(thirdDimensionsliderInit, timeMin,
+				thirdDimensionSize, thirdDimensionSize);
+		final Label timeText = new Label("Time index = " + InteractiveMT.this.thirdDimensionslider, Label.CENTER);
+		final Button JumpinTime = new Button("Jump in time :");
+		final Label MTText = new Label("Preprocess and Determine Seed Ends (Green Channel)", Label.CENTER);
+		
+		
+		
+		final Checkbox mser = new Checkbox("MSER", Finders, FindLinesViaMSER);
+		final Checkbox hough = new Checkbox("HOUGH", Finders, FindLinesViaHOUGH);
+		final Checkbox mserwhough = new Checkbox("MSERwHOUGH", Finders, FindLinesViaMSERwHOUGH);
+		
+		final GridBagLayout layout = new GridBagLayout();
+		final GridBagConstraints c = new GridBagConstraints();
+		
+		panelFirst.setLayout(layout);
+		panelSecond.setLayout(layout);
+		
+		c.fill = GridBagConstraints.HORIZONTAL;
+		c.gridx = 0;
+		c.gridy = 0;
+		c.weightx = 1;
+
+
+		final Label Pre = new Label("Preprocess");
+		final Label Ends = new Label("Method Choice for Seed Ends Determination");
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		panelFirst.add(MTText, c);
+		
+		++c.gridy;
+		panelFirst.add(Pre, c);
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		panelFirst.add(Normalize, c);
+		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		panelFirst.add(MedFiltercur, c);
+		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		panelFirst.add(MedFilterAll, c);
+	
+		++c.gridy;
+		panelFirst.add(Ends, c);
+		
+
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		panelFirst.add(mser, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		panelFirst.add(hough, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		panelFirst.add(mserwhough, c);
+		
+		if (thirdDimensionSize > 1) {
+			++c.gridy;
+			panelFirst.add(thirdDimensionslider, c);
+
+			++c.gridy;
+			panelFirst.add(timeText, c);
+
+			++c.gridy;
+			c.insets = new Insets(0, 175, 0, 175);
+			panelFirst.add(JumpinTime, c);
+		}
+		
+		panelFirst.setVisible(true);
+		
+		cl.show(panelCont, "1");
+	
+		Normalize.addItemListener(new NormalizeListener());
+		MedFiltercur.addItemListener(new MediancurrListener() );
+		MedFilterAll.addItemListener(new MedianAllListener() );
+		
+	//	ChoiceofTracker.addActionListener(new TrackerButtonListener(Cardframe));
+		mser.addItemListener(new MserListener());
+		
+		hough.addItemListener(new HoughListener());
+		mserwhough.addItemListener(new MserwHoughListener());
+		
+		
+		 JPanel control = new JPanel();
+		 control.add(new JButton(new AbstractAction("\u22b2Prev") {
+
+	            @Override
+	            public void actionPerformed(ActionEvent e) {
+	                CardLayout cl = (CardLayout) panelCont.getLayout();
+	                cl.previous(panelCont);
+	            }
+	        }));
+	        control.add(new JButton(new AbstractAction("Next\u22b3") {
+
+	            @Override
+	            public void actionPerformed(ActionEvent e) {
+	                CardLayout cl = (CardLayout) panelCont.getLayout();
+	                cl.next(panelCont);
+	            }
+	        }));
+		// Panel Second
+	        final Button MoveNext = new Button("Update method and parameters (first image in red channel)");
+			final Button JumptoFrame = new Button("Update method and parameters (choose an image in red channel)");
+			
+		final Label MTTextHF = new Label("Choose End point finding method for Higher Frames (Red Channel)", Label.CENTER);
+		
+		
+		final Checkbox displaySeedID = new Checkbox("Display Seed IDs", displaySeedLabels);
+		final Checkbox txtfile = new Checkbox("Save tracks as TXT file", SaveTxt);
+		final Checkbox xlsfile = new Checkbox("Save tracks as XLS file", SaveXLS);
+		final Checkbox KalmanTracker = new Checkbox("Use Kalman Filter for tracking");
+		final Checkbox DeterTracker = new Checkbox("Use Deterministic method for tracking");
+		
+		c.fill = GridBagConstraints.HORIZONTAL;
+		c.gridx = 0;
+		c.gridy = 0;
+		c.weightx = 1;
+
+		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		panelSecond.add(MTTextHF, c);
+		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 220);
+		panelSecond.add(MoveNext, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 180);
+		panelSecond.add(JumptoFrame, c);
+		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 50);
+		panelSecond.add(KalmanTracker, c);
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 50);
+		panelSecond.add(DeterTracker, c);
+		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		panelSecond.add(displaySeedID, c);
+		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		panelSecond.add(txtfile, c);
+		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		panelSecond.add(xlsfile, c);
+		
+		
+		
+		MoveNext.addActionListener(new moveNextListener());
+		JumptoFrame.addActionListener(new moveToFrameListener());
+		
+		thirdDimensionslider
+		.addAdjustmentListener(new thirdDimensionsliderListener(timeText, timeMin, thirdDimensionSize));
+		Cardframe.addWindowListener(new FrameListener(Cardframe));
+		JumpinTime.addActionListener(
+				new moveInThirdDimListener(thirdDimensionslider, timeText, timeMin, thirdDimensionSize));
+		KalmanTracker.addItemListener(new KalmanchoiceListener());
+		DeterTracker.addItemListener(new DeterchoiceListener());
+		
+
+		
+		txtfile.addItemListener(new SaveasTXT());
+		xlsfile.addItemListener(new SaveasXLS());
+		displaySeedID.addItemListener(new DisplaySeedID());
+		
+		MTText.setFont(MTText.getFont().deriveFont(Font.BOLD));
+		Pre.setBackground(new Color(1, 0, 1));
+		Ends.setBackground(new Color(1, 0, 1));
+	
+		MTTextHF.setFont(MTTextHF.getFont().deriveFont(Font.BOLD));
+		
+		Cardframe.add(panelCont, BorderLayout.CENTER);
+		Cardframe.add(control, BorderLayout.SOUTH);
+		Cardframe.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		Cardframe.pack();
+		Cardframe.setVisible(true);
+		
+		
+	
+	}
+	
+	
+	
+	protected class SearchradiusListener implements AdjustmentListener {
+		final Label label;
+		final float min, max;
+
+		public SearchradiusListener(final Label label, final float min, final float max) {
+			this.label = label;
+			this.min = min;
+			this.max = max;
+		}
+
+		@Override
+		public void adjustmentValueChanged(final AdjustmentEvent event) {
+			initialSearchradius = computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
+			label.setText("Initial Search Radius:  = "  + initialSearchradius);
+
+			if (!isComputing) {
+				updatePreview(ValueChange.iniSearch);
+			} else if (!event.getValueIsAdjusting()) {
+				while (isComputing) {
+					SimpleMultiThreading.threadWait(10);
+				}
+				updatePreview(ValueChange.iniSearch);
+			}
+		}
+	}
+
+	
+	protected class maxSearchradiusListener implements AdjustmentListener {
+		final Label label;
+		final float min, max;
+
+		public maxSearchradiusListener(final Label label, final float min, final float max) {
+			this.label = label;
+			this.min = min;
+			this.max = max;
+		}
+
+		@Override
+		public void adjustmentValueChanged(final AdjustmentEvent event) {
+			maxSearchradius = computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
+			label.setText("Max Search Radius:  = "  + maxSearchradius);
+
+			if (!isComputing) {
+				updatePreview(ValueChange.maxSearch);
+			} else if (!event.getValueIsAdjusting()) {
+				while (isComputing) {
+					SimpleMultiThreading.threadWait(10);
+				}
+				updatePreview(ValueChange.maxSearch);
+			}
+		}
+	}
+	
+	
+	protected class missedFrameListener implements AdjustmentListener {
+		final Label label;
+		final float min, max;
+
+		public missedFrameListener(final Label label, final float min, final float max) {
+			this.label = label;
+			this.min = min;
+			this.max = max;
+		}
+
+		@Override
+		public void adjustmentValueChanged(final AdjustmentEvent event) {
+			missedframes = (int)computeIntValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
+			label.setText("Missed frames:  = "  + missedframes);
+
+			if (!isComputing) {
+				updatePreview(ValueChange.missedframes);
+			} else if (!event.getValueIsAdjusting()) {
+				while (isComputing) {
+					SimpleMultiThreading.threadWait(10);
+				}
+				updatePreview(ValueChange.missedframes);
+			}
+		}
+	}
+	
+	protected class DeterchoiceListener implements ItemListener{
+		@Override
+		public void itemStateChanged(ItemEvent arg0) {
+			 if (arg0.getStateChange() == ItemEvent.DESELECTED)
+          	   showDeterministic = false;
+             else if (arg0.getStateChange() == ItemEvent.SELECTED){
+          	   
+          	   showDeterministic = true;
+          	   
+          	 panelThird.removeAll();
+          	 panelThird.repaint();
+          	 final GridBagLayout layout = new GridBagLayout();
+	     		final GridBagConstraints c = new GridBagConstraints();
+	          	c.fill = GridBagConstraints.HORIZONTAL;
+	     		c.gridx = 0;
+	     		c.gridy = 0;
+	     		c.weightx = 1;
+	     		panelThird.setLayout(layout);
+   		final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
+ 		final Button SkipframeandTrackEndPoints = new Button("TrackEndPoint (User specified first and last frame)");
+   		
+ 		++c.gridy;
+ 		c.insets = new Insets(10, 10, 0, 200);
+ 		panelThird.add(TrackEndPoints, c);
+ 		
+ 		++c.gridy;
+ 		c.insets = new Insets(10, 10, 0, 200);
+ 		panelThird.add(SkipframeandTrackEndPoints, c);
+
+   		
+   		
+   		TrackEndPoints.addActionListener(new TrackendsListener());
+ 		SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
+		}
+		
+		
+	}
+	}
+	
+
+	protected class KalmanchoiceListener implements ItemListener{
+		
+
+			
+			@Override
+			public void itemStateChanged(ItemEvent arg0) {
+				 if (arg0.getStateChange() == ItemEvent.DESELECTED){
+	          	   showKalman = false;
+	               showDeterministic = true; 
+	      		
+	      		panelThird.removeAll();
+	      		 panelThird.repaint();
+	      		 final GridBagLayout layout = new GridBagLayout();
+		     		final GridBagConstraints c = new GridBagConstraints();
+		          	c.fill = GridBagConstraints.HORIZONTAL;
+		     		c.gridx = 0;
+		     		c.gridy = 0;
+		     		c.weightx = 1;
+		     		panelThird.setLayout(layout);
+	      		final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
+	    		final Button SkipframeandTrackEndPoints = new Button("TrackEndPoint (User specified first and last frame)");
+	      		
+	    		++c.gridy;
+	    		c.insets = new Insets(10, 10, 0, 200);
+	    		panelThird.add(TrackEndPoints, c);
+	    		
+	    		++c.gridy;
+	    		c.insets = new Insets(10, 10, 0, 200);
+	    		panelThird.add(SkipframeandTrackEndPoints, c);
+
+	      		
+	      		
+	      		TrackEndPoints.addActionListener(new TrackendsListener());
+	    		SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
+	          	   
+				 }
+	             else if (arg0.getStateChange() == ItemEvent.SELECTED){
+	          	   
+	          	   showKalman = true;
+	          	 panelThird.removeAll();
+	          	 panelThird.repaint();
+	          	 final GridBagLayout layout = new GridBagLayout();
+	     		final GridBagConstraints c = new GridBagConstraints();
+	          	c.fill = GridBagConstraints.HORIZONTAL;
+	     		c.gridx = 0;
+	     		c.gridy = 0;
+	     		c.weightx = 1;
+	     		panelThird.setLayout(layout);
+	     		
+	     	
+	     		final Scrollbar rad = new Scrollbar(Scrollbar.HORIZONTAL, initialSearchradiusInit, 10, 0, 10 + scrollbarSize);
+	    		initialSearchradius = computeValueFromScrollbarPosition(initialSearchradiusInit, initialSearchradiusMin, initialSearchradiusMax, scrollbarSize);
+	     	
+	     		
+	     			final Label SearchText = new Label("Initial Search Radius: "+ initialSearchradius, Label.CENTER);
+	     			
+	     			++c.gridy;
+	     			c.insets = new Insets(10, 10, 0, 50);
+	     			panelThird.add(SearchText, c);
+	     			++c.gridy;
+	     			c.insets = new Insets(10, 10, 0, 50);
+	     			panelThird.add(rad, c);
+	     			
+	     			
+	     			
+	     		
+	     			
+
+	         		final Scrollbar Maxrad = new Scrollbar(Scrollbar.HORIZONTAL, maxSearchradiusInit, 10, 0, 10 + scrollbarSize);
+	         		maxSearchradius = computeValueFromScrollbarPosition(maxSearchradiusInit, maxSearchradiusMin, maxSearchradiusMax, scrollbarSize);
+	        		final Label MaxMovText = new Label("Max Movment of Objects per frame: "+ maxSearchradius, Label.CENTER);
+	     			++c.gridy;
+	     			c.insets = new Insets(10, 10, 0, 50);
+	     			panelThird.add(MaxMovText, c);
+	     			++c.gridy;
+	     			c.insets = new Insets(10, 10, 0, 50);
+	     			panelThird.add(Maxrad, c);
+	     			
+	     			
+	     			
+	     			
+	     			
+
+	         		final Scrollbar Miss = new Scrollbar(Scrollbar.HORIZONTAL, missedframesInit, 10, 0, 10 + scrollbarSize);
+	         		Miss.setBlockIncrement(1);
+	         		missedframes = (int) computeValueFromScrollbarPosition(missedframesInit, missedframesMin, missedframesMax, scrollbarSize);
+	        		final Label LostText = new Label("Objects allowed to be lost for #frames"+ missedframes, Label.CENTER);
+	     			++c.gridy;
+	     			c.insets = new Insets(10, 10, 0, 50);
+	     			panelThird.add(LostText, c);
+	     			++c.gridy;
+	     			c.insets = new Insets(10, 10, 0, 50);
+	     			panelThird.add(Miss, c);
+	     			
+	     			final Checkbox Costfunc = new Checkbox("Squared Distance Cost Function");
+	     			++c.gridy;
+	     			c.insets = new Insets(10, 10, 0, 50);
+	     			panelThird.add(Costfunc, c);
+	     			
+	     			
+	     			
+	     			rad.addAdjustmentListener(new SearchradiusListener(SearchText, initialSearchradiusMin, initialSearchradiusMax));
+	     			Maxrad.addAdjustmentListener(new maxSearchradiusListener(MaxMovText, maxSearchradiusMin, maxSearchradiusMax));
+	     			Miss.addAdjustmentListener(new missedFrameListener(LostText, missedframesMin, missedframesMax));
+	     			
+	     			Costfunc.addItemListener(new CostfunctionListener());
+	     			
+
+	     				MTtrackerstart = new KFsearch(AllstartKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,
+	     						thirdDimensionSize, missedframes);
+	     				
+	     				MTtrackerend = new KFsearch(AllendKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,
+	     						thirdDimensionSize, missedframes);
+	     			    
+	     			
+	     				final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
+	    	    		final Button SkipframeandTrackEndPoints = new Button("TrackEndPoint (User specified first and last frame)");
+	    	      		
+	    	    		++c.gridy;
+	    	    		c.insets = new Insets(10, 10, 0, 200);
+	    	    		panelThird.add(TrackEndPoints, c);
+	    	    		
+	    	    		++c.gridy;
+	    	    		c.insets = new Insets(10, 10, 0, 200);
+	    	    		panelThird.add(SkipframeandTrackEndPoints, c);
+
+	    	      		
+	    	      		
+	    	      		TrackEndPoints.addActionListener(new TrackendsListener());
+	    	    		SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
+	          	   
+	          	   
+				
+			}
+			
+			
+		
+			
+			
+			
+		
+			
+		}
+		
+		
+	}
+
+
+
+	
 	
 	public void displaySliders() {
 
@@ -1098,6 +1613,34 @@ public class InteractiveMT implements PlugIn {
 								thirdDimension, psf, newlineMser, userChoiceModel, Domask);
 					
 							
+						
+						
+						
+						if (displaySeedLabels ){
+							
+							ImagePlus currentimp =ImageJFunctions.show(groundframe);
+							Overlay o = currentimp.getOverlay();
+							
+							if( getImp().getOverlay() == null )
+							{
+								o = new Overlay();
+								getImp().setOverlay( o ); 
+							}
+
+						
+							for (int index = 0; index < PrevFrameparam.fst.size(); ++index){
+							EllipseRoi newellipse = new EllipseRoi((int) PrevFrameparam.fst.get(index).fixedpos[0], (int)PrevFrameparam.fst.get(index).fixedpos[1], currentimp);
+							newellipse.setStrokeColor(inactiveColor);
+							newellipse.setStrokeWidth(1);
+							newellipse.setName("ID: " + PrevFrameparam.fst.get(index).seedLabel);
+							o.add(newellipse);
+							o.drawLabels(true);
+							o.drawNames(true);
+							
+							
+							}
+							}
+						
 						PrevFrameparamKalman = FindlinesVia.LinefindingMethodKalman(groundframe, groundframepre, minlength,
 								thirdDimension, psf, newlineMser, userChoiceModel, Domask);
 						
@@ -1120,9 +1663,36 @@ public class InteractiveMT implements PlugIn {
 					
 							
 						
-						PrevFrameparamKalman = FindlinesVia.LinefindingMethodKalman(groundframe, groundframepre, minlength,
-								thirdDimension, psf, newlineHough, userChoiceModel, Domask);
 						
+                           
+						   if (displaySeedLabels ){
+							
+							ImagePlus currentimp =ImageJFunctions.show(groundframe);
+							
+							Overlay o = currentimp.getOverlay();
+							
+							if( getImp().getOverlay() == null )
+							{
+								o = new Overlay();
+								getImp().setOverlay( o ); 
+							}
+
+						
+							for (int index = 0; index < PrevFrameparam.fst.size(); ++index){
+							EllipseRoi newellipse = new EllipseRoi((int) PrevFrameparam.fst.get(index).fixedpos[0], (int)PrevFrameparam.fst.get(index).fixedpos[1], currentimp);
+							newellipse.setStrokeColor(inactiveColor);
+							newellipse.setStrokeWidth(1);
+							newellipse.setName("ID: " + PrevFrameparam.fst.get(index).seedLabel);
+							o.add(newellipse);
+							o.drawLabels(true);
+							o.drawNames(true);
+							
+							
+							}
+							}
+						   
+						   PrevFrameparamKalman = FindlinesVia.LinefindingMethodKalman(groundframe, groundframepre, minlength,
+									thirdDimension, psf, newlineHough, userChoiceModel, Domask);
 						
 					}
 				}
@@ -1137,8 +1707,36 @@ public class InteractiveMT implements PlugIn {
 						PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength,
 								thirdDimension, psf, newlineMserwHough, userChoiceModel, Domask);
 						
-						PrevFrameparamKalman = FindlinesVia.LinefindingMethodKalman(groundframe, groundframepre, minlength,
-								thirdDimension, psf, newlineMserwHough, userChoiceModel, Domask);
+						
+						
+						
+                           if (displaySeedLabels ){
+							
+                        	ImagePlus currentimp =ImageJFunctions.show(groundframe);
+							Overlay o = currentimp.getOverlay();
+							
+							if( getImp().getOverlay() == null )
+							{
+								o = new Overlay();
+								getImp().setOverlay( o ); 
+							}
+
+						
+							for (int index = 0; index < PrevFrameparam.fst.size(); ++index){
+							EllipseRoi newellipse = new EllipseRoi((int) PrevFrameparam.fst.get(index).fixedpos[0], (int)PrevFrameparam.fst.get(index).fixedpos[1], currentimp);
+							newellipse.setStrokeColor(inactiveColor);
+							newellipse.setStrokeWidth(1);
+							newellipse.setName("ID: " + PrevFrameparam.fst.get(index).seedLabel);
+							o.add(newellipse);
+							o.drawLabels(true);
+							o.drawNames(true);
+							
+						
+							}
+							}
+                           
+                           PrevFrameparamKalman = FindlinesVia.LinefindingMethodKalman(groundframe, groundframepre, minlength,
+   								thirdDimension, psf, newlineMserwHough, userChoiceModel, Domask);
 						
 					}
 
@@ -1213,8 +1811,8 @@ public class InteractiveMT implements PlugIn {
 		gd.addChoice("Draw tracks with this color :", colors, colors[indexcol]);
 
 		gd.addNumericField("Initial Search Radius", initialSearchradius, 0);
-		gd.addNumericField("Max Movment of Blobs per frame", maxSearchradius, 0);
-		gd.addNumericField("Blobs allowed to be lost for #frames", missedframes, 0);
+		gd.addNumericField("Max Movment of Ends per frame", maxSearchradius, 0);
+		gd.addNumericField("Ends allowed to be lost for #frames", missedframes, 0);
 		
 
 		initialSearchradius = (int) gd.getNextNumber();
@@ -1291,7 +1889,111 @@ public class InteractiveMT implements PlugIn {
 		return !gd.wasCanceled();
 	}
 
+	
+	
+	
+	private boolean DialogueKalmanTracker() {
 
+		String[] colors = { "Red", "Green", "Blue", "Cyan", "Magenta", "Yellow", "Black", "White" };
+		String[] whichcost = { "Distance based" };
+		int indexcol = 0;
+		int functiontype = 0;
+
+		// Create dialog
+		GenericDialog gd = new GenericDialog("Tracker");
+
+		gd.addChoice("Choose your Cost function (for Kalman) :", whichcost, whichcost[functiontype]);
+		gd.addChoice("Draw tracks with this color :", colors, colors[indexcol]);
+
+		gd.addNumericField("Initial Search Radius", initialSearchradius, 0);
+		gd.addNumericField("Max Movment of Ends per frame", maxSearchradius, 0);
+		gd.addNumericField("Ends allowed to be lost for #frames", missedframes, 0);
+		
+
+		initialSearchradius = (int) gd.getNextNumber();
+		maxSearchradius = (int) gd.getNextNumber();
+		missedframes = (int) gd.getNextNumber();
+		
+			
+			functiontype = gd.getNextChoiceIndex();
+			switch (functiontype) {
+
+			case 0:
+				UserchosenCostFunction = new SquareDistCostFunction();
+				break;
+     
+				
+
+			}
+
+			MTtrackerstart = new KFsearch(AllstartKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,
+					thirdDimensionSize, missedframes);
+			
+			MTtrackerend = new KFsearch(AllendKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,
+					thirdDimensionSize, missedframes);
+		    
+		
+		
+		
+		
+
+	
+
+		
+		switch (indexcol) {
+		case 0:
+			colorDraw = Color.red;
+			break;
+		case 1:
+			colorDraw = Color.green;
+			break;
+		case 2:
+			colorDraw = Color.blue;
+			break;
+		case 3:
+			colorDraw = Color.cyan;
+			break;
+		case 4:
+			colorDraw = Color.magenta;
+			break;
+		case 5:
+			colorDraw = Color.yellow;
+			break;
+		case 6:
+			colorDraw = Color.black;
+			break;
+		case 7:
+			colorDraw = Color.white;
+			break;
+		default:
+			colorDraw = Color.yellow;
+		}
+		
+		gd.showDialog();
+		// color choice of display
+		indexcol = gd.getNextChoiceIndex();
+		return !gd.wasCanceled();
+	}
+
+
+	
+
+	
+	protected class CostfunctionListener implements ItemListener{
+		@Override
+		public void itemStateChanged(ItemEvent arg0) {
+			 
+            if (arg0.getStateChange() == ItemEvent.SELECTED){
+          	   
+          	  UserchosenCostFunction = new  SquareDistCostFunction();
+			
+		}
+		
+		
+	}
+	}
+	
+		
 	 protected class NormalizeListener implements ItemListener{
 
 			@Override
@@ -1312,7 +2014,6 @@ public class InteractiveMT implements PlugIn {
 	           		Normalize.normalize(Views.iterable(originalimg), minval, maxval);
 	           		Normalize.normalize(Views.iterable(originalPreprocessedimg), minval, maxval);
 	            	
-	           		//ImageJFunctions.show(originalPreprocessedimg);
 	           		
 	               }
 			}
@@ -1929,30 +2630,7 @@ public class InteractiveMT implements PlugIn {
 
 					lengthliststart.add(lengthpair);
 					
-					
-					if (displaySeedLabels){
-						
-						
-						Overlay o = imp.getOverlay();
-						
-						if( getImp().getOverlay() == null )
-						{
-							o = new Overlay();
-							getImp().setOverlay( o ); 
-						}
-
-					
-						
-						EllipseRoi newellipse = new EllipseRoi((int) originalpoint[0], (int) originalpoint[1], imp);
-						newellipse.setStrokeColor(inactiveColor);
-						newellipse.setStrokeWidth(1);
-						newellipse.setName("ID: " + SeedID);
-						o.add(newellipse);
-						o.drawLabels(true);
-						o.drawNames(true);
-						
-						imp.updateAndDraw();
-						}
+				
 				}
 				
 				
@@ -2132,29 +2810,7 @@ public class InteractiveMT implements PlugIn {
 					lengthlistend.add(lengthpair);
 					
 					
-					if (displaySeedLabels){
-						
-						
-					Overlay o = imp.getOverlay();
-					
-					if( getImp().getOverlay() == null )
-					{
-						o = new Overlay();
-						getImp().setOverlay( o ); 
-					}
-
-					
-					
-					EllipseRoi newellipse = new EllipseRoi((int) originalpoint[0], (int) originalpoint[1], imp);
-					newellipse.setStrokeColor(inactiveColor);
-					newellipse.setStrokeWidth(1);
-					newellipse.setName("ID: " + SeedID);
-					o.add(newellipse);
-					o.drawLabels(true);
-					o.drawNames(true);
-					
-					imp.updateAndDraw();
-					}
+				
 
 				}
 
@@ -2829,28 +3485,7 @@ public class InteractiveMT implements PlugIn {
 
 					lengthliststart.add(lengthpair);
 					
-					if (displaySeedLabels){
-						
-						
-						Overlay o = imp.getOverlay();
-						
-						if( getImp().getOverlay() == null )
-						{
-							o = new Overlay();
-							getImp().setOverlay( o ); 
-						}
-
-						
-						EllipseRoi newellipse = new EllipseRoi((int) originalpoint[0], (int) originalpoint[1], imp);
-						newellipse.setStrokeColor(inactiveColor);
-						newellipse.setStrokeWidth(1);
-						newellipse.setName("ID: " + SeedID);
-						o.add(newellipse);
-						o.drawLabels(true);
-						o.drawNames(true);
-						
-						imp.updateAndDraw();
-						}
+				
 
 				}
 				
@@ -3037,28 +3672,7 @@ public class InteractiveMT implements PlugIn {
 
 					lengthlistend.add(lengthpair);
 					
-					if (displaySeedLabels){
-						
-						
-						Overlay o = imp.getOverlay();
-						
-						if( getImp().getOverlay() == null )
-						{
-							o = new Overlay();
-							getImp().setOverlay( o ); 
-						}
-
-						
-						EllipseRoi newellipse = new EllipseRoi((int) originalpoint[0], (int) originalpoint[1], imp);
-						newellipse.setStrokeColor(inactiveColor);
-						newellipse.setStrokeWidth(1);
-						newellipse.setName("ID: " + SeedID);
-						o.add(newellipse);
-						o.drawLabels(true);
-						o.drawNames(true);
-						
-						imp.updateAndDraw();
-						}
+					
 
 				}
 
@@ -4758,7 +5372,6 @@ public class InteractiveMT implements PlugIn {
 			sliceObserver.unregister();
 		if (roiListener != null)
 			imp.getCanvas().removeMouseListener(roiListener);
-			//imp.getOverlay().clear();
 
 		isFinished = true;
 	}
@@ -4839,6 +5452,9 @@ public class InteractiveMT implements PlugIn {
 			}
 		}
 	}
+	
+
+
 
 	/**
 	 * Generic, type-agnostic method to create an identical copy of an Img

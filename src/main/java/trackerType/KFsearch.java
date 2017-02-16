@@ -49,13 +49,13 @@ public class KFsearch implements MTTracker {
 
 	public KFsearch(final ArrayList<ArrayList<KalmanTrackproperties>> AllMT,
 			final CostFunction<KalmanTrackproperties, KalmanTrackproperties> UserchosenCostFunction, final double maxsearchRadius,
-			final double initialsearchRadius, final int maxframe, final int maxframeGap) {
+			final double initialsearchRadius, final int maxframe, final int missedframes) {
 		this.AllMT = AllMT;
 		this.UserchosenCostFunction = UserchosenCostFunction;
 		this.initialsearchRadius = initialsearchRadius;
 		this.maxsearchRadius = maxsearchRadius;
 		this.maxframe = maxframe;
-		this.maxframeGap = maxframeGap;
+		this.maxframeGap = missedframes;
 
 	}
 
