@@ -38,6 +38,7 @@ public class KFsearch implements MTTracker {
 	private final double initialsearchRadius;
 	private final CostFunction<KalmanTrackproperties, KalmanTrackproperties> UserchosenCostFunction;
 	private final int maxframe;
+	private final int firstframe;
 	private final int maxframeGap;
 
 	private SimpleWeightedGraph<KalmanTrackproperties, DefaultWeightedEdge> graph;
@@ -49,12 +50,13 @@ public class KFsearch implements MTTracker {
 
 	public KFsearch(final ArrayList<ArrayList<KalmanTrackproperties>> AllMT,
 			final CostFunction<KalmanTrackproperties, KalmanTrackproperties> UserchosenCostFunction, final double maxsearchRadius,
-			final double initialsearchRadius, final int maxframe, final int missedframes) {
+			final double initialsearchRadius,final int firstframe, final int maxframe, final int missedframes) {
 		this.AllMT = AllMT;
 		this.UserchosenCostFunction = UserchosenCostFunction;
 		this.initialsearchRadius = initialsearchRadius;
 		this.maxsearchRadius = maxsearchRadius;
 		this.maxframe = maxframe;
+		this.firstframe = firstframe;
 		this.maxframeGap = missedframes;
 
 	}
@@ -91,9 +93,8 @@ public class KFsearch implements MTTracker {
 		Framedgraph = new ArrayList<Subgraphs>();
 
 		// Find first two non-zero frames containing blobs
-
 		int Firstframe = 0;
-		int Secondframe = 1;
+		int Secondframe = 0;
 
 		for (int frame = 0; frame < maxframe; ++frame) {
 
@@ -149,14 +150,15 @@ public class KFsearch implements MTTracker {
 		// Loop from the second frame to the last frame and build
 		// KalmanFilterMap
 
-		for (int frame = Secondframe; frame < maxframe; frame++) {
+		for (int frame = Secondframe; frame < AllMT.size() ; frame++) {
 
 			SimpleWeightedGraph<KalmanTrackproperties, DefaultWeightedEdge> subgraph = new SimpleWeightedGraph<KalmanTrackproperties, DefaultWeightedEdge>(
 					DefaultWeightedEdge.class);
 
 			List<KalmanTrackproperties> measurements = AllMT.get(frame);
 
-			System.out.println("Doing KF search in frame number: " + frame );
+			
+			System.out.println("Doing KF search in frame number: " + (frame + Firstframe) );
 
 			// Make the preditiction map
 			final Map<ComparableRealPoint, CVMKalmanFilter> predictionMap = new HashMap<ComparableRealPoint, CVMKalmanFilter>(
@@ -181,7 +183,6 @@ public class KFsearch implements MTTracker {
 
 			if (!predictions.isEmpty() && !measurements.isEmpty()) {
 				// Only link measurements to predictions if we have predictions.
-
 				final JaqamanLinkingCostMatrixCreator<ComparableRealPoint, KalmanTrackproperties> crm = new JaqamanLinkingCostMatrixCreator<ComparableRealPoint, KalmanTrackproperties>(
 						predictions, measurements, DistanceBasedcost, maxCost, ALTERNATIVE_COST_FACTOR, PERCENTILE);
 

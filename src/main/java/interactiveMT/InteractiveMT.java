@@ -221,7 +221,7 @@ public class InteractiveMT implements PlugIn {
     boolean update = false;
 	boolean Canny = false;
 	boolean showKalman = false;
-	boolean showDeterministic = true;
+	boolean showDeterministic = false;
 	boolean RoisViaMSER = false;
 	boolean RoisViaWatershed = false;
     boolean displayTree = false;
@@ -1213,10 +1213,10 @@ public class InteractiveMT implements PlugIn {
 	     			Costfunc.addItemListener(new CostfunctionListener());
 	     			
 
-	     				MTtrackerstart = new KFsearch(AllstartKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,
+	     				MTtrackerstart = new KFsearch(AllstartKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius, thirdDimension,
 	     						thirdDimensionSize, missedframes);
 	     				
-	     				MTtrackerend = new KFsearch(AllendKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,
+	     				MTtrackerend = new KFsearch(AllendKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius, thirdDimension,
 	     						thirdDimensionSize, missedframes);
 	     			    
 	     			
@@ -1637,6 +1637,8 @@ public class InteractiveMT implements PlugIn {
 			final Checkbox mserwhough = new Checkbox("MSERwHOUGH", Finders, FindLinesViaMSERwHOUGH);
 			final GridBagLayout layout = new GridBagLayout();
 			final GridBagConstraints c = new GridBagConstraints();
+			panelFourth.removeAll();
+			panelFourth.repaint();
 			panelFourth.setLayout(layout);
 			c.fill = GridBagConstraints.HORIZONTAL;
 			c.gridx = 0;
@@ -1929,10 +1931,10 @@ public class InteractiveMT implements PlugIn {
 
 			}
 
-			MTtrackerstart = new KFsearch(AllstartKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,
+			MTtrackerstart = new KFsearch(AllstartKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,thirdDimension,
 					thirdDimensionSize, missedframes);
 			
-			MTtrackerend = new KFsearch(AllendKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,
+			MTtrackerend = new KFsearch(AllendKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius, thirdDimension,
 					thirdDimensionSize, missedframes);
 		    
 		
@@ -2020,10 +2022,10 @@ public class InteractiveMT implements PlugIn {
 
 			}
 
-			MTtrackerstart = new KFsearch(AllstartKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,
+			MTtrackerstart = new KFsearch(AllstartKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius, thirdDimension,
 					thirdDimensionSize, missedframes);
 			
-			MTtrackerend = new KFsearch(AllendKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,
+			MTtrackerend = new KFsearch(AllendKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius, thirdDimension,
 					thirdDimensionSize, missedframes);
 		    
 		
@@ -2482,7 +2484,7 @@ public class InteractiveMT implements PlugIn {
 					
 					final double[] originalpoint = list.get(0).currentpoint;
 					double startlength = 0;
-				for (int index = 0; index < list.size(); ++index) {
+				for (int index = 1; index < list.size(); ++index) {
 					
 
 					final double[] currentpoint = list.get(index).currentpoint;
@@ -3277,10 +3279,10 @@ public class InteractiveMT implements PlugIn {
 			if (showKalman){
 				
 				
-				MTtrackerstart = new KFsearch(AllstartKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,
+				MTtrackerstart = new KFsearch(AllstartKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius, thirdDimension,
 						thirdDimensionSize, missedframes);
 				
-				MTtrackerend = new KFsearch(AllendKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,
+				MTtrackerend = new KFsearch(AllendKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius, thirdDimension,
 						thirdDimensionSize, missedframes);
 				MTtrackerstart.reset();
 				MTtrackerstart.process();
