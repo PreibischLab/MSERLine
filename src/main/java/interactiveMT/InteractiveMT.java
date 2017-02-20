@@ -307,7 +307,7 @@ public class InteractiveMT implements PlugIn {
 
 	public static enum ValueChange {
 		ROI, ALL, DELTA, FindLinesVia, MAXVAR, MINDIVERSITY, DARKTOBRIGHT, MINSIZE, MAXSIZE, SHOWMSER,
-		FRAME, SHOWHOUGH, thresholdHough, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, rhoPerPixel, thetaPerPixel, THIRDDIM, iniSearch, maxSearch, missedframes;
+		FRAME, SHOWHOUGH, thresholdHough, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, rhoPerPixel, thetaPerPixel, THIRDDIM, iniSearch, maxSearch, missedframes, THIRDDIMTrack;
 	}
 
 	boolean isFinished = false;
@@ -612,6 +612,14 @@ public class InteractiveMT implements PlugIn {
 		}
 
 		
+		if (change == ValueChange.THIRDDIMTrack ) {
+
+		//	if (preprocessedimp != null)
+		//		preprocessedimp.close();
+			
+			preprocessedimp = ImageJFunctions.wrapFloat(CurrentPreprocessedView, "curr");
+			preprocessedimp.setTitle("Preprocessed image Current View in third dimension: " + " " + thirdDimension );
+		}
 		
 		// check if Roi changed
 		boolean roiChanged = false;
@@ -1738,9 +1746,45 @@ public class InteractiveMT implements PlugIn {
 							
 							}
 							}
-						
-						PrevFrameparamKalman = FindlinesVia.LinefindingMethodKalman(groundframe, groundframepre, minlength,
-								thirdDimension, psf, newlineMser, userChoiceModel, Domask);
+
+						   ArrayList<KalmanIndexedlength> start = new ArrayList<KalmanIndexedlength>();
+						   ArrayList<KalmanIndexedlength> end = new ArrayList<KalmanIndexedlength>();
+						   
+						   for (int index = 0; index< PrevFrameparam.fst.size(); ++index){
+							    
+							    double dx = PrevFrameparam.fst.get(index).ds/ Math.sqrt(1 +PrevFrameparam.fst.get(index).slope * PrevFrameparam.fst.get(index).slope);
+								double dy = PrevFrameparam.fst.get(index).slope * dx;
+							   
+							   KalmanIndexedlength startPart = new KalmanIndexedlength(PrevFrameparam.fst.get(index).currentLabel, 
+									   PrevFrameparam.fst.get(index).seedLabel, PrevFrameparam.fst.get(index).framenumber, 
+									   PrevFrameparam.fst.get(index).ds,
+									   PrevFrameparam.fst.get(index).lineintensity,
+									   PrevFrameparam.fst.get(index).background, PrevFrameparam.fst.get(index).currentpos, PrevFrameparam.fst.get(index).fixedpos,
+									   PrevFrameparam.fst.get(index).slope ,PrevFrameparam.fst.get(index).intercept, 
+									   PrevFrameparam.fst.get(index).slope , PrevFrameparam.fst.get(index).intercept, 0, 0, new double[]{dx, dy});
+							   
+							   start.add(startPart);
+						   }
+						   for (int index = 0; index< PrevFrameparam.snd.size(); ++index){
+							    
+							    double dx = PrevFrameparam.snd.get(index).ds/ Math.sqrt(1 +PrevFrameparam.snd.get(index).slope * PrevFrameparam.snd.get(index).slope);
+								double dy = PrevFrameparam.snd.get(index).slope * dx;
+							   
+							   KalmanIndexedlength endPart = new KalmanIndexedlength(PrevFrameparam.snd.get(index).currentLabel, 
+									   PrevFrameparam.snd.get(index).seedLabel, PrevFrameparam.snd.get(index).framenumber, 
+									   PrevFrameparam.snd.get(index).ds,
+									   PrevFrameparam.snd.get(index).lineintensity,
+									   PrevFrameparam.snd.get(index).background, PrevFrameparam.snd.get(index).currentpos, PrevFrameparam.snd.get(index).fixedpos,
+									   PrevFrameparam.snd.get(index).slope ,PrevFrameparam.snd.get(index).intercept, 
+									   PrevFrameparam.snd.get(index).slope , PrevFrameparam.snd.get(index).intercept, 0, 0, new double[]{dx, dy});
+							   end.add(endPart);
+						   }
+						   
+						   
+						   
+						   
+						   
+						   PrevFrameparamKalman =  new Pair<ArrayList<KalmanIndexedlength>, ArrayList<KalmanIndexedlength>> ( start, end); 
 						
 						
 					}
@@ -1788,8 +1832,47 @@ public class InteractiveMT implements PlugIn {
 							}
 							}
 						   
-						   PrevFrameparamKalman = FindlinesVia.LinefindingMethodKalman(groundframe, groundframepre, minlength,
-									thirdDimension, psf, newlineHough, userChoiceModel, Domask);
+						   ArrayList<KalmanIndexedlength> start = new ArrayList<KalmanIndexedlength>();
+						   ArrayList<KalmanIndexedlength> end = new ArrayList<KalmanIndexedlength>();
+						   
+						   for (int index = 0; index< PrevFrameparam.fst.size(); ++index){
+							    
+							    double dx = PrevFrameparam.fst.get(index).ds/ Math.sqrt(1 +PrevFrameparam.fst.get(index).slope * PrevFrameparam.fst.get(index).slope);
+								double dy = PrevFrameparam.fst.get(index).slope * dx;
+							   
+							   KalmanIndexedlength startPart = new KalmanIndexedlength(PrevFrameparam.fst.get(index).currentLabel, 
+									   PrevFrameparam.fst.get(index).seedLabel, PrevFrameparam.fst.get(index).framenumber, 
+									   PrevFrameparam.fst.get(index).ds,
+									   PrevFrameparam.fst.get(index).lineintensity,
+									   PrevFrameparam.fst.get(index).background, PrevFrameparam.fst.get(index).currentpos, PrevFrameparam.fst.get(index).fixedpos,
+									   PrevFrameparam.fst.get(index).slope ,PrevFrameparam.fst.get(index).intercept, 
+									   PrevFrameparam.fst.get(index).slope , PrevFrameparam.fst.get(index).intercept, 0, 0, new double[]{dx, dy});
+							   
+							   start.add(startPart);
+						   }
+						   for (int index = 0; index< PrevFrameparam.snd.size(); ++index){
+							    
+							    double dx = PrevFrameparam.snd.get(index).ds/ Math.sqrt(1 +PrevFrameparam.snd.get(index).slope * PrevFrameparam.snd.get(index).slope);
+								double dy = PrevFrameparam.snd.get(index).slope * dx;
+							   
+							   KalmanIndexedlength endPart = new KalmanIndexedlength(PrevFrameparam.snd.get(index).currentLabel, 
+									   PrevFrameparam.snd.get(index).seedLabel, PrevFrameparam.snd.get(index).framenumber, 
+									   PrevFrameparam.snd.get(index).ds,
+									   PrevFrameparam.snd.get(index).lineintensity,
+									   PrevFrameparam.snd.get(index).background, PrevFrameparam.snd.get(index).currentpos, PrevFrameparam.snd.get(index).fixedpos,
+									   PrevFrameparam.snd.get(index).slope ,PrevFrameparam.snd.get(index).intercept, 
+									   PrevFrameparam.snd.get(index).slope , PrevFrameparam.snd.get(index).intercept, 0, 0, new double[]{dx, dy});
+							   end.add(endPart);
+						   }
+						   
+						   
+						   
+						   
+						   
+						   PrevFrameparamKalman =  new Pair<ArrayList<KalmanIndexedlength>, ArrayList<KalmanIndexedlength>> ( start, end); 
+								   
+								   //FindlinesVia.LinefindingMethodKalman(groundframe, groundframepre, minlength,
+								//	thirdDimension, psf, newlineHough, userChoiceModel, Domask);
 						
 					}
 				}
@@ -1830,9 +1913,45 @@ public class InteractiveMT implements PlugIn {
 						
 							}
 							}
-                           
-                           PrevFrameparamKalman = FindlinesVia.LinefindingMethodKalman(groundframe, groundframepre, minlength,
-   								thirdDimension, psf, newlineMserwHough, userChoiceModel, Domask);
+
+						   ArrayList<KalmanIndexedlength> start = new ArrayList<KalmanIndexedlength>();
+						   ArrayList<KalmanIndexedlength> end = new ArrayList<KalmanIndexedlength>();
+						   
+						   for (int index = 0; index< PrevFrameparam.fst.size(); ++index){
+							    
+							    double dx = PrevFrameparam.fst.get(index).ds/ Math.sqrt(1 +PrevFrameparam.fst.get(index).slope * PrevFrameparam.fst.get(index).slope);
+								double dy = PrevFrameparam.fst.get(index).slope * dx;
+							   
+							   KalmanIndexedlength startPart = new KalmanIndexedlength(PrevFrameparam.fst.get(index).currentLabel, 
+									   PrevFrameparam.fst.get(index).seedLabel, PrevFrameparam.fst.get(index).framenumber, 
+									   PrevFrameparam.fst.get(index).ds,
+									   PrevFrameparam.fst.get(index).lineintensity,
+									   PrevFrameparam.fst.get(index).background, PrevFrameparam.fst.get(index).currentpos, PrevFrameparam.fst.get(index).fixedpos,
+									   PrevFrameparam.fst.get(index).slope ,PrevFrameparam.fst.get(index).intercept, 
+									   PrevFrameparam.fst.get(index).slope , PrevFrameparam.fst.get(index).intercept, 0, 0, new double[]{dx, dy});
+							   
+							   start.add(startPart);
+						   }
+						   for (int index = 0; index< PrevFrameparam.snd.size(); ++index){
+							    
+							    double dx = PrevFrameparam.snd.get(index).ds/ Math.sqrt(1 +PrevFrameparam.snd.get(index).slope * PrevFrameparam.snd.get(index).slope);
+								double dy = PrevFrameparam.snd.get(index).slope * dx;
+							   
+							   KalmanIndexedlength endPart = new KalmanIndexedlength(PrevFrameparam.snd.get(index).currentLabel, 
+									   PrevFrameparam.snd.get(index).seedLabel, PrevFrameparam.snd.get(index).framenumber, 
+									   PrevFrameparam.snd.get(index).ds,
+									   PrevFrameparam.snd.get(index).lineintensity,
+									   PrevFrameparam.snd.get(index).background, PrevFrameparam.snd.get(index).currentpos, PrevFrameparam.snd.get(index).fixedpos,
+									   PrevFrameparam.snd.get(index).slope ,PrevFrameparam.snd.get(index).intercept, 
+									   PrevFrameparam.snd.get(index).slope , PrevFrameparam.snd.get(index).intercept, 0, 0, new double[]{dx, dy});
+							   end.add(endPart);
+						   }
+						   
+						   
+						   
+						   
+						   
+						   PrevFrameparamKalman =  new Pair<ArrayList<KalmanIndexedlength>, ArrayList<KalmanIndexedlength>> ( start, end); 
 						
 					}
 
@@ -2672,21 +2791,39 @@ public class InteractiveMT implements PlugIn {
 			if (showDeterministic){
 			ArrayList<Pair<Integer[], double[]>> lengthliststart = new ArrayList<Pair<Integer[], double[]>>();
 			
+			
+			
 			final ArrayList<Trackproperties> first = Allstart.get(0);
 			int MaxSeedLabel = first.get(first.size() - 1).seedlabel;
 			int MinSeedLabel = first.get(0).seedlabel;
 			
 			
-			double startlength = 0;
+			
+			
+			
+			
+			
+			
+			
+			for (int currentseed = MinSeedLabel; currentseed < MaxSeedLabel + 1; ++currentseed){
+				double startlength = 0;
+				
 			for (int index = 0; index < Allstart.size(); ++index) {
 
 				final int framenumber = index + next;
 				final ArrayList<Trackproperties> thirdDimension = Allstart.get(index);
-
+			
 				
+				
+					
 				for (int frameindex = 0; frameindex < thirdDimension.size(); ++frameindex) {
-
+					
 					final Integer SeedID = thirdDimension.get(frameindex).seedlabel;
+				
+					if (SeedID == currentseed){
+					
+					
+					
 					final Integer[] FrameID = {framenumber, SeedID};
 					final double[] originalpoint = thirdDimension.get(frameindex).originalpoint;
 					final double[] newpoint = thirdDimension.get(frameindex).newpoint;
@@ -2726,10 +2863,10 @@ public class InteractiveMT implements PlugIn {
 
 					lengthliststart.add(lengthpair);
 					
-				
+					}
 				}
 				
-				
+			}
 
 			}
 			
@@ -2745,11 +2882,18 @@ public class InteractiveMT implements PlugIn {
 				try {
 					
 					File fichier = new File(usefolder + "//" + addTrackToName + "SeedLabel" + seedID  + "-start" + ".txt");
+					File fichierMy = new File(usefolder + "//" + addToName + "KymoVarun-start" + seedID + ".txt");
 					FileWriter fw = new FileWriter(fichier);
 					BufferedWriter bw = new BufferedWriter(fw);
 					bw.write("\tFramenumber\tSeedLabel\tOldX (px)\tOldY (px)\tNewX (px)\tNewY (px)\tOldX (real)\tOldY (real)"
 							+ "\tNewX (real)\tNewY (real)"
 							+ "\tLength ( real)\tCummulativeLength (real)n");
+					
+					FileWriter fwmy = new FileWriter(fichierMy);
+					BufferedWriter bwmy = new BufferedWriter(fwmy);
+
+					bwmy.write(
+							"\tFramenumber\tLength\n");
 					
 					for (int index = 0; index < lengthliststart.size(); ++index) {
 						if (lengthliststart.get(index).fst[1] == seedID){
@@ -2765,11 +2909,17 @@ public class InteractiveMT implements PlugIn {
 								+ nf.format(lengthliststart.get(index).snd[7]) + "\t" + "\t"
 								+ nf.format(lengthliststart.get(index).snd[8]) + "\t" + "\t"
 								+ nf.format(lengthliststart.get(index).snd[9])  + "\n");
+						
+
+						bwmy.write(  "\t" + lengthliststart.get(index).fst[0] + "\t" + "\t"
+								+ nf.format(lengthliststart.get(index).snd[9])  + "\n");
 						}
 						
 					}
 					bw.close();
 					fw.close();
+					bwmy.close();
+					fwmy.close();
 				} catch (IOException e) {
 				}
 				}
@@ -2788,29 +2938,7 @@ public class InteractiveMT implements PlugIn {
 					}
 					 
 				}
-					 File fichierMy = new File(usefolder + "//" + addToName + "KymoVarun-start" + ".txt");
-					try {
-						FileWriter fwmy = new FileWriter(fichierMy);
-						BufferedWriter bwmy = new BufferedWriter(fwmy);
-
-						bwmy.write(
-								"\tFramenumber\tLength\n");
-						for (int index = 0; index < lengthliststart.size(); ++index) {
-							if (lengthliststart.get(index).fst[1] == seedID){
-								
-								bwmy.write(  "\t" + lengthliststart.get(index).fst[0] + "\t" + "\t"
-										+ nf.format(lengthliststart.get(index).snd[9])  + "\n");
-								
-								
-							}
-						
-						}
-						bwmy.close();
-						fwmy.close();
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
+					 
 						
 				
 					for (int index = 0; index < lengthliststart.size(); ++index) {
@@ -2849,23 +2977,34 @@ public class InteractiveMT implements PlugIn {
 					
 					}
 					
-					
-					
 					if (SaveXLS)
 						saveResultsToExcel(usefolder + "//" + addTrackToName + "start" +  "SeedLabel" + seedID +  ".xls" , rt, seedID);
+					
+				
 				
 				
 			}
 			
-			double endlength = 0;
 			ArrayList<Pair<Integer[], double[]>> lengthlistend = new ArrayList<Pair<Integer[], double[]>>();
+			
+			for (int currentseed = MinSeedLabel; currentseed < MaxSeedLabel + 1; ++currentseed){
+			
+			double endlength = 0;
 			for (int index = 0; index < Allend.size(); ++index) {
 
 				final int framenumber = index + next;
+				
 				final ArrayList<Trackproperties> thirdDimension = Allend.get(index);
-
+			
+					
 				for (int frameindex = 0; frameindex < thirdDimension.size(); ++frameindex) {
 					final Integer SeedID = thirdDimension.get(frameindex).seedlabel;
+					
+             
+					
+						if (SeedID == currentseed){
+					
+					
 					final Integer[] FrameID = {framenumber, SeedID};
 					final double[] originalpoint = thirdDimension.get(frameindex).originalpoint;
 					final double[] newpoint = thirdDimension.get(frameindex).newpoint;
@@ -2884,7 +3023,7 @@ public class InteractiveMT implements PlugIn {
 					
 					
 					
-					if (seedtoold > seedtocurrent && framenumber > next + 2){
+					if (seedtoold > seedtocurrent && framenumber > next + 5){
 						
 						// MT shrank
 						
@@ -2905,7 +3044,8 @@ public class InteractiveMT implements PlugIn {
 					
 					lengthlistend.add(lengthpair);
 					
-					
+						}
+					}
 				
 
 				}
@@ -2921,11 +3061,17 @@ public class InteractiveMT implements PlugIn {
 				if (SaveTxt){
 				try {
 					File fichier = new File(usefolder + "//" + addTrackToName + "SeedLabel" + seedID + "-end" + ".txt");
+					File fichierMy = new File(usefolder + "//" + addToName + "KymoVarun-end" + seedID +  ".txt");
 					FileWriter fw = new FileWriter(fichier);
 					BufferedWriter bw = new BufferedWriter(fw);
 					bw.write("\tFramenumber\tSeedLabel\tOldX (px)\tOldY (px)\tNewX (px)\tNewY (px)\tOldX (real)\tOldY (real)"
 							+ "\tNewX (real)\tNewY (real)"
 							+ "\tLength ( real)\tCummulativeLength(real)\n");
+					FileWriter fwmy = new FileWriter(fichierMy);
+					BufferedWriter bwmy = new BufferedWriter(fwmy);
+
+					bwmy.write(
+							"\tFramenumber\tLength\n");
 					for (int index = 0; index < lengthlistend.size(); ++index) {
 						if (lengthlistend.get(index).fst[1] == seedID){
 						bw.write(  "\t" + lengthlistend.get(index).fst[0] + "\t" + "\t"
@@ -2940,10 +3086,16 @@ public class InteractiveMT implements PlugIn {
 								+ nf.format(lengthlistend.get(index).snd[7]) + "\t" + "\t"
 								+ nf.format(lengthlistend.get(index).snd[8]) + "\t" + "\t"
 								+ nf.format(lengthlistend.get(index).snd[9]) +  "\n");
+						
+						
+						bwmy.write(  "\t" + lengthlistend.get(index).fst[0] + "\t" + "\t"
+								+ nf.format(lengthlistend.get(index).snd[9])  + "\n");
 						}
 					}
 					bw.close();
 					fw.close();
+					bwmy.close();
+					fwmy.close();
 				} catch (IOException e) {
 				}
 				}
@@ -2960,31 +3112,7 @@ public class InteractiveMT implements PlugIn {
 						e.printStackTrace();
 					}
 				}
-					 File fichierMy = new File(usefolder + "//" + addToName + "KymoVarun-end" + ".txt");
-					try {
-						FileWriter fwmy = new FileWriter(fichierMy);
-						BufferedWriter bwmy = new BufferedWriter(fwmy);
-
-						bwmy.write(
-								"\tFramenumber\tLength\n");
-						for (int index = 0; index < lengthlistend.size(); ++index) {
-							if (lengthlistend.get(index).fst[1] == seedID){
-								
-								bwmy.write(  "\t" + lengthlistend.get(index).fst[0] + "\t" + "\t"
-										+ nf.format(lengthlistend.get(index).snd[9])  + "\n");
-								
-								
-							}
-						
-						}
-						bwmy.close();
-						fwmy.close();
-						
-						
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
+					
 						
 				
 				
@@ -3026,9 +3154,9 @@ public class InteractiveMT implements PlugIn {
 						
 					}
 					
-					
 					if (SaveXLS)
-				saveResultsToExcel(usefolder + "//" + addTrackToName + "end" + "seedLabel" + seedID + ".xls" , rtend, seedID);
+						saveResultsToExcel(usefolder + "//" + addTrackToName + "end" + "seedLabel" + seedID + ".xls" , rtend, seedID);
+					
 			}
 			rtAll.show("Start and End of MT, respectively");
 			}
@@ -3133,7 +3261,7 @@ public class InteractiveMT implements PlugIn {
 				isStarted = true;
 				 CurrentPreprocessedView = getCurrentPreView();
 				
-			updatePreview(ValueChange.THIRDDIM);
+			updatePreview(ValueChange.THIRDDIMTrack);
 			
 			IJ.log("Current frame: " + thirdDimension);
 			
@@ -3530,19 +3658,32 @@ public class InteractiveMT implements PlugIn {
 			
 			if (showDeterministic){
 			
-			
-			
-			double startlength = 0;
-			ArrayList<Pair<Integer[], double[]>> lengthliststart = new ArrayList<Pair<Integer[], double[]>>();
-			for (int index = 0; index < Allstart.size(); ++index) {
 
+				final ArrayList<Trackproperties> first = Allstart.get(0);
+				int MaxSeedLabel = first.get(first.size() - 1).seedlabel;
+				int MinSeedLabel = first.get(0).seedlabel;
+				
+			
+			ArrayList<Pair<Integer[], double[]>> lengthliststart = new ArrayList<Pair<Integer[], double[]>>();
+			for (int currentseed = MinSeedLabel; currentseed < MaxSeedLabel + 1; ++currentseed){
+				double startlength = 0;
+			
+			for (int index = 0; index < Allstart.size(); ++index) {
+				
 				final int framenumber = index + next;
 				final ArrayList<Trackproperties> thirdDimension = Allstart.get(index);
-
+			
+				
+					
 				
 				for (int frameindex = 0; frameindex < thirdDimension.size(); ++frameindex) {
 
+					
+					
 					final Integer SeedID = thirdDimension.get(frameindex).seedlabel;
+				
+					if (SeedID == currentseed){
+					
 					final Integer[] FrameID = {framenumber, SeedID};
 					final double[] originalpoint = thirdDimension.get(frameindex).originalpoint;
 					final double[] newpoint = thirdDimension.get(frameindex).newpoint;
@@ -3559,7 +3700,7 @@ public class InteractiveMT implements PlugIn {
 					
 					
 					
-					if (seedtoold > seedtocurrent && framenumber > next + 2){
+					if (seedtoold > seedtocurrent && framenumber > next + 5){
 						
 						// MT shrank
 						
@@ -3581,7 +3722,8 @@ public class InteractiveMT implements PlugIn {
 
 					lengthliststart.add(lengthpair);
 					
-				
+					}
+					}
 
 				}
 				
@@ -3592,9 +3734,6 @@ public class InteractiveMT implements PlugIn {
 			
                
 			
-			final ArrayList<Trackproperties> first = Allstart.get(0);
-			int MaxSeedLabel = first.get(first.size() - 1).seedlabel;
-			int MinSeedLabel = first.get(0).seedlabel;
 			NumberFormat nf = NumberFormat.getInstance(Locale.ENGLISH);
 			nf.setMaximumFractionDigits(3);
 			
@@ -3604,11 +3743,20 @@ public class InteractiveMT implements PlugIn {
 				if(SaveTxt){
 				try {
 					File fichier = new File(usefolder + "//" + addTrackToName + "SeedLabel" + seedID  + "-start" + ".txt");
+					File fichierMy = new File(usefolder + "//" + addToName + "KymoVarun-start" + seedID + ".txt");
+
 					FileWriter fw = new FileWriter(fichier);
 					BufferedWriter bw = new BufferedWriter(fw);
 					bw.write("\tFramenumber\tSeedLabel\tOldX (px)\tOldY (px)\tNewX (px)\tNewY (px)\tOldX (real)\tOldY (real)"
 							+ "\tNewX (real)\tNewY (real)"
 							+ "\tLength ( real)\tCummulativeLength (real)\n");
+					
+					FileWriter fwmy = new FileWriter(fichierMy);
+					BufferedWriter bwmy = new BufferedWriter(fwmy);
+
+					bwmy.write(
+							"\tFramenumber\tLength\n");
+					
 					for (int index = 0; index < Allstart.size(); ++index) {
 						if (lengthliststart.get(index).fst[1] == seedID){
 						bw.write(  "\t" + lengthliststart.get(index).fst[0] + "\t" + "\t"
@@ -3623,10 +3771,17 @@ public class InteractiveMT implements PlugIn {
 								+ nf.format(lengthliststart.get(index).snd[7]) + "\t" + "\t"
 								+ nf.format(lengthliststart.get(index).snd[8]) + "\t" + "\t"
 								+ nf.format(lengthliststart.get(index).snd[9]) +  "\n");
+						
+						bwmy.write(  "\t" + lengthliststart.get(index).fst[0] + "\t" + "\t"
+								+ nf.format(lengthliststart.get(index).snd[9])  + "\n");
+						
+						
 						}
 					}
 					bw.close();
 					fw.close();
+					bwmy.close();
+					fwmy.close();
 				} catch (IOException e) {
 				}
 				}
@@ -3643,32 +3798,6 @@ public class InteractiveMT implements PlugIn {
 						e.printStackTrace();
 					}
 				}
-				File fichierMy = new File(usefolder + "//" + addToName + "KymoVarun-start" + ".txt");
-					try {
-						FileWriter fwmy = new FileWriter(fichierMy);
-						BufferedWriter bwmy = new BufferedWriter(fwmy);
-
-						bwmy.write(
-								"\tFramenumber\tLength\n");
-						for (int index = 0; index < lengthliststart.size(); ++index) {
-							if (lengthliststart.get(index).fst[1] == seedID){
-								
-								bwmy.write(  "\t" + lengthliststart.get(index).fst[0] + "\t" + "\t"
-										+ nf.format(lengthliststart.get(index).snd[9])  + "\n");
-								
-								
-							}
-						
-						}
-						bwmy.close();
-						fwmy.close();
-						
-						
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-						
 				
 				
 				
@@ -3707,9 +3836,9 @@ public class InteractiveMT implements PlugIn {
 						
 						}
 
+					
 						
 					}
-					
 					
 					if (SaveXLS)
 						saveResultsToExcel(usefolder + "//" + addTrackToName + "start" + "SeedLabel" +  seedID + ".xls" , rt, seedID);
@@ -3718,15 +3847,35 @@ public class InteractiveMT implements PlugIn {
 			
 			}
 					
-				double endlength = 0;
+			
 			ArrayList<Pair<Integer[], double[]>> lengthlistend = new ArrayList<Pair<Integer[], double[]>>();
+			
+			for (int currentseed = MinSeedLabel; currentseed < MaxSeedLabel + 1; ++currentseed){
+				double endlength = 0;
+			
 			for (int index = 0; index < Allend.size(); ++index) {
-
+				
 				final int framenumber = index + next;
 				final ArrayList<Trackproperties> thirdDimension = Allend.get(index);
 
+		
+					
+				
 				for (int frameindex = 0; frameindex < thirdDimension.size(); ++frameindex) {
+					
+					
+					
+					
 					final Integer SeedID = thirdDimension.get(frameindex).seedlabel;
+					
+					
+					
+                  
+					
+				
+					
+						if (SeedID == currentseed){
+					
 					final Integer[] FrameID = {framenumber, SeedID};
 					final double[] originalpoint = thirdDimension.get(frameindex).originalpoint;
 					final double[] newpoint = thirdDimension.get(frameindex).newpoint;
@@ -3745,7 +3894,7 @@ public class InteractiveMT implements PlugIn {
 					
 					
 					
-					if (seedtoold > seedtocurrent && framenumber > next + 2){
+					if (seedtoold > seedtocurrent && framenumber > next + 5){
 						
 						// MT shrank
 						
@@ -3768,7 +3917,9 @@ public class InteractiveMT implements PlugIn {
 
 					lengthlistend.add(lengthpair);
 					
-					
+						}
+						
+					}
 
 				}
 
@@ -3780,11 +3931,19 @@ public class InteractiveMT implements PlugIn {
 				if (SaveTxt){
 				try {
 					File fichier = new File(usefolder + "//" + addTrackToName + "SeedLabel" + seedID + "-end" + ".txt");
+					
+					 File fichierMy = new File(usefolder + "//" + addToName + "KymoVarun-end" + seedID + ".txt");
+
 					FileWriter fw = new FileWriter(fichier);
 					BufferedWriter bw = new BufferedWriter(fw);
 					bw.write("\tFramenumber\tSeedLabel\tOldX (px)\tOldY (px)\tNewX (px)\tNewY (px)\tOldX (real)\tOldY (real)"
 							+ "\tNewX (real)\tNewY (real)"
 							+ "\tLength ( real)\tCummulativeLength (real)\n");
+					
+					FileWriter fwmy = new FileWriter(fichierMy);
+					BufferedWriter bwmy = new BufferedWriter(fwmy);
+					bwmy.write(
+							"\tFramenumber\tLength\n");
 					for (int index = 0; index < Allend.size(); ++index) {
 						if (lengthlistend.get(index).fst[1] == seedID){
 						bw.write(  "\t" + lengthlistend.get(index).fst[0] + "\t" + "\t"
@@ -3799,9 +3958,15 @@ public class InteractiveMT implements PlugIn {
 								+ nf.format(lengthlistend.get(index).snd[7]) + "\t" + "\t"
 								+ nf.format(lengthlistend.get(index).snd[8]) + "\t" + "\t"
 								+ nf.format(lengthlistend.get(index).snd[9]) + "\n");
+						
+						bwmy.write(  "\t" + lengthlistend.get(index).fst[0] + "\t" + "\t"
+								+ nf.format(lengthlistend.get(index).snd[9])  + "\n");
+						
 						}
 						
 					}
+					bwmy.close();
+					fwmy.close();
 					bw.close();
 					fw.close();
 				} catch (IOException e) {
@@ -3821,30 +3986,7 @@ public class InteractiveMT implements PlugIn {
 						e.printStackTrace();
 					}
 				} 
-					 File fichierMy = new File(usefolder + "//" + addToName + "KymoVarun-end" + ".txt");
-					try {
-						
-						FileWriter fwmy = new FileWriter(fichierMy);
-						BufferedWriter bwmy = new BufferedWriter(fwmy);
-						bwmy.write(
-								"\tFramenumber\tLength\n");
-						for (int index = 0; index < lengthlistend.size(); ++index) {
-							if (lengthlistend.get(index).fst[1] == seedID){
-								
-								bwmy.write(  "\t" + lengthlistend.get(index).fst[0] + "\t" + "\t"
-										+ nf.format(lengthlistend.get(index).snd[9])  + "\n");
-								
-								
-							}
-						
-						}
-						
-						bwmy.close();
-						fwmy.close();
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
+					
 						
 				
 				
@@ -3887,9 +4029,9 @@ public class InteractiveMT implements PlugIn {
 						
 						
 					}
+				
 					if (SaveXLS)
 						saveResultsToExcel(usefolder + "//" + addTrackToName + "end" + "SeedLabel" +  seedID + ".xls" , rtend, seedID);
-					
 					
 					
 			
