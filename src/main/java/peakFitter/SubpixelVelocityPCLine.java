@@ -53,10 +53,10 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 	// LM solver iteration params
 	public int maxiter = 200;
 	public double lambda = 1e-4;
-	public double termepsilon = 1e-2;
+	public double termepsilon = 1e-1;
 	// Mask fits iteration param
 	public int iterations = 300;
-	public double cutoffdistance = 5;
+	public double cutoffdistance = 10;
 	public boolean halfgaussian = false;
 	public double Intensityratio = 0.5;
 	private final UserChoiceModel model;
@@ -152,7 +152,6 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 		final int oldframenumber = PrevFrameparamstart.get(PrevFrameparamstart.size() - 1).framenumber;
 		final int framediff = framenumber - oldframenumber;
-		System.out.println(PrevFrameparamstart.size());
 		for (int index = 0; index < PrevFrameparamstart.size(); ++index) {
 			final double originalslope = PrevFrameparamstart.get(index).originalslope;
 
@@ -677,10 +676,10 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			final double[] inistartpos = { LMparam[0], LMparam[1] };
 			final double[] iniendpos = { LMparam[2], LMparam[3] };
 
-			double inicutoffdistance = Math.abs(inistartpos[1] - iniendpos[1]);
-
+			double inicutoffdistanceY = Math.abs(inistartpos[1] - iniendpos[1]);
+			double inicutoffdistanceX = Math.abs(inistartpos[0] - iniendpos[0]);
 			// LM solver part
-			if (inicutoffdistance > 0) {
+			if (inicutoffdistanceY > 2 && inicutoffdistanceX > 2 ) {
 			// LM solver part
 
 			try {
@@ -714,7 +713,6 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			}
 
 
-			System.out.println("Frame: " + framenumber);
 
 			final int seedLabel = iniparam.seedLabel;
 

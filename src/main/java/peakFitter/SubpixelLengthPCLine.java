@@ -606,7 +606,6 @@ public ArrayList<Indexedlength> getEndPoints(){
 					
 					if (Math.abs(endpos[0] - endfit[0]) >= cutoffdistance || Math.abs(endpos[1] - endfit[1]) >= cutoffdistance){
 
-						System.out.println("Mask fits fail, both cords move far, returning LM solver results!");
 
 						for (int d = 0; d < ndims; ++d) {
 							
@@ -622,7 +621,6 @@ public ArrayList<Indexedlength> getEndPoints(){
 
 					for (int d = 0; d < ndims; ++d) {
 						if (Double.isNaN(startfit[d]) || Double.isNaN(endfit[d])) {
-							System.out.println("Mask fits fail, returning LM solver results!");
 							
 							startparam[d] = startpos[d];
 							endparam[d] = endpos[d];
@@ -717,7 +715,6 @@ public ArrayList<Indexedlength> getEndPoints(){
 						
 						if (Math.abs(endpos[0] - endfit[0]) >= cutoffdistance || Math.abs(endpos[1] - endfit[1]) >= cutoffdistance){
 
-							System.out.println("Mask fits fail, both cords move far, returning LM solver results!");
 
 							for (int d = 0; d < ndims; ++d) {
 								
@@ -733,7 +730,6 @@ public ArrayList<Indexedlength> getEndPoints(){
 
 						for (int d = 0; d < ndims; ++d) {
 							if (Double.isNaN(startfit[d]) || Double.isNaN(endfit[d])) {
-								System.out.println("Mask fits fail, returning LM solver results!");
 								
 								startparam[d] = startpos[d];
 								endparam[d] = endpos[d];
@@ -830,7 +826,6 @@ public ArrayList<Indexedlength> getEndPoints(){
 					
 					if (Math.abs(endpos[0] - endfit[0]) >= cutoffdistance || Math.abs(endpos[1] - endfit[1]) >= cutoffdistance){
                        {
-						System.out.println("Mask fits fail, both cords move far, returning LM solver results!");
 
 						for (int d = 0; d < ndims; ++d) {
 							
@@ -847,7 +842,6 @@ public ArrayList<Indexedlength> getEndPoints(){
 
 					for (int d = 0; d < ndims; ++d) {
 						if (Double.isNaN(startfit[d]) || Double.isNaN(endfit[d])) {
-							System.out.println("Mask fits fail, returning LM solver results!");
 							
 							startparam[d] = startpos[d];
 							endparam[d] = endpos[d];

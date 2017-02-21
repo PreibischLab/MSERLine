@@ -307,7 +307,7 @@ public class InteractiveMT implements PlugIn {
 
 	public static enum ValueChange {
 		ROI, ALL, DELTA, FindLinesVia, MAXVAR, MINDIVERSITY, DARKTOBRIGHT, MINSIZE, MAXSIZE, SHOWMSER,
-		FRAME, SHOWHOUGH, thresholdHough, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, rhoPerPixel, thetaPerPixel, THIRDDIM, iniSearch, maxSearch, missedframes, THIRDDIMTrack;
+		FRAME, SHOWHOUGH, thresholdHough, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, rhoPerPixel, thetaPerPixel, THIRDDIM, iniSearch, maxSearch, missedframes, THIRDDIMTrack, MEDIAN, NORMALIZE;
 	}
 
 	boolean isFinished = false;
@@ -603,7 +603,7 @@ public class InteractiveMT implements PlugIn {
 		
 		
 		if (change == ValueChange.THIRDDIM ) {
-
+			System.out.println("Current Time point: " + thirdDimension);
 			if (preprocessedimp != null)
 				preprocessedimp.close();
 			
@@ -612,26 +612,87 @@ public class InteractiveMT implements PlugIn {
 		}
 
 		
+		
 		if (change == ValueChange.THIRDDIMTrack ) {
 
-		//	if (preprocessedimp != null)
-		//		preprocessedimp.close();
-			
-			preprocessedimp = ImageJFunctions.wrapFloat(CurrentPreprocessedView, "curr");
-			preprocessedimp.setTitle("Preprocessed image Current View in third dimension: " + " " + thirdDimension );
+		
+				System.out.println("Current Time point: " + thirdDimension);
+		
+
+				long[] min = { (long) standardRectangle.getMinX(), (long) standardRectangle.getMinY() };
+				long[] max = { (long) standardRectangle.getMaxX(), (long) standardRectangle.getMaxY() };
+				interval = new FinalInterval(min, max);
+				final long Cannyradius = (long) (  Math.ceil(Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1])));
+				
+
+					currentimg = extractImage(CurrentView);
+					currentPreprocessedimg = extractImage(CurrentPreprocessedView);
+					// Expand the image by 10 pixels
+					
+					Interval spaceinterval = Intervals.createMinMax(new long[] {currentimg.min(0),currentimg.min(1), currentimg.max(0), currentimg.max(1)});
+					Interval interval = Intervals.expand(spaceinterval, 10);
+					currentimg = Views.interval(Views.extendBorder(currentimg), interval);
+					currentPreprocessedimg = Views.interval(Views.extendBorder(currentPreprocessedimg), interval);
+					
+					newimg = copytoByteImage(Kernels.CannyEdgeandMean(currentPreprocessedimg, Cannyradius));
 		}
 		
+		
 		// check if Roi changed
-		boolean roiChanged = false;
+				boolean roiChanged = false;
+		if (change== ValueChange.MEDIAN || change == ValueChange.NORMALIZE){
+			if (preprocessedimp != null)
+				preprocessedimp.close();
+			preprocessedimp = ImageJFunctions.show(CurrentPreprocessedView);
+			Roi roi = preprocessedimp.getRoi();
+			if (roi == null || roi.getType() != Roi.RECTANGLE) {
+				preprocessedimp.setRoi(new Rectangle(standardRectangle));
+				roi = preprocessedimp.getRoi();
+				roiChanged = true;
+			}
+			
+			Rectangle rect = roi.getBounds();
+			
+			if (roiChanged || currentimg == null || currentPreprocessedimg == null || newimg == null
+					|| change == ValueChange.FRAME || rect.getMinX() != standardRectangle.getMinX()
+					|| rect.getMaxX() != standardRectangle.getMaxX() || rect.getMinY() != standardRectangle.getMinY()
+					|| rect.getMaxY() != standardRectangle.getMaxY() || change == ValueChange.ALL) {
+				standardRectangle = rect;
 
+				long[] min = { (long) standardRectangle.getMinX(), (long) standardRectangle.getMinY() };
+				long[] max = { (long) standardRectangle.getMaxX(), (long) standardRectangle.getMaxY() };
+				interval = new FinalInterval(min, max);
+				final long Cannyradius = (long) (  Math.ceil(Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1])));
+				
+
+					currentimg = extractImage(CurrentView);
+					currentPreprocessedimg = extractImage(CurrentPreprocessedView);
+					// Expand the image by 10 pixels
+					
+					Interval spaceinterval = Intervals.createMinMax(new long[] {currentimg.min(0),currentimg.min(1), currentimg.max(0), currentimg.max(1)});
+					Interval interval = Intervals.expand(spaceinterval, 10);
+					currentimg = Views.interval(Views.extendBorder(currentimg), interval);
+					currentPreprocessedimg = Views.interval(Views.extendBorder(currentPreprocessedimg), interval);
+					
+					newimg = copytoByteImage(Kernels.CannyEdgeandMean(currentPreprocessedimg, Cannyradius));
+					
+					
+
+					roiChanged = true;
+			}
+		}
+		
+		
+		if (change != ValueChange.THIRDDIMTrack ) {
 		Roi roi = preprocessedimp.getRoi();
 		if (roi == null || roi.getType() != Roi.RECTANGLE) {
 			preprocessedimp.setRoi(new Rectangle(standardRectangle));
 			roi = preprocessedimp.getRoi();
 			roiChanged = true;
 		}
-
+		
 		Rectangle rect = roi.getBounds();
+		
 		if (roiChanged || currentimg == null || currentPreprocessedimg == null || newimg == null
 				|| change == ValueChange.FRAME || rect.getMinX() != standardRectangle.getMinX()
 				|| rect.getMaxX() != standardRectangle.getMaxX() || rect.getMinY() != standardRectangle.getMinY()
@@ -660,7 +721,7 @@ public class InteractiveMT implements PlugIn {
 				roiChanged = true;
 		
 		}
-
+		}
 		// if we got some mouse click but the ROI did not change we can return
 		if (!roiChanged && change == ValueChange.ROI) {
 			isComputing = false;
@@ -677,16 +738,7 @@ public class InteractiveMT implements PlugIn {
 
 		if (change == ValueChange.SHOWHOUGH) {
 
-			MouseEvent mev = new MouseEvent(preprocessedimp.getCanvas(), MouseEvent.MOUSE_RELEASED,
-					System.currentTimeMillis(), 0, 0, 0, 1, false);
-
-			if (mev != null) {
-
-				roimanager.close();
-
-				roimanager = new RoiManager();
-
-			}
+		
 
 			IJ.log("Doing watershedding on the distance transformed image ");
 
@@ -709,22 +761,14 @@ public class InteractiveMT implements PlugIn {
 
 		if (change == ValueChange.SHOWMSER) {
 
-			MouseEvent mev = new MouseEvent(preprocessedimp.getCanvas(), MouseEvent.MOUSE_RELEASED,
-					System.currentTimeMillis(), 0, 0, 0, 1, false);
-
-			if (mev != null) {
-
-				roimanager.close();
-
-				roimanager = new RoiManager();
-
-			}
+			
 
 			IJ.log(" Computing the Component tree");
 			
 			newtree = MserTree.buildMserTree(newimg, delta, minSize, maxSize, maxVar, minDiversity, darktobright);
 			Rois = getcurrentRois(newtree);
 
+			if (preprocessedimp!=null){
 			Overlay o = preprocessedimp.getOverlay();
 
 			if (o == null) {
@@ -742,9 +786,11 @@ public class InteractiveMT implements PlugIn {
 				o.add(or);
 				roimanager.addRoi(or);
 			}
+			}
 
 		}
 
+		if (preprocessedimp!=null)
 		preprocessedimp.updateAndDraw();
 
 		isComputing = false;
@@ -807,7 +853,6 @@ public class InteractiveMT implements PlugIn {
 
 		CheckboxGroup Finders = new CheckboxGroup();
 		final Checkbox Normalize = new Checkbox("Normailze Image Intensity ", NormalizeImage);
-		final Checkbox MedFiltercur = new Checkbox("Apply Median Filter to current Frame", Mediancurr);
 		final Checkbox MedFilterAll = new Checkbox("Apply Median Filter to Stack", MedianAll);
 		final Scrollbar thirdDimensionslider = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 0, 0,
 				thirdDimensionSize);
@@ -848,9 +893,7 @@ public class InteractiveMT implements PlugIn {
 		c.insets = new Insets(10, 10, 0, 0);
 		panelFirst.add(Normalize, c);
 		
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 0);
-		panelFirst.add(MedFiltercur, c);
+	
 		
 		++c.gridy;
 		c.insets = new Insets(10, 10, 0, 0);
@@ -889,7 +932,7 @@ public class InteractiveMT implements PlugIn {
 		cl.show(panelCont, "1");
 	
 		Normalize.addItemListener(new NormalizeListener());
-		MedFiltercur.addItemListener(new MediancurrListener() );
+		//MedFiltercur.addItemListener(new MediancurrListener() );
 		MedFilterAll.addItemListener(new MedianAllListener() );
 		
 	//	ChoiceofTracker.addActionListener(new TrackerButtonListener(Cardframe));
@@ -1263,166 +1306,6 @@ public class InteractiveMT implements PlugIn {
 
 
 	
-	
-	public void displaySliders() {
-
-		final JFrame frame = new JFrame("Find MTs and Track");
-		frame.pack();
-		frame.setSize(new java.awt.Dimension(650, 650));
-		frame.validate();
-		frame.setIconImage(null);
-		
-		/* Instantiation */
-		final GridBagLayout layout = new GridBagLayout();
-		final GridBagConstraints c = new GridBagConstraints();
-		
-		
-		
-		CheckboxGroup Finders = new CheckboxGroup();
-		final Checkbox Normalize = new Checkbox("Normailze Image Intensity ", NormalizeImage);
-		final Checkbox MedFiltercur = new Checkbox("Apply Median Filter to current Frame", Mediancurr);
-		final Checkbox MedFilterAll = new Checkbox("Apply Median Filter to Stack", MedianAll);
-		final Scrollbar thirdDimensionslider = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 0, 0,
-				thirdDimensionSize);
-		thirdDimensionslider.setBlockIncrement(1);
-		this.thirdDimensionslider = (int) computeIntValueFromScrollbarPosition(thirdDimensionsliderInit, timeMin,
-				thirdDimensionSize, thirdDimensionSize);
-		final Label timeText = new Label("Time index = " + this.thirdDimensionslider, Label.CENTER);
-		final Button JumpinTime = new Button("Jump in time :");
-		final Label MTText = new Label("Step 1) Determine end points of MT (start from seeds) ", Label.CENTER);
-		final Label MTTextHF = new Label("Step 2) Track both end points of MT over time ", Label.CENTER);
-		final Button MoveNext = new Button("Update parameters using First Red Channel image");
-		final Button JumptoFrame = new Button("Update parameters using Nth Red Channel image, choose N:");
-		final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
-		final Button SkipframeandTrackEndPoints = new Button("TrackEndPoint (User specified first and last frame)");
-		
-		final Checkbox mser = new Checkbox("MSER", Finders, FindLinesViaMSER);
-		final Checkbox hough = new Checkbox("HOUGH", Finders, FindLinesViaHOUGH);
-		final Checkbox mserwhough = new Checkbox("MSERwHOUGH", Finders, FindLinesViaMSERwHOUGH);
-		
-		final Checkbox displaySeedID = new Checkbox("Display Seed IDs", displaySeedLabels);
-		final Checkbox txtfile = new Checkbox("Save tracks as TXT file", SaveTxt);
-		final Checkbox xlsfile = new Checkbox("Save tracks as XLS file", SaveXLS);
-		final Button ChoiceofTracker = new Button("Choose MT tracker");
-		
-      
-		/* Location */
-		frame.setLayout(layout);
-
-		c.fill = GridBagConstraints.HORIZONTAL;
-		c.gridx = 0;
-		c.gridy = 0;
-		c.weightx = 1;
-
-	
-
-		c.insets = new Insets(10, 10, 0, 0);
-		frame.add(Normalize, c);
-		
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 0);
-		frame.add(MedFiltercur, c);
-		
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 0);
-		frame.add(MedFilterAll, c);
-	
-
-		
-		++c.gridy;
-		frame.add(MTText, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 0);
-		frame.add(mser, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 0);
-		frame.add(hough, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 0);
-		frame.add(mserwhough, c);
-		
-		if (thirdDimensionSize > 1) {
-			++c.gridy;
-			frame.add(thirdDimensionslider, c);
-
-			++c.gridy;
-			frame.add(timeText, c);
-
-			++c.gridy;
-			c.insets = new Insets(0, 175, 0, 175);
-			frame.add(JumpinTime, c);
-		}
-		
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 220);
-		frame.add(MoveNext, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 180);
-		frame.add(JumptoFrame, c);
-		
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 0);
-		frame.add(MTTextHF, c);
-		
-		++c.gridy;
-		c.insets = new Insets(10, 245, 0, 245);
-		frame.add(ChoiceofTracker, c);
-
-		
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 200);
-		frame.add(TrackEndPoints, c);
-		
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 200);
-		frame.add(SkipframeandTrackEndPoints, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 0);
-		frame.add(displaySeedID, c);
-		
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 0);
-		frame.add(txtfile, c);
-		
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 0);
-		frame.add(xlsfile, c);
-		
-		
-	
-		
-		
-		Normalize.addItemListener(new NormalizeListener());
-		MedFiltercur.addItemListener(new MediancurrListener() );
-		MedFilterAll.addItemListener(new MedianAllListener() );
-		
-		ChoiceofTracker.addActionListener(new TrackerButtonListener(frame));
-		mser.addItemListener(new MserListener());
-		hough.addItemListener(new HoughListener());
-		mserwhough.addItemListener(new MserwHoughListener());
-		MoveNext.addActionListener(new moveNextListener());
-		JumptoFrame.addActionListener(new moveToFrameListener());
-		TrackEndPoints.addActionListener(new TrackendsListener());
-		SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
-		thirdDimensionslider
-		.addAdjustmentListener(new thirdDimensionsliderListener(timeText, timeMin, thirdDimensionSize));
-		frame.addWindowListener(new FrameListener(frame));
-		JumpinTime.addActionListener(
-				new moveInThirdDimListener(thirdDimensionslider, timeText, timeMin, thirdDimensionSize));
-		
-		txtfile.addItemListener(new SaveasTXT());
-		xlsfile.addItemListener(new SaveasXLS());
-		displaySeedID.addItemListener(new DisplaySeedID());
-		
-		frame.setVisible(true);
-		MTText.setFont(MTText.getFont().deriveFont(Font.BOLD));
-		MTTextHF.setFont(MTTextHF.getFont().deriveFont(Font.BOLD));
-	}
 
 	protected class TrackerButtonListener implements ActionListener {
 		final Frame parent;
@@ -1717,7 +1600,7 @@ public class InteractiveMT implements PlugIn {
 					
 						
 						PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength,
-								thirdDimension, psf, newlineMser, userChoiceModel, Domask);
+								thirdDimension, psf, newlineMser,UserChoiceModel.Line , Domask);
 					
 							
 						
@@ -1800,7 +1683,7 @@ public class InteractiveMT implements PlugIn {
 								groundframepre, intimg, Maxlabel, thetaPerPixel, rhoPerPixel, thirdDimension);
 						
 						PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength,
-								thirdDimension, psf, newlineHough, userChoiceModel, Domask);
+								thirdDimension, psf, newlineHough, UserChoiceModel.Line, Domask);
 						
 					
 							
@@ -1871,8 +1754,7 @@ public class InteractiveMT implements PlugIn {
 						   
 						   PrevFrameparamKalman =  new Pair<ArrayList<KalmanIndexedlength>, ArrayList<KalmanIndexedlength>> ( start, end); 
 								   
-								   //FindlinesVia.LinefindingMethodKalman(groundframe, groundframepre, minlength,
-								//	thirdDimension, psf, newlineHough, userChoiceModel, Domask);
+								  
 						
 					}
 				}
@@ -1885,7 +1767,7 @@ public class InteractiveMT implements PlugIn {
 								newtree, minlength, thirdDimension, thetaPerPixel, rhoPerPixel);
 					
 						PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength,
-								thirdDimension, psf, newlineMserwHough, userChoiceModel, Domask);
+								thirdDimension, psf, newlineMserwHough, UserChoiceModel.Line, Domask);
 						
 						
 						
@@ -2228,7 +2110,7 @@ public class InteractiveMT implements PlugIn {
 	            	+ (int)minval.get() + " and " + (int)maxval.get());
 	           		Normalize.normalize(Views.iterable(originalimg), minval, maxval);
 	           		Normalize.normalize(Views.iterable(originalPreprocessedimg), minval, maxval);
-	            	
+	            	updatePreview(ValueChange.NORMALIZE);
 	           		
 	               }
 			}
@@ -2311,33 +2193,7 @@ public class InteractiveMT implements PlugIn {
 		 
 	 }
 	 
-	    protected class MediancurrListener implements ItemListener{
-
-	  		@Override
-	  		public void itemStateChanged(ItemEvent arg0) {
-	                
-	                 if (arg0.getStateChange() == ItemEvent.DESELECTED)
-	              	   Mediancurr = false;
-	                 else if (arg0.getStateChange() == ItemEvent.SELECTED){
-	              	   
-	              	  Mediancurr = true;
-	              	   
-	              	  
-	              	DialogueMedian();
-	              	   
-	              	IJ.log(" Applying Median Filter to current Image" );
-	              	
-	              	final MedianFilter2D<FloatType> medfilter = new MedianFilter2D<FloatType>(originalPreprocessedimg, radius);
-	    			medfilter.process();
-	    			IJ.log(" Median filter sucessfully applied to current Image" );
-	    		   originalPreprocessedimg = medfilter.getResult();
-	    		 //  ImageJFunctions.show(originalPreprocessedimg);
-	              	
-	                 }
-	  		}
-	      	
-	      	
-	      }
+	   
 	    
 	    protected class MedianAllListener implements ItemListener{
 
@@ -2359,7 +2215,9 @@ public class InteractiveMT implements PlugIn {
 	    			medfilter.process();
 	    			IJ.log(" Median filter sucessfully applied to the whole stack" );
 	    			originalPreprocessedimg = medfilter.getResult();
-	    		//	ImageJFunctions.show(originalPreprocessedimg);
+	    			CurrentPreprocessedView = getCurrentPreView();
+	    			currentPreprocessedimg = extractImage(CurrentPreprocessedView);
+	    			updatePreview(ValueChange.MEDIAN);
 	              	
 	                 }
 	  		}
@@ -2371,7 +2229,8 @@ public class InteractiveMT implements PlugIn {
 
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
-
+			final long startTime = System.currentTimeMillis();
+		
 		
 			
 			 moveDialogue();
@@ -2393,7 +2252,7 @@ public class InteractiveMT implements PlugIn {
 				
 				 CurrentPreprocessedView = getCurrentPreView();
 					
-					updatePreview(ValueChange.THIRDDIM);
+					updatePreview(ValueChange.THIRDDIMTrack);
 				
 			isStarted = true;
 
@@ -3161,7 +3020,9 @@ public class InteractiveMT implements PlugIn {
 			rtAll.show("Start and End of MT, respectively");
 			}
 			
-			
+			final long endTime = System.currentTimeMillis();
+
+			System.out.println("Total execution time: " + (endTime - startTime) );
 		}
 	}
       public void saveResultsToExcel(String xlFile, ResultsTable rt, int SeedID){
@@ -6889,8 +6750,8 @@ public class InteractiveMT implements PlugIn {
 	public static void main(String[] args) {
 		new ImageJ();
 		
-		ImagePlus imp = new Opener().openImage("/Users/varunkapoor/res/MT2012017.tif");
-		ImagePlus Preprocessedimp = new Opener().openImage("/Users/varunkapoor/res/BGMT2012017.tif");
+		ImagePlus imp = new Opener().openImage("/Users/varunkapoor/res/2017C.tif");
+		ImagePlus Preprocessedimp = new Opener().openImage("/Users/varunkapoor/res/BG2017C.tif");
 		
 		RandomAccessibleInterval<FloatType> originalimg = ImageJFunctions.convertFloat(imp);
 		RandomAccessibleInterval<FloatType> originalPreprocessedimg = ImageJFunctions.convertFloat(Preprocessedimp);
