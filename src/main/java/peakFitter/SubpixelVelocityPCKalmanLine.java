@@ -64,9 +64,9 @@ import graphconstructs.Trackproperties;
 		public double termepsilon = 1e-2;
 		// Mask fits iteration param
 		public int iterations = 300;
-		public double cutoffdistance = 5;
+		public double cutoffdistance = 15;
 		public boolean halfgaussian = false;
-		public double Intensityratio = 0.5;
+		public double Intensityratio = 0.4;
 		private final UserChoiceModel model;
 
 		public void setCutoffdistance(double cutoffdistance) {

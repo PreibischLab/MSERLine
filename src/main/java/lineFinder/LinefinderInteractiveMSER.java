@@ -49,6 +49,7 @@ public class LinefinderInteractiveMSER  implements Linefinder{
 	private int Roiindex;
 	private final int ndims;
 	private EllipseRoi ellipseroi;
+	
 	public LinefinderInteractiveMSER (final RandomAccessibleInterval<FloatType> source, 
 			final RandomAccessibleInterval<FloatType> Preprocessedsource, 
 			MserTree<UnsignedByteType> newtree,

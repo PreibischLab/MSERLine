@@ -300,8 +300,8 @@ public class InteractiveMT implements PlugIn {
 	RandomAccessibleInterval<UnsignedByteType> newimg;
 	ArrayList<double[]> AllmeanCovar;
 	String usefolder = IJ.getDirectory("imagej");
-	String addToName = "MTtest";
-	String addTrackToName = "MTtesttrack";
+	String addToName = "MTWoods";
+	String addTrackToName = "MTWoods";
 	// first and last slice to process
 	int endStack, thirdDimension;
 
@@ -1619,6 +1619,9 @@ public class InteractiveMT implements PlugIn {
 						
 							for (int index = 0; index < PrevFrameparam.fst.size(); ++index){
 							Roi newellipse = new Roi((int) PrevFrameparam.fst.get(index).fixedpos[0], (int)PrevFrameparam.fst.get(index).fixedpos[1], imp);
+							if (originalimg.dimension(0) > 1000)
+								newellipse = new Roi((int) PrevFrameparam.fst.get(index).fixedpos[0] / 2, (int)PrevFrameparam.fst.get(index).fixedpos[1] / 2, imp);
+							
 							newellipse.setStrokeColor(inactiveColor);
 							newellipse.setStrokeWidth(1);
 							newellipse.setName("SeedID: " + PrevFrameparam.fst.get(index).seedLabel);
@@ -1704,6 +1707,8 @@ public class InteractiveMT implements PlugIn {
 						
 							for (int index = 0; index < PrevFrameparam.fst.size(); ++index){
 							EllipseRoi newellipse = new EllipseRoi((int) PrevFrameparam.fst.get(index).fixedpos[0], (int)PrevFrameparam.fst.get(index).fixedpos[1], imp);
+							if (originalimg.dimension(0) > 1000)
+								newellipse = new EllipseRoi((int) PrevFrameparam.fst.get(index).fixedpos[0] / 2, (int)PrevFrameparam.fst.get(index).fixedpos[1] / 2, imp);
 							newellipse.setStrokeColor(inactiveColor);
 							newellipse.setStrokeWidth(1);
 							newellipse.setName("SeedID: " + PrevFrameparam.fst.get(index).seedLabel);
@@ -6533,7 +6538,7 @@ public class InteractiveMT implements PlugIn {
 		
 		final RandomAccessibleInterval<FloatType> img = Views.interval( intervalView, interval );
 		
-		totalimg = Views.interval(Views.extendBorder(img), intervalView);
+		totalimg = Views.interval(Views.extendZero(img), intervalView);
 		
 		return totalimg;
 	}
@@ -6760,6 +6765,8 @@ public class InteractiveMT implements PlugIn {
 // MT2012017
 	
 		final double[] psf = { 1.65, 1.47 };
+		
+		
 		final long radius = (long) (Math.ceil(Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1])));
 
 		// minimum length of the lines to be detected, the smallest possible

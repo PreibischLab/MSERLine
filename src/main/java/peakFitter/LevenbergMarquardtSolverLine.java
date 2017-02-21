@@ -120,11 +120,11 @@ public class LevenbergMarquardtSolverLine {
 				// was not a good idea.  See comment there.
 				//
 				if (e1 > e0 || Double.isNaN(e1)) { // new location worse than before
-					lambda *= 5;
+					lambda *= 20;
 					
 				}
 				else {		// new location better, accept new parameters
-					lambda *= 0.5;
+					lambda *= 0.1;
 				
 					e0 = e1;
 					
