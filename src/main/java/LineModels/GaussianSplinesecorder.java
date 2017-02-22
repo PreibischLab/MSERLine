@@ -82,9 +82,9 @@ public class GaussianSplinesecorder implements MTFitFunction {
 			minVal[i] = a[i];
 			maxVal[i] = a[ndims + i];
 		}
-		double slope = (maxVal[1] - minVal[1]) / (maxVal[0] - minVal[0]) - curvature * (maxVal[0] + minVal[0]);
+		double slope = (maxVal[1] - minVal[1]) / (maxVal[0] - minVal[0]) - 0*curvature * (maxVal[0] + minVal[0]);
 
-		double ds = (a[2 * ndims]);
+		double ds = Math.abs(a[2 * ndims]);
 
 		
 		double mplus2bxstart = slope + 2 * curvature* minVal[0] ;
@@ -137,8 +137,8 @@ public class GaussianSplinesecorder implements MTFitFunction {
 			minVal[i] = a[i];
 			maxVal[i] = a[ndims + i];
 		}
-		double slope = (maxVal[1] - minVal[1]) / (maxVal[0] - minVal[0]) - curvature * (maxVal[0] + minVal[0]);
-		double ds = (a[2 * ndims]);
+		double slope = (maxVal[1] - minVal[1]) / (maxVal[0] - minVal[0]) - 0*curvature * (maxVal[0] + minVal[0]);
+		double ds = Math.abs(a[2 * ndims]);
 		double mplus2bxstart = slope + 2 * curvature* minVal[0];
 		
 
@@ -146,9 +146,9 @@ public class GaussianSplinesecorder implements MTFitFunction {
 				mplus2bxstart* ds / Math.sqrt(1 + mplus2bxstart* mplus2bxstart) };
 
 		
-		double dxbydb = - ds * mplus2bxstart * (-(maxVal[0] + minVal[0]) + 2 * minVal[0]) / (Math.pow(1 + mplus2bxstart * mplus2bxstart, 3 / 2));
+		double dxbydb = - ds * mplus2bxstart * (-(maxVal[0] + a[0]) + 2 * minVal[0]) / (Math.pow(1 + mplus2bxstart * mplus2bxstart, 3 / 2));
 		
-		double[] dxvectorCstart = {dxbydb, mplus2bxstart* dxbydb + (-(maxVal[0] + minVal[0]) + 2 * minVal[0]) * dxvectorstart[0]};
+		double[] dxvectorCstart = {dxbydb, mplus2bxstart* dxbydb + (-(maxVal[0] + a[0]) + 2 * minVal[0]) * dxvectorstart[0]};
 		
 		
 
@@ -163,9 +163,9 @@ public class GaussianSplinesecorder implements MTFitFunction {
 			dsum += 2 * b[i] * di * dxvectorCstart[i];
 		}
 		
-		dxbydb = - ds * mplus2bxstart * (-(maxVal[0] + minVal[0]) + 2 * minVal[0]) / (Math.pow(1 + mplus2bxstart * mplus2bxstart, 3 / 2));
+		dxbydb = - ds * mplus2bxstart * (-(maxVal[0] + a[0]) + 2 * minVal[0]) / (Math.pow(1 + mplus2bxstart * mplus2bxstart, 3 / 2));
 		dxvectorCstart[0] = dxbydb;
-		dxvectorCstart[1] =  mplus2bxstart* dxbydb + (-(maxVal[0] + minVal[0]) + 2 * minVal[0]) * dxvectorstart[0];
+		dxvectorCstart[1] =  mplus2bxstart* dxbydb + (-(maxVal[0] + a[0]) + 2 * minVal[0]) * dxvectorstart[0];
 		
 		sumofgaussians+= dsum * Math.exp(-sum);
 		if (minVal[0] > maxVal[0] || minVal[1] > maxVal[1] && slope > 0)
@@ -212,9 +212,9 @@ public class GaussianSplinesecorder implements MTFitFunction {
 		double sumofgaussians = 0;
 		double di;
 		double curvature = a[2 * ndims + 1];
-		double slope = (maxVal[1] - minVal[1]) / (maxVal[0] - minVal[0]) - curvature * (maxVal[0] + minVal[0]);
+		double slope = (maxVal[1] - minVal[1]) / (maxVal[0] - minVal[0]) - 0*curvature * (maxVal[0] + minVal[0]);
 
-		double ds = (a[2 * ndims]);
+		double ds = Math.abs(a[2 * ndims]);
 
 		while (true) {
 

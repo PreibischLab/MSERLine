@@ -15,12 +15,14 @@ package peakFitter;
 	import LineModels.GaussianSplinesecorder;
 	import LineModels.GaussianSplinethirdorder;
 	import LineModels.Gaussiansplinesecfixedds;
-	import LineModels.MTFitFunction;
+import LineModels.Gaussiansplinethirdorderfixedds;
+import LineModels.MTFitFunction;
 	import LineModels.UseLineModel.UserChoiceModel;
 import graphconstructs.KalmanTrackproperties;
 import graphconstructs.Trackproperties;
 	import labeledObjects.CommonOutputHF;
-	import labeledObjects.KalmanIndexedlength;
+import labeledObjects.Indexedlength;
+import labeledObjects.KalmanIndexedlength;
 	import lineFinder.LinefinderHF;
 	import net.imglib2.Cursor;
 	import net.imglib2.FinalInterval;
@@ -34,7 +36,8 @@ import graphconstructs.Trackproperties;
 	import net.imglib2.type.numeric.real.FloatType;
 	import net.imglib2.view.Views;
 	import peakFitter.GaussianMaskFitMSER.EndfitMSER;
-	import preProcessing.GetLocalmaxmin;
+import peakFitter.SubpixelVelocityPCLine.StartorEnd;
+import preProcessing.GetLocalmaxmin;
 
 	public class SubpixelVelocityPCKalmanLine extends BenchmarkAlgorithm
 			implements OutputAlgorithm<Pair<ArrayList<KalmanIndexedlength>, ArrayList<KalmanIndexedlength>>> {
@@ -60,13 +63,13 @@ import graphconstructs.Trackproperties;
 	    private boolean Maskfail = false;
 		// LM solver iteration params
 		public int maxiter = 200;
-		public double lambda = 1e-4;
+		public double lambda = 1e-2;
 		public double termepsilon = 1e-2;
 		// Mask fits iteration param
 		public int iterations = 300;
-		public double cutoffdistance = 15;
+		public double cutoffdistance = 5;
 		public boolean halfgaussian = false;
-		public double Intensityratio = 0.4;
+		public double Intensityratio = 0.5;
 		private final UserChoiceModel model;
 
 		public void setCutoffdistance(double cutoffdistance) {
@@ -522,7 +525,58 @@ import graphconstructs.Trackproperties;
 				}
 				return MinandMax;
 			}
+			if (model == UserChoiceModel.Splinethirdorderfixedds) {
+				
 
+
+				while (outcursor.hasNext()) {
+
+					outcursor.fwd();
+
+					// To get the min and max co-rodinates along the line so we
+					// have starting points to
+					// move on the line smoothly
+
+					outcursor.localize(newposition);
+
+					if (outcursor.getDoublePosition(0) <= minVal[0]
+							&& outcursor.get().get() / maxintensityline > Intensityratio) {
+						minVal[0] = outcursor.getDoublePosition(0);
+						minVal[1] = outcursor.getDoublePosition(1);
+					}
+
+					if (outcursor.getDoublePosition(0) >= maxVal[0]
+							&& outcursor.get().get() / maxintensityline > Intensityratio) {
+						maxVal[0] = outcursor.getDoublePosition(0);
+						maxVal[1] = outcursor.getDoublePosition(1);
+					}
+				}
+
+				final double[] MinandMax = new double[2 * ndims + 4];
+
+				for (int d = 0; d < ndims; ++d) {
+
+					MinandMax[d] = minVal[d];
+					MinandMax[d + ndims] = maxVal[d];
+				}
+
+				MinandMax[2 * ndims + 1] = maxintensityline;
+				MinandMax[2 * ndims + 2] = 0;
+				MinandMax[2 * ndims + 3] = 0;
+				MinandMax[2 * ndims] = 0;
+				
+				for (int d = 0; d < ndims; ++d) {
+
+					if (MinandMax[d] == Double.MAX_VALUE || MinandMax[d + ndims] == -Double.MIN_VALUE)
+						return null;
+					if (MinandMax[d] >= source.dimension(d) || MinandMax[d + ndims] >= source.dimension(d))
+						return null;
+					if (MinandMax[d] <= 0 || MinandMax[d + ndims] <= 0)
+						return null;
+
+				}
+				return MinandMax;
+			}
 			if (model == UserChoiceModel.Splineordersec) {
 				
 
@@ -706,7 +760,12 @@ import graphconstructs.Trackproperties;
 					UserChoiceFunction = new Gaussiansplinesecfixedds();
 
 				}
+				if (model == UserChoiceModel.Splinethirdorderfixedds) {
+					fixed_param[ndims] = iniparam.slope;
+					fixed_param[ndims + 1] = iniparam.intercept;
+					UserChoiceFunction = new Gaussiansplinethirdorderfixedds();
 
+				}
 				if (model == UserChoiceModel.Splineordersec) {
 					fixed_param[ndims] = iniparam.slope;
 					fixed_param[ndims + 1] = iniparam.intercept;
@@ -785,14 +844,20 @@ import graphconstructs.Trackproperties;
 						final int numgaussians = (int) Math.max(0.5 * Math.round(Math.sqrt(sigmas) /  ds), 2);
 						
 						
-						double[] startfit = startpos;
+						double dist = Distance(iniparam.fixedpos, startpos) -  Distance(iniparam.fixedpos, endpos);
+						
+						
+						double[] startfit =  (dist > 0) ? startpos:endpos;
 						
 						if (DoMask){
 						
 						try {
-							startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
+							startfit = (dist > 0) ? GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
 									iterations, dxvector, newslope, newintercept, Intensity, halfgaussian,
-									EndfitMSER.StartfitMSER, label, background);
+									EndfitMSER.StartfitMSER, label, background)
+									:GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians,
+											iterations, dxvector, newslope, newintercept, Intensity, halfgaussian,
+										EndfitMSER.EndfitMSER, label, background);
 						} catch (Exception e) {
 							e.printStackTrace();
 						}
@@ -842,14 +907,22 @@ import graphconstructs.Trackproperties;
 							sigmas+=psf[d] * psf[d];
 						}
 						final int numgaussians = (int) Math.max(0.5 * Math.round(Math.sqrt(sigmas) /  ds), 2);
-						double[] endfit = endpos;
+						 double dist = Distance(iniparam.fixedpos, startpos) -  Distance(iniparam.fixedpos, endpos);
+							
+							
+							
+							double[] endfit = (dist > 0) ? startpos:endpos;
 						
 						if (DoMask){
 						
 						try {
-							endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
-									dxvector, newslope, newintercept, Intensity, halfgaussian, EndfitMSER.EndfitMSER,
-									label, background);
+							endfit = (dist > 0) ? 
+									GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians, iterations,
+											dxvector, newslope,newintercept, Intensity, halfgaussian,
+											EndfitMSER.StartfitMSER, label, background)
+									:GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
+									dxvector, newslope, newintercept, Intensity, halfgaussian,
+									EndfitMSER.EndfitMSER, label, background);
 						} catch (Exception e) {
 							e.printStackTrace();
 						}
@@ -903,13 +976,17 @@ import graphconstructs.Trackproperties;
 							sigmas+=psf[d] * psf[d];
 						}
 						final int numgaussians = (int) Math.max(0.5 * Math.round(Math.sqrt(sigmas) /  ds), 2);
-						double[] startfit = startpos;
+						  double dist = Distance(iniparam.fixedpos, startpos) -  Distance(iniparam.fixedpos, endpos);
+						double[] startfit =  (dist > 0) ? startpos:endpos;
 						
 						if (DoMask){
 						try {
-							startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
+							startfit = (dist > 0) ? GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
 									iterations, dxvector, newslope, newintercept, Intensity, halfgaussian,
-									EndfitMSER.StartfitMSER, label, background);
+									EndfitMSER.StartfitMSER, label, background)
+									:GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians,
+											iterations, dxvector, newslope, newintercept, Intensity, halfgaussian,
+										EndfitMSER.EndfitMSER, label, background);
 						} catch (Exception e) {
 							e.printStackTrace();
 						}
@@ -957,13 +1034,21 @@ import graphconstructs.Trackproperties;
 							sigmas+=psf[d] * psf[d];
 						}
 						final int numgaussians = (int) Math.max(0.5 * Math.round(Math.sqrt(sigmas) /  ds), 2);
-						double[] endfit = endpos;
+						 double dist = Distance(iniparam.fixedpos, startpos) -  Distance(iniparam.fixedpos, endpos);
+							
+							
+							
+							double[] endfit = (dist > 0) ? startpos:endpos;
 						
 						if (DoMask){
 						try {
-							endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
-									dxvector, newslope, newintercept, Intensity, halfgaussian, EndfitMSER.EndfitMSER,
-									label, background);
+							endfit = (dist > 0) ? 
+									GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians, iterations,
+											dxvector, newslope, newintercept, Intensity, halfgaussian,
+											EndfitMSER.StartfitMSER, label, background)
+									:GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
+									dxvector, newslope, newintercept, Intensity, halfgaussian,
+									EndfitMSER.EndfitMSER, label, background);
 						} catch (Exception e) {
 							e.printStackTrace();
 						}
@@ -1011,7 +1096,10 @@ import graphconstructs.Trackproperties;
 						double dy = newslope * dx;
 						double[] dxvector = { dx, dy };
 						
-						double[] startfit = startpos;
+						 double dist = Distance(iniparam.fixedpos, startpos) -  Distance(iniparam.fixedpos, endpos);
+							
+							
+							double[] startfit =  (dist > 0) ? startpos:endpos;
 						
 						double sigmas = 0;
 						 
@@ -1024,9 +1112,12 @@ import graphconstructs.Trackproperties;
 						if (DoMask){
 						
 						try {
-							startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
+							startfit = (dist > 0) ? GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
 									iterations, dxvector, newslope, newintercept, lineIntensity, halfgaussian,
-									EndfitMSER.StartfitMSER, label, background);
+									EndfitMSER.StartfitMSER, label, background)
+									:GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians,
+											iterations, dxvector, newslope, newintercept, lineIntensity, halfgaussian,
+										EndfitMSER.EndfitMSER, label, background);
 						} catch (Exception e) {
 							e.printStackTrace();
 						}
@@ -1073,13 +1164,22 @@ import graphconstructs.Trackproperties;
 							sigmas+=psf[d] * psf[d];
 						}
 						final int numgaussians = (int) Math.max(0.5 * Math.round(Math.sqrt(sigmas) /  ds), 2);
-						double[] endfit = endpos;
+
+						 double dist = Distance(iniparam.fixedpos, startpos) -  Distance(iniparam.fixedpos, endpos);
+							
+							
+							
+							double[] endfit = (dist > 0) ? startpos:endpos;
 						
 						if (DoMask){
 						try {
-							endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
-									dxvector, newslope, newintercept, lineIntensity, halfgaussian, EndfitMSER.EndfitMSER,
-									label, background);
+							endfit = (dist > 0) ? 
+									GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians, iterations,
+											dxvector, newslope, newintercept, lineIntensity, halfgaussian,
+											EndfitMSER.StartfitMSER, label, background)
+									:GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
+									dxvector, newslope, newintercept, lineIntensity, halfgaussian,
+									EndfitMSER.EndfitMSER, label, background);
 						} catch (Exception e) {
 							e.printStackTrace();
 						}
@@ -1121,7 +1221,10 @@ import graphconstructs.Trackproperties;
 						final double ds = fixed_param[ndims + 2];
 						final double lineIntensity = LMparam[2 * ndims + 1];
 						final double background = LMparam[2 * ndims + 2];
-						double[] startfit = startpos;
+						 double dist = Distance(iniparam.fixedpos, startpos) -  Distance(iniparam.fixedpos, endpos);
+							
+							
+							double[] startfit =  (dist > 0) ? startpos:endpos;
 
 						final double newslope = (startpos[1] - endpos[1])/ (startpos[0] - endpos[0]) - Curvature * (startpos[0] + endpos[0]);
 
@@ -1141,9 +1244,12 @@ import graphconstructs.Trackproperties;
 						if (DoMask){
 						
 						try {
-							startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
+							startfit = (dist > 0) ? GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
 									iterations, dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
-									EndfitMSER.StartfitMSER, label, background);
+									EndfitMSER.StartfitMSER, label, background)
+									:GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians,
+											iterations, dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
+										EndfitMSER.EndfitMSER, label, background);
 						} catch (Exception e) {
 							e.printStackTrace();
 						}
@@ -1193,7 +1299,12 @@ import graphconstructs.Trackproperties;
 						final double lineIntensity = LMparam[2 * ndims + 1];
 						final double background = LMparam[2 * ndims + 2];
 						System.out.println("Curvature: " + Curvature);
-						double[] endfit = endpos;
+
+						 double dist = Distance(iniparam.fixedpos, startpos) -  Distance(iniparam.fixedpos, endpos);
+							
+							
+							
+							double[] endfit = (dist > 0) ? startpos:endpos;
 						// + 2 * Curvature * endpos[0]
 						final double newslope = (endpos[1] - startpos[1])/ (endpos[0] - startpos[0]) - Curvature * (endpos[0] + startpos[0]);
 
@@ -1213,7 +1324,11 @@ import graphconstructs.Trackproperties;
 						if (DoMask){
 						
 						try {
-							endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
+							endfit = (dist > 0) ? 
+									GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians, iterations,
+											dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
+											EndfitMSER.StartfitMSER, label, background)
+									:GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
 									dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
 									EndfitMSER.EndfitMSER, label, background);
 						} catch (Exception e) {
@@ -1249,6 +1364,167 @@ import graphconstructs.Trackproperties;
 
 					}
 				}
+				else if (model == UserChoiceModel.Splinethirdorderfixedds) {
+					if (startorend == StartorEnd.Start) {
+						final double Curvature = LMparam[2 * ndims];
+						final double Inflection= LMparam[2 * ndims + 3];
+						final double currentintercept = iniparam.originalintercept;
+						final double ds = fixed_param[ndims + 2];
+						final double lineIntensity = LMparam[2 * ndims + 1];
+						final double background = LMparam[2 * ndims + 2];
+						
+	                       double dist = Distance(iniparam.fixedpos, startpos) -  Distance(iniparam.fixedpos, endpos);
+					
+						
+						double[] startfit =  (dist > 0) ? startpos:endpos;
+						final double newslope = (startpos[1] - endpos[1])/ (startpos[0] - endpos[0]) - Curvature * (startpos[0] + endpos[0])
+								-Inflection * (startpos[0]* startpos[0] + endpos[0]* endpos[0] + startpos[0] * endpos[0]) ;
+
+						//+ 2 * Curvature * startpos[0]
+						double dx = ds / Math.sqrt(1 + (newslope + 2 * Curvature * startpos[0]+ 3 * Inflection* startpos[0] * startpos[0]) 
+								* (newslope + 2 * Curvature * startpos[0] + 3 * Inflection* startpos[0] * startpos[0]) );
+						double dy = (newslope + 2 * Curvature * startpos[0] + 3 * Inflection* startpos[0] * startpos[0]) * dx;
+						double[] dxvector = { dx, dy };
+						double sigmas = 0;
+						 
+						for (int d  = 0; d < ndims; ++d){
+							
+							sigmas+=psf[d] * psf[d];
+						}
+
+						final int numgaussians = (int) Math.max(0.5 * Math.round(Math.sqrt(sigmas) /  ds), 2);
+
+						if (DoMask){
+						
+						try {
+							startfit = (dist > 0) ? GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
+									iterations, dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
+									EndfitMSER.StartfitMSER, label, background)
+									:GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians,
+											iterations, dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
+										EndfitMSER.EndfitMSER, label, background);
+										
+							
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+
+					
+						
+
+					
+						
+						if (Math.abs(startpos[0] - startfit[0]) >= cutoffdistance || Math.abs(startpos[1] - startfit[1]) >= cutoffdistance){
+							Maskfail = true;
+
+							for (int d = 0; d < ndims; ++d) {
+							startfit[d] = startpos[d];
+							}
+						}
+						for (int d = 0; d < ndims; ++d) {
+							if (Double.isNaN(startfit[d])) {
+								Maskfail = true;
+								startfit[d] = startpos[d];
+
+							}
+						}
+						}
+						System.out.println("Curvature: " + Curvature);
+						System.out.println("Inflection: " + Inflection);
+						KalmanIndexedlength PointofInterest = new KalmanIndexedlength(label, seedLabel, framenumber, ds, lineIntensity,
+								background, startfit, iniparam.fixedpos, newslope, currentintercept,
+								iniparam.originalslope, iniparam.originalintercept, Curvature, Inflection, iniparam.originalds);
+						
+						if (Maskfail == true)
+							System.out.println("New XLM: " + startfit[0] + " New YLM: " + startfit[1]);
+							else 
+								System.out.println("New XMask: " + startfit[0] + " New YMask: " + startfit[1]);	
+				
+						
+						
+							
+						return PointofInterest;
+					} else {
+
+						final double Curvature = LMparam[2 * ndims];
+
+						final double Inflection = LMparam[2 * ndims + 3];
+						final double currentintercept = iniparam.originalintercept;
+						final double ds = fixed_param[ndims + 2];
+						final double lineIntensity = LMparam[2 * ndims + 1];
+						final double background = LMparam[2 * ndims + 2];
+						System.out.println("Curvature: " + Curvature);
+						System.out.println("Inflection: " + Inflection);
+					
+						
+						 double dist = Distance(iniparam.fixedpos, startpos) -  Distance(iniparam.fixedpos, endpos);
+							
+							
+							
+							double[] endfit = (dist > 0) ? startpos:endpos;
+						// + 2 * Curvature * endpos[0]
+						final double newslope = (endpos[1] - startpos[1])/ (endpos[0] - startpos[0]) - Curvature * (endpos[0] + startpos[0])
+								-Inflection * (startpos[0]* startpos[0] + endpos[0]* endpos[0] + startpos[0] * endpos[0]);
+
+						//+ 2 * Curvature * startpos[0]
+						double dx = ds / Math.sqrt(1 + (newslope + 2 * Curvature * endpos[0]+ 3 * Inflection* endpos[0] * endpos[0])
+								* (newslope + 2 * Curvature * endpos[0] + 3 * Inflection* endpos[0] * endpos[0]) );
+						double dy = (newslope+ 2 * Curvature * endpos[0]) * dx;
+						double[] dxvector = { dx, dy };
+						double sigmas = 0;
+	 
+						for (int d  = 0; d < ndims; ++d){
+							
+							sigmas+=psf[d] * psf[d];
+						}
+						
+						final int numgaussians = (int) Math.max(0.5 * Math.round(Math.sqrt(sigmas) /  ds), 2);
+					
+						if (DoMask){
+						
+						try {
+							endfit = (dist > 0) ? 
+									GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians, iterations,
+											dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
+											EndfitMSER.StartfitMSER, label, background)
+									:GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
+									dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
+									EndfitMSER.EndfitMSER, label, background);
+							
+							
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+
+						
+						if (Math.abs(endpos[0] - endfit[0]) >= cutoffdistance || Math.abs(endpos[1] - endfit[1]) >= cutoffdistance){
+							Maskfail = true;
+							for (int d = 0; d < ndims; ++d) {
+							endfit[d] = endpos[d];
+							}
+						}
+						for (int d = 0; d < ndims; ++d) {
+							if (Double.isNaN(endfit[d])) {
+								Maskfail = true;
+								endfit[d] = endpos[d];
+
+							}
+						}
+						}
+						KalmanIndexedlength PointofInterest = new KalmanIndexedlength(label, seedLabel, framenumber, ds, lineIntensity,
+								background, endfit, iniparam.fixedpos, newslope, currentintercept,
+								iniparam.originalslope, iniparam.originalintercept, Curvature, Inflection, iniparam.originalds);
+						if (Maskfail == true)
+							System.out.println("New XLM: " + endfit[0] + " New YLM: " + endfit[1]);
+							else 
+								System.out.println("New XMask: " + endfit[0] + " New YMask: " + endfit[1]);	
+						
+					
+						
+						return PointofInterest;
+
+					}
+				}
 				else if (model == UserChoiceModel.Splineordersec) {
 					if (startorend == StartorEnd.Start) {
 						final double Curvature = LMparam[2 * ndims + 1];
@@ -1259,7 +1535,13 @@ import graphconstructs.Trackproperties;
 						final double ds = (LMparam[2 * ndims]);
 						final double lineIntensity = LMparam[2 * ndims + 2];
 						final double background = LMparam[2 * ndims + 3];
-						double[] startfit = startpos;
+					
+						
+
+						double dist = Distance(iniparam.fixedpos, startpos) -  Distance(iniparam.fixedpos, endpos);
+					
+						
+						double[] startfit =  (dist > 0) ? startpos:endpos;
 						final double newslope = (startpos[1] - endpos[1])/ (startpos[0] - endpos[0]) - Curvature * (startpos[0] + endpos[0]);
 
 
@@ -1278,9 +1560,14 @@ import graphconstructs.Trackproperties;
 					if (DoMask){
 					
 						try {
-							startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
+							startfit = (dist > 0) ? GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
 									iterations, dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
-									EndfitMSER.StartfitMSER, label, background);
+									EndfitMSER.StartfitMSER, label, background)
+									:GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians,
+											iterations, dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
+										EndfitMSER.EndfitMSER, label, background);
+							
+						
 						} catch (Exception e) {
 							e.printStackTrace();
 						}
@@ -1307,7 +1594,7 @@ import graphconstructs.Trackproperties;
 						System.out.println("Curvature: " + Curvature);
 
 						KalmanIndexedlength PointofInterest = new KalmanIndexedlength(label, seedLabel, framenumber, ds, lineIntensity,
-								background, startfit,iniparam.fixedpos, newslope, currentintercept,
+								background, startfit, iniparam.fixedpos, newslope, currentintercept,
 								iniparam.originalslope, iniparam.originalintercept, Curvature, 0, iniparam.originalds);
 						if (Maskfail == true)
 							System.out.println("New XLM: " + startfit[0] + " New YLM: " + startfit[1]);
@@ -1329,7 +1616,13 @@ import graphconstructs.Trackproperties;
 						final double background = LMparam[2 * ndims + 3];
 						System.out.println("Curvature: " + Curvature);
 						final double newslope = (endpos[1] - startpos[1])/ (endpos[0] - startpos[0]) - Curvature * (endpos[0] + startpos[0]);
-						double[] endfit = endpos;
+						
+					
+						 double dist = Distance(iniparam.fixedpos, startpos) -  Distance(iniparam.fixedpos, endpos);
+							
+							
+							
+							double[] endfit = (dist > 0) ? startpos:endpos;
 
 						double dx = ds / Math.sqrt(1 + (newslope + 2 * Curvature * endpos[0]) * (newslope + 2 * Curvature * endpos[0]));
 						double dy = (newslope + 2 * Curvature * endpos[0]) * dx;
@@ -1346,9 +1639,15 @@ import graphconstructs.Trackproperties;
 						if (DoMask){
 						
 						try {
-							endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
+							endfit = (dist > 0) ? 
+									GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians, iterations,
+											dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
+											EndfitMSER.StartfitMSER, label, background)
+									:GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
 									dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
 									EndfitMSER.EndfitMSER, label, background);
+							
+					
 						} catch (Exception e) {
 							e.printStackTrace();
 						}
@@ -1377,7 +1676,7 @@ import graphconstructs.Trackproperties;
 						}
 
 						KalmanIndexedlength PointofInterest = new KalmanIndexedlength(label, seedLabel, framenumber, ds, lineIntensity,
-								background, endfit,iniparam.fixedpos, newslope, currentintercept,
+								background, endfit, iniparam.fixedpos, newslope, currentintercept,
 								iniparam.originalslope, iniparam.originalintercept, Curvature, 0, iniparam.originalds);
 						if (Maskfail == true)
 							System.out.println("New XLM: " + endfit[0] + " New YLM: " + endfit[1]);
@@ -1401,7 +1700,11 @@ import graphconstructs.Trackproperties;
 						final double ds = (LMparam[2 * ndims]);
 						final double lineIntensity = LMparam[2 * ndims + 3];
 						final double background = LMparam[2 * ndims + 4];
-						double[] startfit = startpos;
+						
+	                    double dist = Distance(iniparam.fixedpos, startpos) -  Distance(iniparam.fixedpos, endpos);
+					
+						
+						double[] startfit =  (dist > 0) ? startpos:endpos;
 						final double newslope = (startpos[1] - endpos[1])/ (startpos[0] - endpos[0]) - Curvature * (startpos[0] + endpos[0])
 								- Inflection * (startpos[0] * startpos[0] + endpos[0] * endpos[0] + startpos[0] * endpos[0]);
 
@@ -1422,9 +1725,14 @@ import graphconstructs.Trackproperties;
 					if (DoMask){
 					
 						try {
-							startfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
+							startfit = (dist > 0) ? GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians,
 									iterations, dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
-									EndfitMSER.StartfitMSER, label, background);
+									EndfitMSER.StartfitMSER, label, background)
+									:GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians,
+											iterations, dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
+										EndfitMSER.EndfitMSER, label, background);
+							
+							
 						} catch (Exception e) {
 							e.printStackTrace();
 						}
@@ -1449,7 +1757,7 @@ import graphconstructs.Trackproperties;
 						System.out.println("Curvature: " + Curvature);
 						System.out.println("Inflection: " + Inflection);
 						KalmanIndexedlength PointofInterest = new KalmanIndexedlength(label, seedLabel, framenumber, ds, lineIntensity,
-								background, startfit,iniparam.fixedpos, newslope, currentintercept,
+								background, startfit, iniparam.fixedpos, newslope, currentintercept,
 								iniparam.originalslope, iniparam.originalintercept, Curvature, Inflection, iniparam.originalds);
 						if (Maskfail == true)
 							System.out.println("New XLM: " + startfit[0] + " New YLM: " + startfit[1]);
@@ -1473,7 +1781,12 @@ import graphconstructs.Trackproperties;
 						System.out.println("Inflection: " + Inflection);
 						final double newslope = (endpos[1] - startpos[1])/ (endpos[0] - startpos[0]) - Curvature * (endpos[0] + startpos[0])
 								- Inflection * (startpos[0] * startpos[0] + endpos[0] * endpos[0] + startpos[0] * endpos[0]);
-						double[] endfit = endpos;
+						
+	                   double dist = Distance(iniparam.fixedpos, startpos) -  Distance(iniparam.fixedpos, endpos);
+					
+						
+						
+						double[] endfit = (dist > 0) ? startpos:endpos;
 
 						double dx = ds / Math.sqrt(1 + (newslope + 2 * Curvature * endpos[0] + 3 * Inflection * endpos[0] * endpos[0]) 
 								* (newslope + 2 * Curvature * endpos[0]+ 3 * Inflection * endpos[0] * endpos[0]));
@@ -1491,9 +1804,15 @@ import graphconstructs.Trackproperties;
 						if (DoMask){
 						
 						try {
-							endfit = GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
+							endfit = (dist > 0) ? 
+									GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, startpos.clone(), psf, numgaussians, iterations,
+											dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
+											EndfitMSER.StartfitMSER, label, background)
+									:GaussianMaskFitMSER.sumofgaussianMaskFit(currentimg, endpos.clone(), psf, numgaussians, iterations,
 									dxvector, newslope, currentintercept, lineIntensity, halfgaussian,
 									EndfitMSER.EndfitMSER, label, background);
+							
+						
 						} catch (Exception e) {
 							e.printStackTrace();
 						}
@@ -1522,7 +1841,7 @@ import graphconstructs.Trackproperties;
 						}
 
 						KalmanIndexedlength PointofInterest = new KalmanIndexedlength(label, seedLabel, framenumber, ds, lineIntensity,
-								background, endfit,iniparam.fixedpos, newslope, currentintercept,
+								background, endfit, iniparam.fixedpos, newslope, currentintercept,
 								iniparam.originalslope, iniparam.originalintercept, Curvature, Inflection, iniparam.originalds);
 						if (Maskfail == true)
 							System.out.println("New XLM: " + endfit[0] + " New YLM: " + endfit[1]);
@@ -1536,6 +1855,8 @@ import graphconstructs.Trackproperties;
 
 					}
 				}
+				
+			
 				
 			
 				

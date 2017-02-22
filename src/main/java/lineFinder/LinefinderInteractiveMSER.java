@@ -124,7 +124,7 @@ public class LinefinderInteractiveMSER  implements Linefinder{
 				ellipseroi = GetDelta.createEllipse(mean, covar, 3);
 	    		final double perimeter = ellipseroi.getLength();
 	    		final double smalleigenvalue = SmallerEigenvalue(mean, covar);
-	    		if (perimeter > 2 * Math.PI * minlength ){
+	    	//	if (perimeter > 2 * Math.PI * minlength ){
 	    			
 	    			Roiindex = count;
 	    			count++;
@@ -194,7 +194,7 @@ public class LinefinderInteractiveMSER  implements Linefinder{
 				}
 				}
 				
-			}
+		//	}
 
 		
 

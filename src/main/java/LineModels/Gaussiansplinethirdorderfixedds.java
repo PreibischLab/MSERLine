@@ -1,6 +1,6 @@
 package LineModels;
 
-public class Gaussiansplinesecfixedds implements MTFitFunction {
+public class Gaussiansplinethirdorderfixedds implements MTFitFunction {
 
 	@Override
 	public double val(double[] x, double[] a, double[] b) {
@@ -26,18 +26,24 @@ public class Gaussiansplinesecfixedds implements MTFitFunction {
 
 		}
 
+		// Curvature
 		else if (k == 2 * ndims) {
 
 			return a[2 * ndims + 1] * EdC(x, a, b);
 
 		}
 
+		
+		// Intensity
 		else if (k == 2 * ndims + 1)
 
 			return Etotal(x, a, b);
 
 		else if (k == 2 * ndims + 2)
 			return 1.0;
+		
+		else if (k == 2 * ndims + 3)
+			return a[2 * ndims + 1] * EdI(x, a, b);
 
 		else
 			return 0;
@@ -64,6 +70,77 @@ public class Gaussiansplinesecfixedds implements MTFitFunction {
 		}
 
 		return Math.exp(-sum);
+
+	}
+	private static final double EdI(final double[] x, final double[] a, final double[] b) {
+
+		double di;
+		final int ndims = x.length;
+		double[] minVal = new double[ndims];
+		double[] maxVal = new double[ndims];
+		double curvature = a[2 * ndims];
+		
+		double inflection = a[2 * ndims + 3];
+		for (int i = 0; i < x.length; i++) {
+			minVal[i] = a[i];
+			maxVal[i] = a[ndims + i];
+		}
+		double slope = (maxVal[1] - minVal[1]) / (maxVal[0] - minVal[0]) - curvature * (maxVal[0] + minVal[0])
+				- inflection * (minVal[0] * minVal[0] + maxVal[0] * maxVal[0] + minVal[0] * maxVal[0]);
+		
+		double ds = b[ndims + 2];
+		
+		double mplus2bxstart = slope + 2 * curvature* minVal[0] + 3 * inflection* minVal[0] * minVal[0];
+		
+
+		double[] dxvectorstart = { ds / Math.sqrt(1 + mplus2bxstart* mplus2bxstart), 
+				mplus2bxstart* ds / Math.sqrt(1 + mplus2bxstart* mplus2bxstart) };
+
+		
+		double dxbydcstart = - ds * mplus2bxstart * (-(minVal[0] * minVal[0] + maxVal[0] * maxVal[0] + minVal[0] * maxVal[0]) + 3 * minVal[0] * minVal[0]) 
+                           / (Math.pow(1 + mplus2bxstart * mplus2bxstart, 3 / 2));
+		
+		double[] dxvectorCstart = {dxbydcstart, mplus2bxstart* dxbydcstart + 
+				(-(minVal[0] * minVal[0] + maxVal[0] * maxVal[0] + minVal[0] * maxVal[0]) + 3 * minVal[0] * minVal[0]) * dxvectorstart[0]};
+		
+     double mplus2bxend = slope + 2 * curvature* maxVal[0] + 3 * inflection* maxVal[0] * maxVal[0];
+		
+
+		double[] dxvectorend = { ds / Math.sqrt(1 + mplus2bxend* mplus2bxend), 
+				mplus2bxend* ds / Math.sqrt(1 + mplus2bxend* mplus2bxend) };
+
+		
+		double dxbydcend = - ds * mplus2bxend * (-(minVal[0] * minVal[0] + maxVal[0] * maxVal[0] + minVal[0] * maxVal[0]) + 3 * maxVal[0] * maxVal[0]) 
+                           / (Math.pow(1 + mplus2bxend * mplus2bxend, 3 / 2));
+		
+		double[] dxvectorCend = {dxbydcend, mplus2bxstart* dxbydcend + 
+				(-(minVal[0] * minVal[0] + maxVal[0] * maxVal[0] + minVal[0] * maxVal[0]) + 3 * maxVal[0] * maxVal[0]) * dxvectorend[0]};
+
+		double sumofgaussians = 0;
+		
+		double dsum = 0;
+		double sum = 0;
+		for (int i = 0; i < x.length; i++) {
+			minVal[i] += dxvectorstart[i];
+			di = x[i] - minVal[i];
+			sum += b[i] * di * di;
+			dsum += 2 * b[i] * di * dxvectorCstart[i];
+		}
+
+		sumofgaussians+= dsum * Math.exp(-sum);
+		double dsumend = 0;
+		double sumend = 0;
+		for (int i = 0; i < x.length; i++) {
+			maxVal[i] -= dxvectorend[i];
+			di = x[i] - maxVal[i];
+			sumend += b[i] * di * di;
+			dsumend += -2 * b[i] * di * dxvectorCend[i];
+		}
+		sumofgaussians += dsumend * Math.exp(-sumend);
+		
+		
+	
+		return sumofgaussians;
 
 	}
 
@@ -166,12 +243,8 @@ public class Gaussiansplinesecfixedds implements MTFitFunction {
 
 			sum = 0;
 
-			
 			double dx = ds / Math.sqrt(1 + (slope + 2 * curvature* minVal[0]) * (slope + 2 * curvature* minVal[0]));
 			double dy = (slope + 2 * curvature* minVal[0]) * dx;
-			
-			
-			
 			double[] dxvector = { dx, dy };
 
 			for (int i = 0; i < x.length; i++) {
@@ -182,7 +255,7 @@ public class Gaussiansplinesecfixedds implements MTFitFunction {
 			}
 			sumofgaussians += Math.exp(-sum);
 
-			if (minVal[0] >= maxVal[0] )
+			if (minVal[0] >= maxVal[0])
 				break;
 
 		}

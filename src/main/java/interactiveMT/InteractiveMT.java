@@ -6157,9 +6157,9 @@ public class InteractiveMT implements PlugIn {
             if (indexmodel == 0)
 			userChoiceModel = UserChoiceModel.Line;
             if (indexmodel == 1)
-			userChoiceModel = UserChoiceModel.Splineordersec;
+			userChoiceModel = UserChoiceModel.Splineordersecfixedds;
             if (indexmodel == 2)
-			userChoiceModel = UserChoiceModel.Splineorderthird;
+			userChoiceModel = UserChoiceModel.Splinethirdorderfixedds;
 
           
 	
