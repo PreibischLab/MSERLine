@@ -64,12 +64,12 @@ import preProcessing.GetLocalmaxmin;
 		// LM solver iteration params
 		public int maxiter = 200;
 		public double lambda = 1e-3;
-		public double termepsilon = 1e-2;
+		public double termepsilon = 1e-1;
 		// Mask fits iteration param
 		public int iterations = 300;
-		public double cutoffdistance = 15;
+		public double cutoffdistance = 5;
 		public boolean halfgaussian = false;
-		public double Intensityratio = 0.1;
+		public double Intensityratio = 0.5;
 		private final UserChoiceModel model;
 
 		public void setCutoffdistance(double cutoffdistance) {
@@ -811,6 +811,18 @@ import preProcessing.GetLocalmaxmin;
 						LMparam[j] = safeparam[j];
 				}
 
+				if (model == UserChoiceModel.Splineordersec || model == UserChoiceModel.Splineorderthird ) {
+					
+					if(LMparam[2 * ndims] < 0 || LMparam[2 * ndims] > 3 * Math.min(psf[0], psf[1]) ){
+						
+						for (int j = 0; j < LMparam.length; j++) 
+							LMparam[j] = safeparam[j];
+						
+					}
+						
+					
+				}
+				
 				double[] startpos = new double[ndims];
 				double[] endpos = new double[ndims];
 

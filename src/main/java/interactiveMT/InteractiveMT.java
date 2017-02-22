@@ -6538,7 +6538,7 @@ public class InteractiveMT implements PlugIn {
 		
 		final RandomAccessibleInterval<FloatType> img = Views.interval( intervalView, interval );
 		
-		totalimg = Views.interval(Views.extendBorder(img), intervalView);
+		totalimg = Views.interval(Views.extendZero(img), intervalView);
 		
 		return totalimg;
 	}
