@@ -300,8 +300,8 @@ public class InteractiveMT implements PlugIn {
 	RandomAccessibleInterval<UnsignedByteType> newimg;
 	ArrayList<double[]> AllmeanCovar;
 	String usefolder = IJ.getDirectory("imagej");
-	String addToName = "MTWoods";
-	String addTrackToName = "MTWoods";
+	String addToName = "MT1";
+	String addTrackToName = "MT1";
 	// first and last slice to process
 	int endStack, thirdDimension;
 
@@ -1498,8 +1498,8 @@ public class InteractiveMT implements PlugIn {
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
 
-			boolean dialog = moveDialogue();
-			if (dialog) {
+			moveDialogue();
+			
 				
 				
 				if (thirdDimension > thirdDimensionSize) {
@@ -1575,7 +1575,7 @@ public class InteractiveMT implements PlugIn {
 			
 			}
 			
-		}
+		
 	}
 
 	protected class FindLinesListener implements ActionListener {
@@ -2384,7 +2384,7 @@ public class InteractiveMT implements PlugIn {
 			
 		
 			
-			DisplaysubGraphstart displaytrackstart = new DisplaysubGraphstart(impstart, subgraphstart, next - 1);
+			DisplaysubGraphstart displaytrackstart = new DisplaysubGraphstart(impstart, subgraphstart, next );
 			displaytrackstart.getImp();
 			impstart.draw();
 			
@@ -2396,7 +2396,7 @@ public class InteractiveMT implements PlugIn {
 			SimpleWeightedGraph<double[], DefaultWeightedEdge> graphend = trackerend.getResult();
 			ArrayList<Subgraphs> subgraphend = trackerend.getFramedgraph();
 			
-			DisplaysubGraphend displaytrackend = new DisplaysubGraphend(impend, subgraphend, next - 1);
+			DisplaysubGraphend displaytrackend = new DisplaysubGraphend(impend, subgraphend, next );
 			displaytrackend.getImp();
 			impend.draw();
 			
@@ -3114,7 +3114,7 @@ public class InteractiveMT implements PlugIn {
 
 			
 			
-		   int next = 1;
+		   int next = 2;
 		   
 		
 			
@@ -3733,11 +3733,6 @@ public class InteractiveMT implements PlugIn {
 					
 					
 					final Integer SeedID = thirdDimension.get(frameindex).seedlabel;
-					
-					
-					
-                  
-					
 				
 					
 						if (SeedID == currentseed){
@@ -6755,8 +6750,8 @@ public class InteractiveMT implements PlugIn {
 	public static void main(String[] args) {
 		new ImageJ();
 		
-		ImagePlus imp = new Opener().openImage("/Users/varunkapoor/res/2017C.tif");
-		ImagePlus Preprocessedimp = new Opener().openImage("/Users/varunkapoor/res/BG2017C.tif");
+		ImagePlus imp = new Opener().openImage("/Users/varunkapoor/Documents/MT-Dummy/testlengthA.tif");
+		ImagePlus Preprocessedimp = new Opener().openImage("/Users/varunkapoor/Documents/MT-Dummy/testlengthA.tif");
 		
 		RandomAccessibleInterval<FloatType> originalimg = ImageJFunctions.convertFloat(imp);
 		RandomAccessibleInterval<FloatType> originalPreprocessedimg = ImageJFunctions.convertFloat(Preprocessedimp);

@@ -100,7 +100,7 @@ public class GaussianSplinesecorder implements MTFitFunction {
 		
 		
 		
-double mplus2bxend = slope + 2 * curvature* maxVal[0];
+       double mplus2bxend = slope + 2 * curvature* maxVal[0];
 		
 
 		double[] dxvectorend = { ds / Math.sqrt(1 + mplus2bxend* mplus2bxend), 
@@ -112,7 +112,7 @@ double mplus2bxend = slope + 2 * curvature* maxVal[0];
 		
 		double sumofgaussians = 0;
 		
-		//while(true){
+		while(true){
 		double dsum = 0;
 		double sum = 0;
 		for (int i = 0; i < x.length; i++) {
@@ -121,29 +121,21 @@ double mplus2bxend = slope + 2 * curvature* maxVal[0];
 			sum += b[i] * di * di;
 			dsum += 2 * b[i] * di * dxvectorderivstart[i];
 		}
-		//mplus2bxstart = slope + 2 * curvature* minVal[0];
-		//dxvectorderivstart[0] = 1 / Math.sqrt(1 + mplus2bxstart* mplus2bxstart);
-		//dxvectorderivstart[1] = mplus2bxstart / Math.sqrt(1 + mplus2bxstart * mplus2bxstart);
+		mplus2bxstart = slope + 2 * curvature* minVal[0];
+		dxvectorderivstart[0] = 1 / Math.sqrt(1 + mplus2bxstart* mplus2bxstart);
+		dxvectorderivstart[1] = mplus2bxstart / Math.sqrt(1 + mplus2bxstart * mplus2bxstart);
 				
 		sumofgaussians+= dsum * Math.exp(-sum);
 		
-		double dsumend = 0;
-		double sumend = 0;
-		for (int i = 0; i < x.length; i++) {
-			maxVal[i] -= dxvectorend[i];
-			di = x[i] - maxVal[i];
-			sum += b[i] * di * di;
-			dsum += 2 * b[i] * di * dxvectorderivend[i];
-		}
-		sumofgaussians+= dsumend * Math.exp(-sumend);
-		/*
+		
+		
 		if (minVal[0] > maxVal[0] || minVal[1] > maxVal[1] && slope > 0)
 			break;
 		if (minVal[0] > maxVal[0] || minVal[1] < maxVal[1] && slope < 0)
 			break;
 
 	}
-		*/
+		
 		return sumofgaussians;
 
 	}
