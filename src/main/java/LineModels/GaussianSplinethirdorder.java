@@ -93,7 +93,7 @@ public class GaussianSplinethirdorder implements MTFitFunction {
 		double slope = (maxVal[1] - minVal[1]) / (maxVal[0] - minVal[0]) - curvature * (maxVal[0] + minVal[0]) 
 				- inflection * (minVal[0] * minVal[0] + maxVal[0] * maxVal[0] + minVal[0] * maxVal[0]);
 
-		double ds = Math.abs(a[2 * ndims]);
+		double ds = (a[2 * ndims]);
 
 		
 		double mplus2bxstart = slope + 2 * curvature* minVal[0] + 3 * inflection* minVal[0] * minVal[0] ;
@@ -149,7 +149,7 @@ public class GaussianSplinethirdorder implements MTFitFunction {
 		}
 		double slope = (maxVal[1] - minVal[1]) / (maxVal[0] - minVal[0]) - curvature * (maxVal[0] + minVal[0])
 				- inflection * (minVal[0] * minVal[0] + maxVal[0] * maxVal[0] + minVal[0] * maxVal[0]);;
-		double ds = Math.abs(a[2 * ndims]);
+		double ds = (a[2 * ndims]);
 		double mplus2bxstart = slope + 2 * curvature* minVal[0] + 3 * inflection* minVal[0] * minVal[0];
 		
 
@@ -205,7 +205,7 @@ public class GaussianSplinethirdorder implements MTFitFunction {
 		}
 		double slope = (maxVal[1] - minVal[1]) / (maxVal[0] - minVal[0]) - curvature * (maxVal[0] + minVal[0])
 				- inflection * (minVal[0] * minVal[0] + maxVal[0] * maxVal[0] + minVal[0] * maxVal[0]);
-		double ds = Math.abs(a[2 * ndims]);
+		double ds = (a[2 * ndims]);
 		double mplus2bxstart = slope + 2 * curvature* minVal[0] + 3 * inflection* minVal[0] * minVal[0];
 		
 
@@ -232,11 +232,11 @@ public class GaussianSplinethirdorder implements MTFitFunction {
 			dsum += 2 * b[i] * di * dxvectorCstart[i];
 		}
 
-		dxbydc = - ds * mplus2bxstart * (-(a[0] * a[0] + maxVal[0] * maxVal[0] + a[0] * maxVal[0]) + 3 * minVal[0] * minVal[0]) 
+		dxbydc = - ds * mplus2bxstart * (-(minVal[0] * minVal[0] + maxVal[0] * maxVal[0] + minVal[0] * maxVal[0]) + 3 * minVal[0] * minVal[0]) 
                 / (Math.pow(1 + mplus2bxstart * mplus2bxstart, 3 / 2));
 		dxvectorCstart[0] = dxbydc;
 		dxvectorCstart[1] =   mplus2bxstart* dxbydc + 
-				(-(a[0] * a[0] + maxVal[0] * maxVal[0] + a[0] * maxVal[0]) + 3 * minVal[0] * minVal[0]) * dxvectorstart[0];
+				(-(minVal[0] * minVal[0] + maxVal[0] * maxVal[0] + minVal[0] * maxVal[0]) + 3 * minVal[0] * minVal[0]) * dxvectorstart[0];
 		
 		sumofgaussians+= dsum * Math.exp(-sum);
 		if (minVal[0] > maxVal[0] || minVal[1] > maxVal[1] && slope > 0)
@@ -288,7 +288,7 @@ public class GaussianSplinethirdorder implements MTFitFunction {
 		double slope = (maxVal[1] - minVal[1]) / (maxVal[0] - minVal[0]) - curvature * (maxVal[0] + minVal[0])
 				- inflection * (minVal[0] * minVal[0] + maxVal[0] * maxVal[0] + minVal[0] * maxVal[0]);
 
-		double ds = Math.abs(a[2 * ndims]);
+		double ds = (a[2 * ndims]);
 
 		while (true) {
 
@@ -306,7 +306,8 @@ public class GaussianSplinethirdorder implements MTFitFunction {
 				sum += b[i] * di * di;
 			}
 			sumofgaussians += Math.exp(-sum);
-
+			if (minVal[0] + dxvector[0] < 1.0E-5)
+				break;
 			if (minVal[0] >= maxVal[0] || minVal[1] >= maxVal[1] && slope > 0)
 				break;
 			if (minVal[0] >= maxVal[0] || minVal[1] <= maxVal[1] && slope < 0)

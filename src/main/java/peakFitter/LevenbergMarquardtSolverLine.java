@@ -107,10 +107,9 @@ public class LevenbergMarquardtSolverLine {
 					term = 0;
 				}
 				else {
-					term++;
-					if (term == 2) {
+				
 						done = true;
-					}
+					
 				}
 				if (iter > maxiter -1)
 				System.out.println("LM solver unable to find extrema after" + iter + " iterations");
@@ -120,11 +119,11 @@ public class LevenbergMarquardtSolverLine {
 				// was not a good idea.  See comment there.
 				//
 				if (e1 > e0 || Double.isNaN(e1)) { // new location worse than before
-					lambda *= 5;
+					lambda *= 10;
 					
 				}
 				else {		// new location better, accept new parameters
-					lambda *= 0.5;
+					lambda *= 0.1;
 				
 					e0 = e1;
 					
@@ -136,14 +135,14 @@ public class LevenbergMarquardtSolverLine {
 				}
 				// New truncation criteria to fasten the solver when it is stuck in a local minima
 				for( int i = 0; i < nparm; i++ ) {
-					if (Math.abs(a[i] - na[i]) < 1.0E-10 && iter >= 2 || (lambda <= 1.0E-3 || lambda >= 1.0E3))
+					if (Math.abs(a[i] - na[i]) < 1.0E-10 && iter >= 2 || (lambda <= 1.0E-5 || lambda >= 1.0E3))
 						
 						done = true;
 				}
 				
 				
 				
-				System.out.println(iter+ " " + lambda);
+				System.out.println(iter+ " " + lambda+ " "+ Math.abs(e1-e0));
 
 			} while(!done);
 

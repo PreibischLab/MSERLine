@@ -53,13 +53,13 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
     private boolean Maskfail = false;
 	// LM solver iteration params
 	public int maxiter = 200;
-	public double lambda = 1e-2;
-	public double termepsilon = 1e-1;
+	public double lambda = 1e-3;
+	public double termepsilon = 1e-2;
 	// Mask fits iteration param
 	public int iterations = 200;
-	public double cutoffdistance = 5;
+	public double cutoffdistance = 15;
 	public boolean halfgaussian = false;
-	public double Intensityratio = 0.5;
+	public double Intensityratio = 0.1;
 	private final UserChoiceModel model;
 
 	public void setCutoffdistance(double cutoffdistance) {
@@ -739,7 +739,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			double inicutoffdistanceY = Math.abs(inistartpos[1] - iniendpos[1]);
 			double inicutoffdistanceX = Math.abs(inistartpos[0] - iniendpos[0]);
 			// LM solver part
-			if (inicutoffdistanceY > 2 && inicutoffdistanceX > 2 ) {
+			if (inicutoffdistanceY > 0 && inicutoffdistanceX > 0 ) {
 			// LM solver part
 
 			try {

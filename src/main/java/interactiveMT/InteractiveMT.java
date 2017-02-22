@@ -6157,9 +6157,9 @@ public class InteractiveMT implements PlugIn {
             if (indexmodel == 0)
 			userChoiceModel = UserChoiceModel.Line;
             if (indexmodel == 1)
-			userChoiceModel = UserChoiceModel.Splineordersecfixedds;
+			userChoiceModel = UserChoiceModel.Splineordersec;
             if (indexmodel == 2)
-			userChoiceModel = UserChoiceModel.Splinethirdorderfixedds;
+			userChoiceModel = UserChoiceModel.Splineorderthird;
 
           
 	
@@ -6538,7 +6538,7 @@ public class InteractiveMT implements PlugIn {
 		
 		final RandomAccessibleInterval<FloatType> img = Views.interval( intervalView, interval );
 		
-		totalimg = Views.interval(Views.extendZero(img), intervalView);
+		totalimg = Views.interval(Views.extendBorder(img), intervalView);
 		
 		return totalimg;
 	}
