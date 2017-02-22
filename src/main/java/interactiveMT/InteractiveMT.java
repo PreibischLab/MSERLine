@@ -6750,8 +6750,8 @@ public class InteractiveMT implements PlugIn {
 	public static void main(String[] args) {
 		new ImageJ();
 		
-		ImagePlus imp = new Opener().openImage("/Users/varunkapoor/Documents/MT-Dummy/testlengthA.tif");
-		ImagePlus Preprocessedimp = new Opener().openImage("/Users/varunkapoor/Documents/MT-Dummy/testlengthA.tif");
+		ImagePlus imp = new Opener().openImage("/Users/varunkapoor/res/2017C.tif");
+		ImagePlus Preprocessedimp = new Opener().openImage("/Users/varunkapoor/res/BG2017C.tif");
 		
 		RandomAccessibleInterval<FloatType> originalimg = ImageJFunctions.convertFloat(imp);
 		RandomAccessibleInterval<FloatType> originalPreprocessedimg = ImageJFunctions.convertFloat(Preprocessedimp);
