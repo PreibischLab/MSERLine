@@ -300,8 +300,8 @@ public class InteractiveMT implements PlugIn {
 	RandomAccessibleInterval<UnsignedByteType> newimg;
 	ArrayList<double[]> AllmeanCovar;
 	String usefolder = IJ.getDirectory("imagej");
-	String addToName = "MT1";
-	String addTrackToName = "MT1";
+	String addToName = "MT2KymoVarun";
+	String addTrackToName = "MT2KymoVarun";
 	// first and last slice to process
 	int endStack, thirdDimension;
 
@@ -1994,93 +1994,6 @@ public class InteractiveMT implements PlugIn {
 	
 	
 	
-	private boolean DialogueKalmanTracker() {
-
-		String[] colors = { "Red", "Green", "Blue", "Cyan", "Magenta", "Yellow", "Black", "White" };
-		String[] whichcost = { "Distance based" };
-		int indexcol = 0;
-		int functiontype = 0;
-
-		// Create dialog
-		GenericDialog gd = new GenericDialog("Tracker");
-
-		gd.addChoice("Choose your Cost function (for Kalman) :", whichcost, whichcost[functiontype]);
-		gd.addChoice("Draw tracks with this color :", colors, colors[indexcol]);
-
-		gd.addNumericField("Initial Search Radius", initialSearchradius, 0);
-		gd.addNumericField("Max Movment of Ends per frame", maxSearchradius, 0);
-		gd.addNumericField("Ends allowed to be lost for #frames", missedframes, 0);
-		
-
-		initialSearchradius = (int) gd.getNextNumber();
-		maxSearchradius = (int) gd.getNextNumber();
-		missedframes = (int) gd.getNextNumber();
-		
-			
-			functiontype = gd.getNextChoiceIndex();
-			switch (functiontype) {
-
-			case 0:
-				UserchosenCostFunction = new SquareDistCostFunction();
-				break;
-     
-				
-
-			}
-
-			MTtrackerstart = new KFsearch(AllstartKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius, thirdDimension,
-					thirdDimensionSize, missedframes);
-			
-			MTtrackerend = new KFsearch(AllendKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius, thirdDimension,
-					thirdDimensionSize, missedframes);
-		    
-		
-		
-		
-		
-
-	
-
-		
-		switch (indexcol) {
-		case 0:
-			colorDraw = Color.red;
-			break;
-		case 1:
-			colorDraw = Color.green;
-			break;
-		case 2:
-			colorDraw = Color.blue;
-			break;
-		case 3:
-			colorDraw = Color.cyan;
-			break;
-		case 4:
-			colorDraw = Color.magenta;
-			break;
-		case 5:
-			colorDraw = Color.yellow;
-			break;
-		case 6:
-			colorDraw = Color.black;
-			break;
-		case 7:
-			colorDraw = Color.white;
-			break;
-		default:
-			colorDraw = Color.yellow;
-		}
-		
-		gd.showDialog();
-		// color choice of display
-		indexcol = gd.getNextChoiceIndex();
-		return !gd.wasCanceled();
-	}
-
-
-	
-
-	
 	protected class CostfunctionListener implements ItemListener{
 		@Override
 		public void itemStateChanged(ItemEvent arg0) {
@@ -2479,6 +2392,8 @@ public class InteractiveMT implements PlugIn {
 					final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, currentpoint);
 					final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
 					 
+					if (list.get(index).thirdDimension > next){
+					
                 if (seedtoold > seedtocurrent && list.get(index).thirdDimension > next + 2){
 						
 						// MT shrank
@@ -2495,7 +2410,7 @@ public class InteractiveMT implements PlugIn {
 						
 					}
 					
-					
+				}
 					
 					rt.incrementCounter();
 
@@ -2589,6 +2504,8 @@ public class InteractiveMT implements PlugIn {
 					final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, currentpoint);
 					final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
 					 
+					
+					if (list.get(index).thirdDimension > next){
                 if (seedtoold > seedtocurrent && list.get(index).thirdDimension > next + 2){
 						
 						// MT shrank
@@ -2605,7 +2522,7 @@ public class InteractiveMT implements PlugIn {
 						
 					}
 					
-					
+					}
 					
 					rt.incrementCounter();
 
@@ -2702,7 +2619,7 @@ public class InteractiveMT implements PlugIn {
 					final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
 					
 					
-					
+					if (framenumber > next){
 					
 					if (seedtoold > seedtocurrent && framenumber > next + 2){
 						
@@ -2720,7 +2637,7 @@ public class InteractiveMT implements PlugIn {
 						
 					}
 					
-					
+					}
 					final double[] startinfo = { oldpoint[0], oldpoint[1], newpoint[0], newpoint[1], oldpointCal[0], oldpointCal[1], newpointCal[0], newpointCal[1],
 							length, startlength};
 					Pair<Integer[], double[]> lengthpair = new Pair<Integer[], double[]>(FrameID, startinfo);
@@ -2789,19 +2706,7 @@ public class InteractiveMT implements PlugIn {
 				}
 				
 				
-				if (Kymoimg!= null){
-					File fichier = new File(usefolder + "//" + addToName + "KymoWill-start" + ".txt");
-					
-					
-					
-					 try {
-						ExtractKymo.ReadFromKymo(Kymoimg, fichier);
-					} catch (IOException e) {
-
-						e.printStackTrace();
-					}
-					 
-				}
+				
 					 
 						
 				
@@ -2885,9 +2790,9 @@ public class InteractiveMT implements PlugIn {
 					final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
 					
 					
+					if (framenumber > next){
 					
-					
-					if (seedtoold > seedtocurrent && framenumber > next + 5){
+					if (seedtoold > seedtocurrent && framenumber > next + 2){
 						
 						// MT shrank
 						
@@ -2901,6 +2806,8 @@ public class InteractiveMT implements PlugIn {
 						
 					endlength+=length;
 						
+					}
+					
 					}
 					final double[] endinfo = { oldpoint[0], oldpoint[1], newpoint[0], newpoint[1],
 							oldpointCal[0], oldpointCal[1], newpointCal[0], newpointCal[1], length, endlength};
@@ -2964,19 +2871,7 @@ public class InteractiveMT implements PlugIn {
 				}
 				}
 				
-				if (Kymoimg!= null){
-					File fichier = new File(usefolder + "//" + addToName + "KymoWill-end" + ".txt");
-					
-					
-					
-					 try {
-						ExtractKymo.ReadFromKymo(Kymoimg, fichier);
-					} catch (IOException e) {
-
-						e.printStackTrace();
-					}
-				}
-					
+				
 						
 				
 				
@@ -3346,7 +3241,7 @@ public class InteractiveMT implements PlugIn {
 					final double length = util.Boundingboxes.Distance(currentpointCal, oldpointCal);
 					final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, currentpoint);
 					final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
-					 
+					if (list.get(index).thirdDimension  > next){
                 if (seedtoold > seedtocurrent && list.get(index).thirdDimension > next + 2){
 						
 						// MT shrank
@@ -3363,7 +3258,7 @@ public class InteractiveMT implements PlugIn {
 						
 					}
 					
-					
+					}
 					
 					rt.incrementCounter();
 
@@ -3456,6 +3351,8 @@ public class InteractiveMT implements PlugIn {
 					final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, currentpoint);
 					final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
 					 
+					if (list.get(index).thirdDimension  > next){
+					
                 if (seedtoold > seedtocurrent && list.get(index).thirdDimension > next + 2){
 						
 						// MT shrank
@@ -3472,7 +3369,7 @@ public class InteractiveMT implements PlugIn {
 						
 					}
 					
-					
+					}
 					
 					rt.incrementCounter();
 
@@ -3564,9 +3461,9 @@ public class InteractiveMT implements PlugIn {
 					final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
 					
 					
+					if (framenumber > next){
 					
-					
-					if (seedtoold > seedtocurrent && framenumber > next + 5){
+					if (seedtoold > seedtocurrent && framenumber > next + 2){
 						
 						// MT shrank
 						
@@ -3581,7 +3478,7 @@ public class InteractiveMT implements PlugIn {
 					startlength+=length;
 						
 					}
-					
+					}
 					final double[] startinfo = { oldpoint[0], oldpoint[1], newpoint[0], newpoint[1], oldpointCal[0], oldpointCal[1], newpointCal[0], newpointCal[1],
 							length, startlength};
 					Pair<Integer[], double[]> lengthpair = new Pair<Integer[], double[]>(FrameID, startinfo);
@@ -3652,18 +3549,7 @@ public class InteractiveMT implements PlugIn {
 				}
 				}
 				
-				if (Kymoimg!= null){
-					File fichier = new File(usefolder + "//" + addToName + "KymoWill-start" + ".txt");
-				
-					
-					
-					 try {
-						ExtractKymo.ReadFromKymo(Kymoimg, fichier);
-					} catch (IOException e) {
-
-						e.printStackTrace();
-					}
-				}
+			
 				
 				
 				
@@ -3753,9 +3639,9 @@ public class InteractiveMT implements PlugIn {
 					final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
 					
 					
+					if (framenumber > next){
 					
-					
-					if (seedtoold > seedtocurrent && framenumber > next + 5){
+					if (seedtoold > seedtocurrent && framenumber > next + 2){
 						
 						// MT shrank
 						
@@ -3770,7 +3656,7 @@ public class InteractiveMT implements PlugIn {
 						endlength+=length;
 						
 					}
-					
+					}
 					
 					final double[] endinfo = { oldpoint[0], oldpoint[1], newpoint[0], newpoint[1],
 							oldpointCal[0], oldpointCal[1], newpointCal[0], newpointCal[1], length, endlength};
@@ -3835,19 +3721,7 @@ public class InteractiveMT implements PlugIn {
 				}
 				
 				
-				if (Kymoimg!= null){
-					File fichier = new File(usefolder + "//" + addToName + "KymoWill-end" + ".txt");
-					
-					
-					
-					 try {
-						ExtractKymo.ReadFromKymo(Kymoimg, fichier);
-					} catch (IOException e) {
-
-						e.printStackTrace();
-					}
-				} 
-					
+			
 						
 				
 				
@@ -4764,833 +4638,6 @@ public class InteractiveMT implements PlugIn {
 		}
 	}
 
-	private void DisplayHough() {
-
-		// Create dialog
-		final Frame frame = new Frame("Interactive Hough");
-		frame.setSize(550, 550);
-		frame.setLayout(new BorderLayout());
-		/* Instantiation */
-		final GridBagLayout layout = new GridBagLayout();
-		final GridBagConstraints c = new GridBagConstraints();
-		final Label exthresholdText = new Label("threshold = threshold to create Bitimg for watershedding.",
-				Label.CENTER);
-		final Label exthetaText = new Label("thetaPerPixel = Pixel Size in theta direction for Hough space.",
-				Label.CENTER);
-		final Label exrhoText = new Label("rhoPerPixel = Pixel Size in rho direction for Hough space.",
-				Label.CENTER);
-		
-		// IJ.log("Determining the initial threshold for the image");
-		// thresholdHoughInit =
-		// GlobalThresholding.AutomaticThresholding(currentPreprocessedimg);
-		final Scrollbar threshold = new Scrollbar(Scrollbar.HORIZONTAL, (int) thresholdHoughInit, 10, 0,
-				10 + scrollbarSize);
-		this.thresholdHough = computeValueFromScrollbarPosition((int) thresholdHoughInit, thresholdHoughMin,
-				thresholdHoughMax, scrollbarSize);
-
-		final Scrollbar thetaSize = new Scrollbar(Scrollbar.HORIZONTAL, (int) thetaPerPixelInit, 10, 0,
-				10 + scrollbarSize);
-		this.thetaPerPixel = computeValueFromScrollbarPosition((int) thetaPerPixelInit, thetaPerPixelMin,
-				thetaPerPixelMax, scrollbarSize);
-
-		final Scrollbar rhoSize = new Scrollbar(Scrollbar.HORIZONTAL, (int) rhoPerPixelInit, 10, 0, 10 + scrollbarSize);
-		this.rhoPerPixel = computeValueFromScrollbarPosition((int) rhoPerPixelInit, rhoPerPixelMin, rhoPerPixelMax,
-				scrollbarSize);
-
-		final Checkbox displayBit = new Checkbox("Display Bitimage ", displayBitimg);
-		final Checkbox displayWatershed = new Checkbox("Display Watershedimage ", displayWatershedimg);
-		final Label thresholdText = new Label("thresholdValue = ", Label.CENTER);
-		final Label thetaText = new Label("Size of Hough Space in Theta = ", Label.CENTER);
-		final Label rhoText = new Label("Size of Hough Space in Rho = ", Label.CENTER);
-		final Button Dowatershed = new Button("Do watershedding");
-		final Button FindLinesListener = new Button("Find endpoints");
-		final Button button = new Button("Done");
-		/* Location */
-		frame.setLayout(layout);
-
-		c.fill = GridBagConstraints.HORIZONTAL;
-		c.gridx = 0;
-		c.gridy = 0;
-		c.weightx = 4;
-		c.weighty = 1.5;
-
-		frame.add(exthresholdText, c);
-		++c.gridy;
-		
-		frame.add(exthetaText, c);
-		++c.gridy;
-		
-		frame.add(exrhoText, c);
-		++c.gridy;
-		
-		frame.add(thresholdText, c);
-		++c.gridy;
-		
-		frame.add(threshold, c);
-		++c.gridy;
-
-		
-
-		frame.add(thetaText, c);
-		++c.gridy;
-		frame.add(thetaSize, c);
-		++c.gridy;
-
-		frame.add(rhoText, c);
-
-		++c.gridy;
-
-		frame.add(rhoSize, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 175, 0, 175);
-		frame.add(displayBit, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 175, 0, 175);
-		frame.add(displayWatershed, c);
-		++c.gridy;
-		c.insets = new Insets(10, 175, 0, 175);
-		frame.add(Dowatershed, c);
-		++c.gridy;
-		
-		c.insets = new Insets(10, 175, 0, 175);
-		frame.add(FindLinesListener, c);
-		++c.gridy;
-		c.insets = new Insets(10, 175, 0, 175);
-		frame.add(button, c);
-
-		button.addActionListener(new FinishedButtonListener(frame, false));
-		threshold.addAdjustmentListener(new thresholdHoughListener(thresholdText, thresholdHoughMin, thresholdHoughMax,
-				scrollbarSize, threshold));
-
-		thetaSize.addAdjustmentListener(
-				new thetaSizeHoughListener(thetaText, rhoText, thetaPerPixelMin, thetaPerPixelMax, scrollbarSize, thetaSize, rhoSize));
-
-		rhoSize.addAdjustmentListener(
-				new rhoSizeHoughListener(rhoText, rhoPerPixelMin, rhoPerPixelMax, scrollbarSize, rhoSize));
-
-		displayBit.addItemListener(new ShowBitimgListener());
-		displayWatershed.addItemListener(new ShowwatershedimgListener());
-		Dowatershed.addActionListener(new DowatershedListener());
-		FindLinesListener.addActionListener(new FindLinesListener());
-		frame.addWindowListener(new FrameListener(frame));
-
-		frame.setVisible(true);
-
-		originalColor = threshold.getBackground();
-
-	}
-
-	private void DisplayMSER() {
-
-		// Create dialog
-		final Frame frame = new Frame("Interactive Mser");
-		frame.setSize(550, 550);
-		frame.setLayout(new BorderLayout());
-		/* Instantiation */
-		final GridBagLayout layout = new GridBagLayout();
-		final GridBagConstraints c = new GridBagConstraints();
-
-		final Label exdeltaText = new Label("delta = stepsize of thresholds.", Label.CENTER);
-		final Label exmaxVarText = new Label("maxVar = maximum instability score of the region. ", Label.CENTER);
-		final Label exminDiversityText = new Label("minDiversity = minimum diversity of adjacent regions. ",
-				Label.CENTER);
-		final Label exminSizeText = new Label("MinSize = mimimum size of accepted region. ", Label.CENTER);
-		final Label exmaxSizeText = new Label("MaxSize = maximum size of accepted region. ", Label.CENTER);
-
-		final Scrollbar delta = new Scrollbar(Scrollbar.HORIZONTAL, deltaInit, 10, 0, 10 + scrollbarSize);
-		final Scrollbar maxVar = new Scrollbar(Scrollbar.HORIZONTAL, maxVarInit, 10, 0, 10 + scrollbarSize);
-		final Scrollbar minDiversity = new Scrollbar(Scrollbar.HORIZONTAL, minDiversityInit, 10, 0, 10 + scrollbarSize);
-		final Scrollbar minSize = new Scrollbar(Scrollbar.HORIZONTAL, minSizeInit, 10, 0, 10 + scrollbarSize);
-		final Scrollbar maxSize = new Scrollbar(Scrollbar.HORIZONTAL, maxSizeInit, 10, 0, 10 + scrollbarSize);
-		final Button ComputeTree = new Button("Compute Tree and display");
-		final Button FindLinesListener = new Button("Find endpoints");
-		this.maxVar = computeValueFromScrollbarPosition(maxVarInit, maxVarMin, maxVarMax, scrollbarSize);
-		this.delta = computeValueFromScrollbarPosition(deltaInit, deltaMin, deltaMax, scrollbarSize);
-		this.minDiversity = computeValueFromScrollbarPosition(minDiversityInit, minDiversityMin, minDiversityMax,
-				scrollbarSize);
-		this.minSize = (int) computeValueFromScrollbarPosition(minSizeInit, minSizemin, minSizemax, scrollbarSize);
-		this.maxSize = (int) computeValueFromScrollbarPosition(maxSizeInit, maxSizemin, maxSizemax, scrollbarSize);
-
-		final Checkbox min = new Checkbox("Look for Minima ", darktobright);
-
-		final Label deltaText = new Label("delta = ", Label.CENTER);
-		final Label maxVarText = new Label("maxVar = ", Label.CENTER);
-		final Label minDiversityText = new Label("minDiversity = ", Label.CENTER);
-		final Label minSizeText = new Label("MinSize = ", Label.CENTER);
-		final Label maxSizeText = new Label("MaxSize = ", Label.CENTER);
-		final Button button = new Button("Done");
-		/* Location */
-		frame.setLayout(layout);
-
-		c.fill = GridBagConstraints.HORIZONTAL;
-		c.gridx = 0;
-		c.gridy = 0;
-		c.weightx = 4;
-		c.weighty = 1.5;
-
-		frame.add(exdeltaText, c);
-		++c.gridy;
-
-		frame.add(exmaxVarText, c);
-		++c.gridy;
-
-		frame.add(exminDiversityText, c);
-		++c.gridy;
-
-		frame.add(exminSizeText, c);
-		++c.gridy;
-
-		frame.add(exmaxSizeText, c);
-		++c.gridy;
-
-		frame.add(deltaText, c);
-
-		++c.gridy;
-		frame.add(delta, c);
-
-		++c.gridy;
-
-		frame.add(maxVarText, c);
-
-		++c.gridy;
-		frame.add(maxVar, c);
-
-		++c.gridy;
-
-		frame.add(minDiversityText, c);
-
-		++c.gridy;
-		frame.add(minDiversity, c);
-
-		++c.gridy;
-
-		frame.add(minSizeText, c);
-
-		++c.gridy;
-		frame.add(minSize, c);
-
-		++c.gridy;
-
-		frame.add(maxSizeText, c);
-
-		++c.gridy;
-		frame.add(maxSize, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 175, 0, 175);
-		frame.add(min, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 175, 0, 175);
-		frame.add(ComputeTree, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 180, 0, 180);
-		frame.add(FindLinesListener, c);
-		
-		++c.gridy;
-		c.insets = new Insets(10, 180, 0, 180);
-		frame.add(button, c);
-
-		delta.addAdjustmentListener(new DeltaListener(deltaText, deltaMin, deltaMax, scrollbarSize, delta));
-
-		maxVar.addAdjustmentListener(new maxVarListener(maxVarText, maxVarMin, maxVarMax, scrollbarSize, maxVar));
-
-		minDiversity.addAdjustmentListener(new minDiversityListener(minDiversityText, minDiversityMin, minDiversityMax,
-				scrollbarSize, minDiversity));
-
-		minSize.addAdjustmentListener(new minSizeListener(minSizeText, minSizemin, minSizemax, scrollbarSize, minSize));
-
-		maxSize.addAdjustmentListener(new maxSizeListener(maxSizeText, maxSizemin, maxSizemax, scrollbarSize, maxSize));
-		button.addActionListener(new FinishedButtonListener(frame, false));
-
-		delta.addAdjustmentListener(new DeltaListener(deltaText, deltaMin, deltaMax, scrollbarSize, delta));
-		maxVar.addAdjustmentListener(new maxVarListener(maxVarText, maxVarMin, maxVarMax, scrollbarSize, maxVar));
-		minDiversity.addAdjustmentListener(new minDiversityListener(minDiversityText, minDiversityMin, minDiversityMax,
-				scrollbarSize, minDiversity));
-		minSize.addAdjustmentListener(new minSizeListener(minSizeText, minSizemin, minSizemax, scrollbarSize, minSize));
-		maxSize.addAdjustmentListener(new maxSizeListener(maxSizeText, maxSizemin, maxSizemax, scrollbarSize, maxSize));
-		min.addItemListener(new DarktobrightListener());
-		ComputeTree.addActionListener(new ComputeTreeListener());
-		FindLinesListener.addActionListener(new FindLinesListener());
-		frame.addWindowListener(new FrameListener(frame));
-
-		frame.setVisible(true);
-
-		originalColor = delta.getBackground();
-
-	}
-
-	
-	private void DisplayMSERwHough() {
-
-		// Create dialog
-		final Frame frame = new Frame("Interactive Mser with Hough");
-		frame.setSize(750, 750);
-		frame.setLayout(new BorderLayout());
-		/* Instantiation */
-		final GridBagLayout layout = new GridBagLayout();
-		final GridBagConstraints c = new GridBagConstraints();
-		
-		final Label exthetaText = new Label("thetaPerPixel = Pixel Size in theta direction for Hough space.",
-				Label.CENTER);
-		final Label exrhoText = new Label("rhoPerPixel = Pixel Size in rho direction for Hough space.",
-				Label.CENTER);
-		
-	    final Checkbox rhoEnable = new Checkbox( "Enable Manual Adjustment of rhoPerPixel", enablerhoPerPixel );
-
-
-		final Scrollbar thetaSize = new Scrollbar(Scrollbar.HORIZONTAL, (int) thetaPerPixelInit, 10, 0,
-				10 + scrollbarSize);
-		this.thetaPerPixel = computeValueFromScrollbarPosition((int) thetaPerPixelInit, thetaPerPixelMin,
-				thetaPerPixelMax, scrollbarSize);
-
-		final Scrollbar rhoSize = new Scrollbar(Scrollbar.HORIZONTAL, (int) rhoPerPixelInit, 10, 0, 10 + scrollbarSize);
-		this.rhoPerPixel = computeValueFromScrollbarPosition((int) rhoPerPixelInit, rhoPerPixelMin, rhoPerPixelMax,
-				scrollbarSize);
-
-		
-		final Label thetaText = new Label("Size of Hough Space in Theta = ", Label.CENTER);
-		final Label rhoText = new Label("Size of Hough Space in Rho = ", Label.CENTER);
-		final Button FindLinesListener = new Button("Find endpoints");
-		final Button button = new Button("Done");
-	
-		
-		
-		final Label exdeltaText = new Label("delta = stepsize of thresholds.", Label.CENTER);
-		
-		final Label exmaxVarText = new Label("maxVar = maximum instability score of the region. ", Label.CENTER);
-		final Label exminDiversityText = new Label("minDiversity = minimum diversity of adjacent regions. ",
-				Label.CENTER);
-		final Label exminSizeText = new Label("MinSize = mimimum size of accepted region. ", Label.CENTER);
-		final Label exmaxSizeText = new Label("MaxSize = maximum size of accepted region. ", Label.CENTER);
-
-		final Scrollbar delta = new Scrollbar(Scrollbar.HORIZONTAL, deltaInit, 10, 0, 10 + scrollbarSize);
-		final Scrollbar maxVar = new Scrollbar(Scrollbar.HORIZONTAL, maxVarInit, 10, 0, 10 + scrollbarSize);
-		final Scrollbar minDiversity = new Scrollbar(Scrollbar.HORIZONTAL, minDiversityInit, 10, 0, 10 + scrollbarSize);
-		final Scrollbar minSize = new Scrollbar(Scrollbar.HORIZONTAL, minSizeInit, 10, 0, 10 + scrollbarSize);
-		final Scrollbar maxSize = new Scrollbar(Scrollbar.HORIZONTAL, maxSizeInit, 10, 0, 10 + scrollbarSize);
-		final Button ComputeTree = new Button("Compute Tree and display");
-
-		final Label HoughText = new Label("Now determine the Hough space parameters.", Label.CENTER);
-		
-		this.maxVar = computeValueFromScrollbarPosition(maxVarInit, maxVarMin, maxVarMax, scrollbarSize);
-		this.delta = computeValueFromScrollbarPosition(deltaInit, deltaMin, deltaMax, scrollbarSize);
-		this.minDiversity = computeValueFromScrollbarPosition(minDiversityInit, minDiversityMin, minDiversityMax,
-				scrollbarSize);
-		this.minSize = (int) computeValueFromScrollbarPosition(minSizeInit, minSizemin, minSizemax, scrollbarSize);
-		this.maxSize = (int) computeValueFromScrollbarPosition(maxSizeInit, maxSizemin, maxSizemax, scrollbarSize);
-
-		final Checkbox min = new Checkbox("Look for Minima ", darktobright);
-
-		final Label deltaText = new Label("delta = ", Label.CENTER);
-		final Label maxVarText = new Label("maxVar = ", Label.CENTER);
-		final Label minDiversityText = new Label("minDiversity = ", Label.CENTER);
-		final Label minSizeText = new Label("MinSize = ", Label.CENTER);
-		final Label maxSizeText = new Label("MaxSize = ", Label.CENTER);
-		/* Location */
-		frame.setLayout(layout);
-
-		c.fill = GridBagConstraints.HORIZONTAL;
-		c.gridx = 0;
-		c.gridy = 0;
-		c.weightx = 4;
-		c.weighty = 1.5;
-
-		frame.add(exdeltaText, c);
-		++c.gridy;
-
-		frame.add(exmaxVarText, c);
-		++c.gridy;
-
-		frame.add(exminDiversityText, c);
-		++c.gridy;
-
-		frame.add(exminSizeText, c);
-		++c.gridy;
-
-		frame.add(exmaxSizeText, c);
-		++c.gridy;
-
-		
-		frame.add(deltaText, c);
-
-		++c.gridy;
-		frame.add(delta, c);
-
-		++c.gridy;
-
-		frame.add(maxVarText, c);
-
-		++c.gridy;
-		frame.add(maxVar, c);
-
-		++c.gridy;
-
-		frame.add(minDiversityText, c);
-
-		++c.gridy;
-		frame.add(minDiversity, c);
-
-		++c.gridy;
-
-		frame.add(minSizeText, c);
-
-		++c.gridy;
-		frame.add(minSize, c);
-
-		++c.gridy;
-
-		frame.add(maxSizeText, c);
-
-		++c.gridy;
-		frame.add(maxSize, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 175, 0, 175);
-		frame.add(min, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 175, 0, 175);
-		
-		frame.add(ComputeTree, c);
-		++c.gridy;
-		
-		frame.add(HoughText, c);
-		++c.gridy;
-		
-		
-		frame.add(exthetaText, c);
-		++c.gridy;
-		
-		frame.add(exrhoText, c);
-		
-		
-		++c.gridy;
-		frame.add(thetaText, c);
-		++c.gridy;
-		frame.add(thetaSize, c);
-		++c.gridy;
-
-		frame.add(rhoText, c);
-
-		++c.gridy;
-
-		frame.add(rhoSize, c);
-		
-		++c.gridy;
-		 c.insets = new Insets(0,175,0,175);
-		frame.add(rhoEnable, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 175, 0, 175);
-		frame.add(FindLinesListener, c);
-	
-		
-		++c.gridy;
-		c.insets = new Insets(10, 175, 0, 175);
-		frame.add(button, c);
-
-		delta.addAdjustmentListener(new DeltaListener(deltaText, deltaMin, deltaMax, scrollbarSize, delta));
-
-		maxVar.addAdjustmentListener(new maxVarListener(maxVarText, maxVarMin, maxVarMax, scrollbarSize, maxVar));
-
-		minDiversity.addAdjustmentListener(new minDiversityListener(minDiversityText, minDiversityMin, minDiversityMax,
-				scrollbarSize, minDiversity));
-
-		minSize.addAdjustmentListener(new minSizeListener(minSizeText, minSizemin, minSizemax, scrollbarSize, minSize));
-
-		maxSize.addAdjustmentListener(new maxSizeListener(maxSizeText, maxSizemin, maxSizemax, scrollbarSize, maxSize));
-		button.addActionListener(new FinishedButtonListener(frame, false));
-
-		delta.addAdjustmentListener(new DeltaListener(deltaText, deltaMin, deltaMax, scrollbarSize, delta));
-		maxVar.addAdjustmentListener(new maxVarListener(maxVarText, maxVarMin, maxVarMax, scrollbarSize, maxVar));
-		minDiversity.addAdjustmentListener(new minDiversityListener(minDiversityText, minDiversityMin, minDiversityMax,
-				scrollbarSize, minDiversity));
-		minSize.addAdjustmentListener(new minSizeListener(minSizeText, minSizemin, minSizemax, scrollbarSize, minSize));
-		maxSize.addAdjustmentListener(new maxSizeListener(maxSizeText, maxSizemin, maxSizemax, scrollbarSize, maxSize));
-		min.addItemListener(new DarktobrightListener());
-
-		
-		
-		FindLinesListener.addActionListener(new FindLinesListener());
-
-		thetaSize.addAdjustmentListener(
-				new thetaSizeHoughListener(thetaText, rhoText, thetaPerPixelMin, thetaPerPixelMax, scrollbarSize, thetaSize, rhoSize));
-
-		rhoSize.addAdjustmentListener(
-				new rhoSizeHoughListener(rhoText, rhoPerPixelMin, rhoPerPixelMax, scrollbarSize, rhoSize));
-
-		ComputeTree.addActionListener(new ComputeTreeListener());
-		
-		frame.addWindowListener(new FrameListener(frame));
-
-		frame.setVisible(true);
-
-		originalColor = delta.getBackground();
-
-	}
-
-	
-	
-	
-	
-	
-	private void UpdateHough() {
-
-		// Create dialog
-				final Frame frame = new Frame("update Hough");
-				frame.setSize(550, 550);
-				frame.setLayout(new BorderLayout());
-				/* Instantiation */
-				final GridBagLayout layout = new GridBagLayout();
-				final GridBagConstraints c = new GridBagConstraints();
-				final Label exthresholdText = new Label("threshold = threshold to create Bitimg for watershedding.",
-						Label.CENTER);
-				final Label exthetaText = new Label("thetaPerPixel = Pixel Size in theta direction for Hough space.",
-						Label.CENTER);
-				final Label exrhoText = new Label("rhoPerPixel = Pixel Size in rho direction for Hough space.",
-						Label.CENTER);
-				
-				// IJ.log("Determining the initial threshold for the image");
-				// thresholdHoughInit =
-				// GlobalThresholding.AutomaticThresholding(currentPreprocessedimg);
-				final Scrollbar threshold = new Scrollbar(Scrollbar.HORIZONTAL, (int) thresholdHoughInit, 10, 0,
-						10 + scrollbarSize);
-				this.thresholdHough = computeValueFromScrollbarPosition((int) thresholdHoughInit, thresholdHoughMin,
-						thresholdHoughMax, scrollbarSize);
-
-				final Scrollbar thetaSize = new Scrollbar(Scrollbar.HORIZONTAL, (int) thetaPerPixelInit, 10, 0,
-						10 + scrollbarSize);
-				this.thetaPerPixel = computeValueFromScrollbarPosition((int) thetaPerPixelInit, thetaPerPixelMin,
-						thetaPerPixelMax, scrollbarSize);
-
-				final Scrollbar rhoSize = new Scrollbar(Scrollbar.HORIZONTAL, (int) rhoPerPixelInit, 10, 0, 10 + scrollbarSize);
-				this.rhoPerPixel = computeValueFromScrollbarPosition((int) rhoPerPixelInit, rhoPerPixelMin, rhoPerPixelMax,
-						scrollbarSize);
-
-				final Checkbox displayBit = new Checkbox("Display Bitimage ", displayBitimg);
-				final Checkbox displayWatershed = new Checkbox("Display Watershedimage ", displayWatershedimg);
-				final Label thresholdText = new Label("thresholdValue = ", Label.CENTER);
-				final Label thetaText = new Label("Size of Hough Space in Theta = ", Label.CENTER);
-				final Label rhoText = new Label("Size of Hough Space in Rho = ", Label.CENTER);
-				final Button Dowatershed = new Button("Do watershedding");
-				final Button button = new Button("Done");
-				/* Location */
-				frame.setLayout(layout);
-
-				c.fill = GridBagConstraints.HORIZONTAL;
-				c.gridx = 0;
-				c.gridy = 0;
-				c.weightx = 4;
-				c.weighty = 1.5;
-
-				frame.add(exthresholdText, c);
-				++c.gridy;
-				
-				frame.add(exthetaText, c);
-				++c.gridy;
-				
-				frame.add(exrhoText, c);
-				++c.gridy;
-				
-				frame.add(thresholdText, c);
-				++c.gridy;
-				
-				frame.add(threshold, c);
-				++c.gridy;
-
-				
-
-				frame.add(thetaText, c);
-				++c.gridy;
-				frame.add(thetaSize, c);
-				++c.gridy;
-
-				frame.add(rhoText, c);
-
-				++c.gridy;
-
-				frame.add(rhoSize, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				frame.add(displayBit, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				frame.add(displayWatershed, c);
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				frame.add(Dowatershed, c);
-				
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				frame.add(button, c);
-
-				button.addActionListener(new DoneandmovebackButtonListener(frame, false));
-
-				threshold.addAdjustmentListener(new thresholdHoughListener(thresholdText, thresholdHoughMin, thresholdHoughMax,
-						scrollbarSize, threshold));
-
-				thetaSize.addAdjustmentListener(
-						new thetaSizeHoughListener(thetaText, rhoText, thetaPerPixelMin, thetaPerPixelMax, scrollbarSize, thetaSize, rhoSize));
-
-				rhoSize.addAdjustmentListener(
-						new rhoSizeHoughListener(rhoText, rhoPerPixelMin, rhoPerPixelMax, scrollbarSize, rhoSize));
-
-				displayBit.addItemListener(new ShowBitimgListener());
-				displayWatershed.addItemListener(new ShowwatershedimgListener());
-				Dowatershed.addActionListener(new DowatershedListener());
-				frame.addWindowListener(new FrameListener(frame));
-
-				frame.setVisible(true);
-
-				originalColor = threshold.getBackground();
-	}
-
-	private void UpdateMSER() {
-
-		// Create dialog
-		
-				
-	
-				
-				Frame frame = new Frame("Update MSER Parameters");
-				frame.setSize(550, 550);
-				frame.setLayout(new BorderLayout());
-				final Scrollbar delta = new Scrollbar(Scrollbar.HORIZONTAL, deltaInit, 10, 0, 10 + scrollbarSize);
-				final Scrollbar maxVar = new Scrollbar(Scrollbar.HORIZONTAL, maxVarInit, 10, 0, 10 + scrollbarSize);
-				final Scrollbar minDiversity = new Scrollbar(Scrollbar.HORIZONTAL, minDiversityInit, 10, 0, 10 + scrollbarSize);
-				final Scrollbar minSize = new Scrollbar(Scrollbar.HORIZONTAL, minSizeInit, 10, 0, 10 + scrollbarSize);
-				final Scrollbar maxSize = new Scrollbar(Scrollbar.HORIZONTAL, maxSizeInit, 10, 0, 10 + scrollbarSize);
-				this.maxVar = computeValueFromScrollbarPosition(maxVarInit, maxVarMin, maxVarMax, scrollbarSize);
-				this.delta = computeValueFromScrollbarPosition(deltaInit, deltaMin, deltaMax, scrollbarSize);
-				this.minDiversity = computeValueFromScrollbarPosition(minDiversityInit, minDiversityMin, minDiversityMax,
-						scrollbarSize);
-				this.minSize = (int) computeValueFromScrollbarPosition(minSizeInit, minSizemin, minSizemax, scrollbarSize);
-				this.maxSize = (int) computeValueFromScrollbarPosition(maxSizeInit, maxSizemin, maxSizemax, scrollbarSize);
-
-				final Checkbox min = new Checkbox("Look for Minima ", darktobright);
-				/* Instantiation */
-				final GridBagLayout layout = new GridBagLayout();
-				final GridBagConstraints c = new GridBagConstraints();
-				final Button ComputeTree = new Button("Compute Tree and display");
-				final Button button = new Button("Done");
-				/* Location */
-				final Label deltaText = new Label("delta = ", Label.CENTER);
-				final Label maxVarText = new Label("maxVar = ", Label.CENTER);
-				final Label minDiversityText = new Label("minDiversity = ", Label.CENTER);
-				final Label minSizeText = new Label("MinSize = ", Label.CENTER);
-				final Label maxSizeText = new Label("MaxSize = ", Label.CENTER);
-				frame.setLayout(layout);
-
-				c.fill = GridBagConstraints.HORIZONTAL;
-				c.gridx = 0;
-				c.gridy = 0;
-				c.weightx = 4;
-				c.weighty = 1.5;
-				++c.gridy;
-
-				frame.add(deltaText, c);
-				
-				++c.gridy;
-				frame.add(delta, c);
-
-				++c.gridy;
-
-				frame.add(maxVarText, c);
-
-				++c.gridy;
-				frame.add(maxVar, c);
-
-				++c.gridy;
-
-				frame.add(minDiversityText, c);
-
-				++c.gridy;
-				frame.add(minDiversity, c);
-
-				++c.gridy;
-
-				frame.add(minSizeText, c);
-
-				++c.gridy;
-				frame.add(minSize, c);
-
-				++c.gridy;
-
-				frame.add(maxSizeText, c);
-
-				++c.gridy;
-				frame.add(maxSize, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				frame.add(min, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				frame.add(ComputeTree, c);
-
-			
-				
-				++c.gridy;
-				c.insets = new Insets(10, 180, 0, 180);
-				frame.add(button, c);
-
-				delta.addAdjustmentListener(new DeltaListener(deltaText, deltaMin, deltaMax, scrollbarSize, delta));
-
-				maxVar.addAdjustmentListener(new maxVarListener(maxVarText, maxVarMin, maxVarMax, scrollbarSize, maxVar));
-
-				minDiversity.addAdjustmentListener(new minDiversityListener(minDiversityText, minDiversityMin, minDiversityMax,
-						scrollbarSize, minDiversity));
-
-				minSize.addAdjustmentListener(new minSizeListener(minSizeText, minSizemin, minSizemax, scrollbarSize, minSize));
-
-				maxSize.addAdjustmentListener(new maxSizeListener(maxSizeText, maxSizemin, maxSizemax, scrollbarSize, maxSize));
-				button.addActionListener(new DoneandmovebackButtonListener(frame, false));
-
-				delta.addAdjustmentListener(new DeltaListener(deltaText, deltaMin, deltaMax, scrollbarSize, delta));
-				maxVar.addAdjustmentListener(new maxVarListener(maxVarText, maxVarMin, maxVarMax, scrollbarSize, maxVar));
-				minDiversity.addAdjustmentListener(new minDiversityListener(minDiversityText, minDiversityMin, minDiversityMax,
-						scrollbarSize, minDiversity));
-				minSize.addAdjustmentListener(new minSizeListener(minSizeText, minSizemin, minSizemax, scrollbarSize, minSize));
-				maxSize.addAdjustmentListener(new maxSizeListener(maxSizeText, maxSizemin, maxSizemax, scrollbarSize, maxSize));
-				min.addItemListener(new DarktobrightListener());
-				ComputeTree.addActionListener(new ComputeTreeListener());
-				frame.addWindowListener(new FrameListener(frame));
-
-				frame.setVisible(true);
-
-				originalColor = delta.getBackground();
-				
-				
-	}
-
-	
-	private void UpdateMSERwHough() {
-
-		GenericDialog gd = new GenericDialog("Update MSERwHough Parameters");
-		
-
-		
-		Frame frame = new Frame("Update MSER Parameters");
-		frame.setSize(550, 550);
-		frame.setLayout(new BorderLayout());
-		final Scrollbar delta = new Scrollbar(Scrollbar.HORIZONTAL, deltaInit, 10, 0, 10 + scrollbarSize);
-		final Scrollbar maxVar = new Scrollbar(Scrollbar.HORIZONTAL, maxVarInit, 10, 0, 10 + scrollbarSize);
-		final Scrollbar minDiversity = new Scrollbar(Scrollbar.HORIZONTAL, minDiversityInit, 10, 0, 10 + scrollbarSize);
-		final Scrollbar minSize = new Scrollbar(Scrollbar.HORIZONTAL, minSizeInit, 10, 0, 10 + scrollbarSize);
-		final Scrollbar maxSize = new Scrollbar(Scrollbar.HORIZONTAL, maxSizeInit, 10, 0, 10 + scrollbarSize);
-		this.maxVar = computeValueFromScrollbarPosition(maxVarInit, maxVarMin, maxVarMax, scrollbarSize);
-		this.delta = computeValueFromScrollbarPosition(deltaInit, deltaMin, deltaMax, scrollbarSize);
-		this.minDiversity = computeValueFromScrollbarPosition(minDiversityInit, minDiversityMin, minDiversityMax,
-				scrollbarSize);
-		this.minSize = (int) computeValueFromScrollbarPosition(minSizeInit, minSizemin, minSizemax, scrollbarSize);
-		this.maxSize = (int) computeValueFromScrollbarPosition(maxSizeInit, maxSizemin, maxSizemax, scrollbarSize);
-
-		final Checkbox min = new Checkbox("Look for Minima ", darktobright);
-		/* Instantiation */
-		final GridBagLayout layout = new GridBagLayout();
-		final GridBagConstraints c = new GridBagConstraints();
-		final Button ComputeTree = new Button("Compute Tree and display");
-		final Button button = new Button("Done");
-		/* Location */
-		final Label deltaText = new Label("delta = ", Label.CENTER);
-		final Label maxVarText = new Label("maxVar = ", Label.CENTER);
-		final Label minDiversityText = new Label("minDiversity = ", Label.CENTER);
-		final Label minSizeText = new Label("MinSize = ", Label.CENTER);
-		final Label maxSizeText = new Label("MaxSize = ", Label.CENTER);
-		frame.setLayout(layout);
-
-		c.fill = GridBagConstraints.HORIZONTAL;
-		c.gridx = 0;
-		c.gridy = 0;
-		c.weightx = 4;
-		c.weighty = 1.5;
-		++c.gridy;
-
-		frame.add(deltaText, c);
-		
-		++c.gridy;
-		frame.add(delta, c);
-
-		++c.gridy;
-
-		frame.add(maxVarText, c);
-
-		++c.gridy;
-		frame.add(maxVar, c);
-
-		++c.gridy;
-
-		frame.add(minDiversityText, c);
-
-		++c.gridy;
-		frame.add(minDiversity, c);
-
-		++c.gridy;
-
-		frame.add(minSizeText, c);
-
-		++c.gridy;
-		frame.add(minSize, c);
-
-		++c.gridy;
-
-		frame.add(maxSizeText, c);
-
-		++c.gridy;
-		frame.add(maxSize, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 175, 0, 175);
-		frame.add(min, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 175, 0, 175);
-		frame.add(ComputeTree, c);
-
-	
-		
-		++c.gridy;
-		c.insets = new Insets(10, 180, 0, 180);
-		frame.add(button, c);
-
-		delta.addAdjustmentListener(new DeltaListener(deltaText, deltaMin, deltaMax, scrollbarSize, delta));
-
-		maxVar.addAdjustmentListener(new maxVarListener(maxVarText, maxVarMin, maxVarMax, scrollbarSize, maxVar));
-
-		minDiversity.addAdjustmentListener(new minDiversityListener(minDiversityText, minDiversityMin, minDiversityMax,
-				scrollbarSize, minDiversity));
-
-		minSize.addAdjustmentListener(new minSizeListener(minSizeText, minSizemin, minSizemax, scrollbarSize, minSize));
-
-		maxSize.addAdjustmentListener(new maxSizeListener(maxSizeText, maxSizemin, maxSizemax, scrollbarSize, maxSize));
-		button.addActionListener(new DoneandmovebackButtonListener(frame, false));
-
-		delta.addAdjustmentListener(new DeltaListener(deltaText, deltaMin, deltaMax, scrollbarSize, delta));
-		maxVar.addAdjustmentListener(new maxVarListener(maxVarText, maxVarMin, maxVarMax, scrollbarSize, maxVar));
-		minDiversity.addAdjustmentListener(new minDiversityListener(minDiversityText, minDiversityMin, minDiversityMax,
-				scrollbarSize, minDiversity));
-		minSize.addAdjustmentListener(new minSizeListener(minSizeText, minSizemin, minSizemax, scrollbarSize, minSize));
-		maxSize.addAdjustmentListener(new maxSizeListener(maxSizeText, maxSizemin, maxSizemax, scrollbarSize, maxSize));
-		min.addItemListener(new DarktobrightListener());
-		ComputeTree.addActionListener(new ComputeTreeListener());
-		frame.addWindowListener(new FrameListener(frame));
-
-		frame.setVisible(true);
-
-		originalColor = delta.getBackground();
-		
-		
-
-	}
-
-	
 	protected class FinishedButtonListener implements ActionListener {
 		final Frame parent;
 		final boolean cancel;
