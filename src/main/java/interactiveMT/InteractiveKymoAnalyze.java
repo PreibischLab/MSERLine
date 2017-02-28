@@ -91,6 +91,8 @@ public class InteractiveKymoAnalyze implements PlugIn {
 		  nbRois = roimanager.getCount();
           Roi[] RoisOrig = roimanager.getRoisAsArray();
           
+        
+          
          
           
           for (int i = 0; i < nbRois; ++i){
@@ -101,23 +103,40 @@ public class InteractiveKymoAnalyze implements PlugIn {
         float[] xCord = l.getFloatPolygon().xpoints;
         int[] yCord = l.getYCoordinates();
         
-        for (int index = 0; index < n; index++) {
+        for (int index = 0; index < n - 1; index++) {
       
        float[] cords = {xCord[index], yCord[index] } ;
+       float[] nextcords = {xCord[index + 1], yCord[index + 1] };
+       
+       float slope = (nextcords[1] - cords[1]) / (nextcords[0] - cords[0]);
+       float intercept = nextcords[1] - slope * nextcords[0];
+       
+       for (int y = (int)cords[1]; y < nextcords[1]; ++y){
+    	   
+    	 
+ 		  
+ 		  float[] cordsLine = {(y - intercept) / slope, y};
+ 		  
+ 		  Mask.add(cordsLine);
+    	   
+ 		  System.out.println(cordsLine[1] + " " + cordsLine[0]  );
+       }
       
-        Mask.add(cords);
-        System.out.println(xCord[index] + " " + yCord[index] );
+       
+       
         }
         
-       
-
         		  
           }
+          
+         
+        	
+          
           /********
   		 * The part below removes the duplicate entries in the array
   		 * dor the time co-ordinate
   		 ********/
-  		/*	
+  		
   			int j = 0;
 
   			for (int index = 0; index < Mask.size(); ++index) {
@@ -126,7 +145,7 @@ public class InteractiveKymoAnalyze implements PlugIn {
 
   					if (Mask.get(index)[1] == Mask.get(j)[1]) {
 
-  						Mask.remove(index);
+  						Mask.remove(j);
   					}
 
   					else {
@@ -136,7 +155,7 @@ public class InteractiveKymoAnalyze implements PlugIn {
 
   				}
   			}
-          */
+          
           roimanager.close();
           
 		
@@ -327,9 +346,9 @@ public class InteractiveKymoAnalyze implements PlugIn {
 		
 		new ImageJ();
 		String usefolder = IJ.getDirectory("imagej");
-		String addToName = "DeltaLKymo2";
+		String addToName = "DeltaLKymo4";
 		
-		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("/Users/varunkapoor/Documents/MTAnalysis/20170210/Kymograph2.tif"),
+		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("/Users/varunkapoor/Documents/MTAnalysis/20170210/Kymograph4.tif"),
 				new ArrayImgFactory<FloatType>());
 		
 		File fichier = new File(usefolder + "//" + addToName + "ID" + 0 + ".txt");
