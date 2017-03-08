@@ -145,7 +145,7 @@ public class ExtractKymo {
 		String addToName = "DeltaLKymo2";
 		
 		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util
-				.openAs32Bit(new File("/Users/varunkapoor/Documents/MTAnalysis/20170210/MaskKymo2.tif"), new ArrayImgFactory<FloatType>());
+				.openAs32Bit(new File("/Users/varunkapoor/Documents/MTAnalysis/20170210/Kymograph4.tif"), new ArrayImgFactory<FloatType>());
 		
 		
 		

@@ -273,7 +273,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 		final Cursor<FloatType> outcursor = Views.iterable(currentimg).localizingCursor();
 
 		final double maxintensityline = GetLocalmaxmin.computeMaxIntensity(currentimg);
-
+		final double minintensityline = 0;
 		if (model == UserChoiceModel.Line) {
 
 			double slope = iniparam.originalslope;
@@ -311,7 +311,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 			MinandMax[2 * ndims] = 0.5 * Math.min(psf[0], psf[1]);
 			MinandMax[2 * ndims + 1] = maxintensityline;
-			MinandMax[2 * ndims + 2] = 0;
+			MinandMax[2 * ndims + 2] = minintensityline;
 			for (int d = 0; d < ndims; ++d) {
 
 				if (MinandMax[d] == Double.MAX_VALUE || MinandMax[d + ndims] == -Double.MIN_VALUE)
@@ -359,7 +359,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			}
 
 			MinandMax[2 * ndims] = maxintensityline;
-			MinandMax[2 * ndims + 1] = 0;
+			MinandMax[2 * ndims + 1] = minintensityline;
 			for (int d = 0; d < ndims; ++d) {
 
 				if (MinandMax[d] == Double.MAX_VALUE || MinandMax[d + ndims] == -Double.MIN_VALUE)
@@ -405,7 +405,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 			MinandMax[2 * ndims] = 0.5 * Math.min(psf[0], psf[1]);
 			MinandMax[2 * ndims + 1] = maxintensityline;
-			MinandMax[2 * ndims + 2] = 0;
+			MinandMax[2 * ndims + 2] = minintensityline;
 			for (int d = 0; d < ndims; ++d) {
 
 				if (MinandMax[d] == Double.MAX_VALUE || MinandMax[d + ndims] == -Double.MIN_VALUE)
@@ -453,7 +453,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			}
 
 			MinandMax[2 * ndims + 1] = maxintensityline;
-			MinandMax[2 * ndims + 2] = 0;
+			MinandMax[2 * ndims + 2] = minintensityline;
 			MinandMax[2 * ndims] = 0;
 			for (int d = 0; d < ndims; ++d) {
 
@@ -502,9 +502,9 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			}
 
 			MinandMax[2 * ndims + 1] = maxintensityline;
-			MinandMax[2 * ndims + 2] = 0;
-			MinandMax[2 * ndims + 3] = 0;
-			MinandMax[2 * ndims] = 0;
+			MinandMax[2 * ndims + 2] = minintensityline;
+			MinandMax[2 * ndims + 3] = iniparam.Inflection;
+			MinandMax[2 * ndims] = iniparam.Curvature;
 
 			for (int d = 0; d < ndims; ++d) {
 
@@ -552,7 +552,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			}
 
 			MinandMax[2 * ndims + 2] = maxintensityline;
-			MinandMax[2 * ndims + 3] = 0;
+			MinandMax[2 * ndims + 3] = minintensityline;
 			MinandMax[2 * ndims + 1] = iniparam.Curvature;
 			MinandMax[2 * ndims] = 0.5 * Math.min(psf[0], psf[1]);
 
@@ -603,7 +603,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 			MinandMax[2 * ndims + 2] = iniparam.Inflection;
 			MinandMax[2 * ndims + 3] = maxintensityline;
-			MinandMax[2 * ndims + 4] = 0;
+			MinandMax[2 * ndims + 4] = minintensityline;
 			MinandMax[2 * ndims + 1] = iniparam.Curvature;
 			MinandMax[2 * ndims] = 0.5 * Math.min(psf[0], psf[1]);
 

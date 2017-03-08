@@ -19,6 +19,7 @@ public class DisplaysubGraphstart {
 	
 	private final ImagePlus imp;
 	private final ArrayList<Subgraphs> subgraph;
+	private final ArrayList<float[]> Kymo;
     private final int ndims;
     private final int frame;
 	
@@ -28,6 +29,7 @@ public class DisplaysubGraphstart {
 		this.subgraph = subgraph;
 		ndims = imp.getNDimensions();
 		this.frame = 0;
+		this.Kymo = null;
 
 		// add listener to the imageplus slice slider
 				SliceObserver sliceObserver = new SliceObserver( imp, new ImagePlusListener() );
@@ -39,11 +41,21 @@ public class DisplaysubGraphstart {
 		this.subgraph = subgraph;
 		ndims = imp.getNDimensions();
 		this.frame = frame;
-
+		this.Kymo = null;
 		// add listener to the imageplus slice slider
 				SliceObserver sliceObserver = new SliceObserver( imp, new ImagePlusListener() );
 	}
 	
+public DisplaysubGraphstart(final ImagePlus imp, final ArrayList<Subgraphs> subgraph, int frame, ArrayList<float[]> Kymo){
+		
+		this.imp = imp;
+		this.subgraph = subgraph;
+		ndims = imp.getNDimensions();
+		this.frame = frame;
+		this.Kymo = Kymo;
+		// add listener to the imageplus slice slider
+				SliceObserver sliceObserver = new SliceObserver( imp, new ImagePlusListener() );
+	}
 	
 public ImagePlus getImp() { return this.imp; } 
 	
@@ -86,6 +98,7 @@ public ImagePlus getImp() { return this.imp; }
 							newline.setStrokeColor(Color.GREEN);
 							newline.setStrokeWidth(0.8);
 
+							
 							o.add(newline);
 							
 						

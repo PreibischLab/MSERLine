@@ -39,9 +39,11 @@ public class Gaussiansplinethirdorderfixedds implements MTFitFunction {
 
 			return Etotal(x, a, b);
 
+		// Background
 		else if (k == 2 * ndims + 2)
 			return 1.0;
 		
+		// Inflection
 		else if (k == 2 * ndims + 3)
 			return a[2 * ndims + 1] * EdI(x, a, b);
 

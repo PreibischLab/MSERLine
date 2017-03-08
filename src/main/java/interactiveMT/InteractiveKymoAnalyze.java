@@ -115,7 +115,10 @@ public class InteractiveKymoAnalyze implements PlugIn {
     	   
     	 
  		  
- 		  float[] cordsLine = {(y - intercept) / slope, y};
+ 		  float[] cordsLine = {(y - intercept) / (slope), y};
+ 		  
+ 		  
+ 		  
  		  
  		  Mask.add(cordsLine);
     	   
@@ -139,8 +142,15 @@ public class InteractiveKymoAnalyze implements PlugIn {
   		
   			int j = 0;
 
-  			for (int index = 0; index < Mask.size(); ++index) {
+  			for (int index = 0; index < Mask.size() - 1; ++index) {
+  				
+  				
   				j = index + 1;
+  				
+  				if (Mask.get(j)[0]== Float.NaN)
+  					Mask.get(j)[0] = Mask.get(index)[0];
+  					
+  					
   				while (j < Mask.size()) {
 
   					if (Mask.get(index)[1] == Mask.get(j)[1]) {
@@ -152,6 +162,8 @@ public class InteractiveKymoAnalyze implements PlugIn {
   						++j;
   						
   					}
+  					
+  					
 
   				}
   			}
@@ -178,35 +190,87 @@ public class InteractiveKymoAnalyze implements PlugIn {
           
          
           
-          for (int i = 0; i < nbRois; ++i){
-        	  
-        	  
-       
-        	  
-        PolygonRoi l = (PolygonRoi) RoisOrig[i];
         
-        int n = l.getNCoordinates(); 
-        float[] xCord = l.getFloatPolygon().xpoints;
-        int[] yCord = l.getYCoordinates();
-        
-        for (int index = 0; index < n; index++) {
-      
-       float[] cords = {xCord[index], yCord[index] } ;
-       
-        Base.add(cords);
-        System.out.println(xCord[index] + " " + yCord[index] );
-        }
        
        
       
-       
-       
-       
-        		  
-          }	  
+        for (int i = 0; i < nbRois; ++i){
+      	  
+            PolygonRoi l = (PolygonRoi) RoisOrig[i];
+            
+            int n = l.getNCoordinates(); 
+            float[] xCord = l.getFloatPolygon().xpoints;
+            int[] yCord = l.getYCoordinates();
+            
+            for (int index = 0; index < n - 1; index++) {
           
-		
-	}
+           float[] cords = {xCord[index], yCord[index] } ;
+           float[] nextcords = {xCord[index + 1], yCord[index + 1] };
+           
+           float slope = (nextcords[1] - cords[1]) / (nextcords[0] - cords[0]);
+           float intercept = nextcords[1] - slope * nextcords[0];
+           
+           for (int y = (int)cords[1]; y < nextcords[1]; ++y){
+        	   
+        	 
+     		  
+     		  float[] cordsLine = {xCord[index], y};
+     		  
+     		  
+     		  
+     		  
+     		  Base.add(cordsLine);
+        	   
+     		 
+           }
+           
+         
+   					
+   					
+
+   				}
+   			}
+       
+        /********
+   		 * The part below removes the duplicate entries in the array
+   		 * dor the time co-ordinate
+   		 ********/
+   		
+   			int j = 0;
+
+   			for (int index = 0; index < Base.size() - 1; ++index) {
+   				
+   				
+   				j = index + 1;
+   				
+   				if (Base.get(j)[0]== Float.NaN && Base.get(index)[0]!=Float.NaN)
+   					Base.get(j)[0] = Base.get(index)[0];
+   				else{
+   				Base.remove(j);	
+   				Base.remove(index);
+   				}
+   					
+   					
+   				while (j < Base.size()) {
+
+   					if (Base.get(index)[1] == Base.get(j)[1]) {
+
+   						Base.remove(j);
+   					}
+
+   					else {
+   						++j;
+   						
+   					}
+   				}
+   				
+   			
+   			}
+           
+   			for (int index = 0; index < Base.size() ; ++index) {
+   		 System.out.println(Base.get(index)[1] + " " + Base.get(index)[0]  );
+   			}
+        }
 	
 	JFrame Cardframe = new JFrame("Extract Kymo");
 	JPanel panelCont = new JPanel();
@@ -231,7 +295,7 @@ public class InteractiveKymoAnalyze implements PlugIn {
 		c.weightx = 1;
 
     	
-    	final Label Select = new Label("Make Segmented Line selection, then Edit -> Selection - > Fit Spline");
+    	final Label Select = new Label("Make Segmented Line selection");
     	final Button ExtractKymo = new Button("Extract Mask Co-ordinates :");
     	final Button ExtractBaseLine = new Button("Extract Baseline Co-ordinates :");
     	final Button GetLength = new Button("Get absolute Lengths :");
@@ -304,7 +368,7 @@ public class InteractiveKymoAnalyze implements PlugIn {
 					fw = new FileWriter(fichier);
 					BufferedWriter bw = new BufferedWriter(fw);
 					bw.write(
-	    					"\tDeltaFramenumber\tDeltaLength\n");
+	    					"\tFramenumber\tLength\n");
 				
     			
 
@@ -327,7 +391,7 @@ public class InteractiveKymoAnalyze implements PlugIn {
     				
     				Length.add(lengthtime);
     				bw.write("\t" + (lengthtime[1]) + "\t" + (lengthtime[0] + "\n"));
-    				// System.out.println(lengthtime[1]+ " " + lengthtime[0] );
+    				 System.out.println(lengthtime[1]+ " " + lengthtime[0] );
     			}
     			bw.close();
     			fw.close();
@@ -345,10 +409,11 @@ public class InteractiveKymoAnalyze implements PlugIn {
 	public static  void main (String[] args){
 		
 		new ImageJ();
-		String usefolder = IJ.getDirectory("imagej");
-		String addToName = "DeltaLKymo4";
+		String usefolder = ("/Users/varunkapoor/Documents/20170229/Video4/");
+				//IJ.getDirectory("imagej");
+		String addToName = "MT4porcineWH";
 		
-		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("/Users/varunkapoor/Documents/MTAnalysis/20170210/Kymograph4.tif"),
+		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("/Users/varunkapoor/Documents/20170229/Video4/Kymograph4.tif"),
 				new ArrayImgFactory<FloatType>());
 		
 		File fichier = new File(usefolder + "//" + addToName + "ID" + 0 + ".txt");
