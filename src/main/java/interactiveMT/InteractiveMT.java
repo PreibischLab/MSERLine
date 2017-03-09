@@ -1597,7 +1597,7 @@ public void MakeRois(){
   				float[] lengthtime = {currentlength, Mask.get(index)[1]};
   				
   				Length.add(lengthtime);
-  				bw.write("\t" + (lengthtime[1]) + "\t" + (lengthtime[0] + "\n"));
+  				bw.write("\t" + ( (int)lengthtime[1]) + "\t" + (lengthtime[0] + "\n"));
   				 System.out.println(lengthtime[1]+ " " + lengthtime[0] );
   			}
   			bw.close();
@@ -2571,22 +2571,23 @@ public void MakeRois(){
 			for (int index  = 0 ; index < deltaL.size(); ++index){
 				
 				if (deltaL.get(index)[1] >= starttime && deltaL.get(index)[1] <= endtime){
-			velocity+= deltaL.get(index)[0];	
+			velocity+= deltaL.get(index)[0] ;	
 				
 				}
 			}
 			
-			velocity /= (endtime - starttime);
+			velocity /= endtime - starttime;
+			
 			FileWriter vw;
 				File fichierKyvel = new File(usefolder + "//" + addToName + "KymoWill-velocity"  + ".txt");
 			try {
 				vw = new FileWriter(fichierKyvel);
 				BufferedWriter bvw = new BufferedWriter(vw);
-				System.out.println("KymoResult: " + "\t" + starttime + "\t" + endtime+ "\t" + velocity + "\n");
-				IJ.log("KymoResult: " + "\t" + starttime + "\t" + endtime+ "\t" + velocity + "\n");
+				System.out.println("KymoResult: " + "\t" + starttime + "\t" + endtime+ "\t" + velocity  + "\t "+ velocity * calibration[0]/5+ "\n");
+				IJ.log("KymoResult: " + "\t" + starttime + "\t" + endtime+ "\t" + velocity +  "\t "+ velocity * calibration[0]/5 +  "\n");
 				bvw.write(
-						"\tStarttime\tEndtime\tRate(velocity pixel units)\n");
-				bvw.write("\t" + starttime + "\t" + endtime+ "\t" + velocity);
+						"\tStarttime\tEndtime\tRate(velocity pixel units)\tRate(velocity real units)\n");
+				bvw.write("\t" + starttime + "\t" + endtime+ "\t" + velocity+  "\t "+ velocity * calibration[0]/5);
 			
 				
 				bvw.close();
@@ -2697,7 +2698,6 @@ public void MakeRois(){
 							float delta = (float) (lengthtimestart.get(index)[0] - Length.get(secindex)[0]);
 							float[] cudeltadeltaLstart = {delta,time};
 							deltadstart.add(cudeltadeltaLstart);
-							System.out.println(delta);
 							
 						}
 						
@@ -2718,7 +2718,6 @@ public void MakeRois(){
 							float delta = (float) (lengthtimeend.get(index)[0] - Length.get(secindex)[0]);
 							float[] cudeltadeltaLend = {delta,time};
 							deltadend.add(cudeltadeltaLend);
-							System.out.println(delta);
 							
 						}
 						
@@ -2740,20 +2739,17 @@ public void MakeRois(){
 					}
 				}
 				
-				velocitystart /= (endtime - starttime);
+				velocitystart /= endtime - starttime;
 				
 				double velocityend = 0;
-				for (int index  = 0 ; index < deltaLstart.size(); ++index){
+				for (int index  = 0 ; index < deltaLend.size(); ++index){
 					
-					if (deltaLstart.get(index)[1] >= starttime && deltaLstart.get(index)[1] <= endtime){
-				velocityend+= deltaLstart.get(index)[0];	
+					if (deltaLend.get(index)[1] >= starttime && deltaLend.get(index)[1] <= endtime){
+				velocityend+= deltaLend.get(index)[0] ;	
 					
 					}
 				}
-				
-				velocityend /= (endtime - starttime);
-				
-				
+				velocityend /= endtime - starttime;
 				double velocity = ((Math.abs(velocityend) - Math.abs(velocitystart)) >= 0) ? velocityend:velocitystart;
 				if (numberKymo){
 				deltad = ((Math.abs(velocityend) - Math.abs(velocitystart)) >= 0) ? deltadend:deltadstart;
@@ -2820,12 +2816,12 @@ public void MakeRois(){
 			try {
 				vw = new FileWriter(fichierKyvel);
 				BufferedWriter bvw = new BufferedWriter(vw);
-				System.out.println("MT tracker: " + "\t" + starttime + "\t" + endtime+ "\t" + velocity + "\n");
+				System.out.println("MT tracker: " + "\t" + starttime + "\t" + endtime+ "\t" + velocity + "\t" + + velocity * calibration[0]/5  + "\n");
 				
 				IJ.log("MT tracker: " + "\t" + starttime + "\t" + endtime+ "\t" + velocity + "\n");
 				bvw.write(
-						"\tStarttime\tEndtime\tRate(velocity pixel units)\n");
-				bvw.write("\t" + starttime + "\t" + endtime+ "\t" + velocity );
+						"\tStarttime\tEndtime\tRate(velocity pixel units)\tRate (velocity in real units)\n");
+				bvw.write("\t" + starttime + "\t" + endtime+ "\t" + velocity + "\t "+ velocity * calibration[0]/5 );
 			
 				
 				bvw.close();
@@ -3576,7 +3572,7 @@ public void MakeRois(){
 							
 
 							bwmy.write(  "\t" + lengthliststart.get(index).fst[0] + "\t" + "\t"
-									+ nf.format(lengthliststart.get(index).snd[9])  + "\n");
+									+ nf.format(lengthliststart.get(index).snd[11])  + "\n");
 							
 							
 							
@@ -3789,7 +3785,7 @@ public void MakeRois(){
 							
 							
 							bwmy.write(  "\t" + lengthlistend.get(index).fst[0] + "\t" + "\t"
-									+ nf.format(lengthlistend.get(index).snd[9])  + "\n");
+									+ nf.format(lengthlistend.get(index).snd[11])  + "\n");
 						
 							
 							}
@@ -4490,7 +4486,7 @@ public void MakeRois(){
 									+ nf.format(lengthliststart.get(index).snd[9]) +  "\n");
 							
 							bwmy.write(  "\t" + lengthliststart.get(index).fst[0] + "\t" + "\t"
-									+ nf.format(lengthliststart.get(index).snd[9])  + "\n");
+									+ nf.format(lengthliststart.get(index).snd[11])  + "\n");
 							
 							
 							}
@@ -4713,7 +4709,7 @@ public void MakeRois(){
 									+ nf.format(lengthlistend.get(index).snd[9]) + "\n");
 							
 							bwmy.write(  "\t" + lengthlistend.get(index).fst[0] + "\t" + "\t"
-									+ nf.format(lengthlistend.get(index).snd[9])  + "\n");
+									+ nf.format(lengthlistend.get(index).snd[11])  + "\n");
 							
 							
 					
@@ -6645,7 +6641,7 @@ public void MakeRois(){
 		
 		ImagePlus imp = new Opener().openImage("/Users/varunkapoor/Documents/20170229/Video4/2017-02-16_laeivs_cy5seeds_cy3_2nd002_concatenated.tif");
 		ImagePlus Preprocessedimp = new Opener().openImage("/Users/varunkapoor/Documents/20170229/Video4/BG2017-02-16_laeivs_cy5seeds_cy3_2nd002_concatenated.tif");
-		ImagePlus kymoimp = new Opener().openImage("/Users/varunkapoor/Documents/20170229/Video4/Kymograph4-1.tif");
+		ImagePlus kymoimp = new Opener().openImage("/Users/varunkapoor/Documents/20170229/Video4/Kymograph1-1.tif");
 		RandomAccessibleInterval<FloatType> originalimg = ImageJFunctions.convertFloat(imp);
 		RandomAccessibleInterval<FloatType> originalPreprocessedimg = ImageJFunctions.convertFloat(Preprocessedimp);
 		RandomAccessibleInterval<FloatType> kymoimg = ImageJFunctions.convertFloat(kymoimp);

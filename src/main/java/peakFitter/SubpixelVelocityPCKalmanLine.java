@@ -69,7 +69,7 @@ import preProcessing.GetLocalmaxmin;
 		public int iterations = 300;
 		public double cutoffdistance = 5;
 		public boolean halfgaussian = false;
-		public double Intensityratio = 0.5;
+		public double Intensityratio = 0.25;
 		private final UserChoiceModel model;
 
 		public void setCutoffdistance(double cutoffdistance) {
