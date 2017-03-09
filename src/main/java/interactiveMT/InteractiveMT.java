@@ -181,7 +181,7 @@ public class InteractiveMT implements PlugIn {
 	float thetaPerPixelMax = 2;
 	float rhoPerPixelMax = 2;
 
-	boolean analyzekymo = true;
+	boolean analyzekymo = false;
 	boolean darktobright = false;
 	boolean displayBitimg = false;
 	boolean displayWatershedimg = false;
@@ -191,7 +191,7 @@ public class InteractiveMT implements PlugIn {
 	long minSizemax = 100;
 	long maxSizemin = 100;
 	long maxSizemax = 10000;
-
+     
 	int thirdDimensionslider = 0;
 	int thirdDimensionsliderInit = 1;
 	int timeMin = 1;
@@ -227,6 +227,8 @@ public class InteractiveMT implements PlugIn {
 	FloatType maxval = new FloatType(1);
 	SliceObserver sliceObserver;
 	RoiListener roiListener;
+	boolean numberKymo = false;
+	boolean numberTracker = true;
 	boolean isComputing = false;
 	boolean isStarted = false;
 	boolean FindLinesViaMSER = false;
@@ -237,6 +239,7 @@ public class InteractiveMT implements PlugIn {
     boolean update = false;
 	boolean Canny = false;
 	boolean showKalman = false;
+	boolean showAnalysis = false;
 	boolean showDeterministic = false;
 	boolean RoisViaMSER = false;
 	boolean RoisViaWatershed = false;
@@ -250,10 +253,14 @@ public class InteractiveMT implements PlugIn {
 	boolean SaveXLS = true;
 	int nbRois;
     Roi rorig = null;
+    ArrayList<double[]> lengthtimestart = new ArrayList<double[]>();
+    ArrayList<double[]> lengthtimeend= new ArrayList<double[]>();
 	MTTracker MTtrackerstart;
 	MTTracker MTtrackerend;
 	CostFunction<KalmanTrackproperties, KalmanTrackproperties> UserchosenCostFunction;
 	float initialSearchradius = 20;
+	int starttime = 0;
+	int endtime = 0;
 	float maxSearchradius = 15;
 	int missedframes = 1;
 	public int initialSearchradiusInit =  (int) initialSearchradius;
@@ -324,7 +331,7 @@ public class InteractiveMT implements PlugIn {
 
 	public static enum ValueChange {
 		ROI, ALL, DELTA, FindLinesVia, MAXVAR, MINDIVERSITY, DARKTOBRIGHT, MINSIZE, MAXSIZE, SHOWMSER,
-		FRAME, SHOWHOUGH, thresholdHough, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, rhoPerPixel, thetaPerPixel, THIRDDIM, iniSearch, maxSearch, missedframes, THIRDDIMTrack, MEDIAN;
+		FRAME, SHOWHOUGH, thresholdHough, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, rhoPerPixel, thetaPerPixel, THIRDDIM, iniSearch, maxSearch, missedframes, THIRDDIMTrack, MEDIAN, kymo;
 	}
 	
 	boolean isFinished = false;
@@ -659,6 +666,9 @@ public class InteractiveMT implements PlugIn {
 			roimanager = new RoiManager();
 		}
 		
+		
+		
+		
 		if (change == ValueChange.THIRDDIMTrack ) {
 			// check if Roi changed
 			
@@ -869,6 +879,7 @@ public class InteractiveMT implements PlugIn {
 	JPanel panelFifth = new JPanel();
 	JPanel panelSixth = new JPanel();
 	JPanel panelSeventh = new JPanel();
+	JPanel panelEighth = new JPanel();
 	public void  Card() {
 		
 
@@ -889,7 +900,7 @@ public class InteractiveMT implements PlugIn {
 		panelCont.add(panelFifth, "5");
 		panelCont.add(panelSixth, "6");
 		panelCont.add(panelSeventh, "7");
-		
+		panelCont.add(panelEighth, "8");
 		// First Panel
         panelFirst.setName("Preprocess and Determine Seeds");
 
@@ -1020,6 +1031,7 @@ public class InteractiveMT implements PlugIn {
 		c.weightx = 1;
 
 		panelThird.setLayout(layout);
+		panelEighth.setLayout(layout);
 		++c.gridy;
 		c.insets = new Insets(10, 10, 0, 0);
 		panelThird.add(MTTextHF, c);
@@ -1055,46 +1067,7 @@ public class InteractiveMT implements PlugIn {
 				new moveInThirdDimListener(thirdDimensionslider, timeText, timeMin, thirdDimensionSize));
 	
 		
-		final Checkbox KalmanTracker = new Checkbox("Use Kalman Filter for tracking");
-		final Checkbox DeterTracker = new Checkbox("Use Deterministic method for tracking");
-		final Checkbox KymoExtract = new Checkbox("Extract Kymo (for the single chosen MT)");
-		final Label Kal = new Label("Use Kalman Filter for probabilistic tracking");
-		final Label Det = new Label("Use Deterministic tracker using the fixed Seed points");
-		Kal.setBackground(new Color(1, 0, 1));
-		Kal.setForeground(new Color(255, 255, 255));
-		Det.setBackground(new Color(1, 0, 1));
-		Det.setForeground(new Color(255, 255, 255));
 		
-		
-		panelSixth.setLayout(layout);
-		
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 50);
-		panelSixth.add(Kal, c);
-		
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 50);
-		panelSixth.add(KalmanTracker, c);
-		
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 50);
-		panelSixth.add(Det, c);
-		
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 50);
-		panelSixth.add(DeterTracker, c);
-		
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 50);
-		panelSixth.add(DeterTracker, c);
-		if (analyzekymo == true){
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 50);
-		panelSixth.add(KymoExtract, c);
-		}
-		KalmanTracker.addItemListener(new KalmanchoiceListener());
-		DeterTracker.addItemListener(new DeterchoiceListener());
-		KymoExtract.addItemListener(new KymoExtractListener());
 		txtfile.addItemListener(new SaveasTXT());
 		xlsfile.addItemListener(new SaveasXLS());
 		displaySeedID.addItemListener(new DisplaySeedID());
@@ -1107,6 +1080,15 @@ public class InteractiveMT implements PlugIn {
 		Kymo.setBackground(new Color(1, 0, 1));
 		Kymo.setForeground(new Color(255, 255, 255));
 		MTTextHF.setFont(MTTextHF.getFont().deriveFont(Font.BOLD));
+		
+		
+		final Checkbox Analyze = new Checkbox("Do Rough Analysis");
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 50);
+		panelEighth.add(Analyze, c);
+		
+		Analyze.addItemListener(new AnalyzeListener());
+		
 		
 		Cardframe.add(panelCont, BorderLayout.CENTER);
 		Cardframe.add(control, BorderLayout.SOUTH);
@@ -1215,7 +1197,14 @@ public class InteractiveMT implements PlugIn {
      		c.gridy = 0;
      		c.weightx = 1;
      		panelSeventh.setLayout(layout);
-     		
+     		  RoiManager roimanager = RoiManager.getInstance();
+     		    
+     		    if (roimanager!=null){
+     		    	
+     		    	roimanager.close();
+     		    	roimanager = new RoiManager();
+     		    	
+     		    }
      		
      		Kymoimp = ImageJFunctions.show(Kymoimg);
 
@@ -1373,6 +1362,9 @@ public class InteractiveMT implements PlugIn {
 public void MakeRois(){
 		
 	    RoiManager roimanager = RoiManager.getInstance();
+	    
+	   
+	    
 		rorig = Kymoimp.getRoi();
 		
 		if (rorig == null) {
@@ -1382,7 +1374,15 @@ public void MakeRois(){
           Roi[] RoisOrig = roimanager.getRoisAsArray();
           
         
-          
+			Overlay overlaysec = Kymoimp.getOverlay();
+			
+			if (overlaysec == null) {
+				overlaysec = new Overlay();
+				
+				Kymoimp.setOverlay(overlaysec);
+			
+			}
+			overlaysec.clear();
          
           
           for (int i = 0; i < nbRois; ++i){
@@ -1398,14 +1398,21 @@ public void MakeRois(){
        float[] cords = {xCord[index], yCord[index] } ;
        float[] nextcords = {xCord[index + 1], yCord[index + 1] };
        
-       float slope = (nextcords[1] - cords[1]) / (nextcords[0] - cords[0]);
+       float slope = (float)( (nextcords[1] - cords[1]) / (nextcords[0] - cords[0]));
        float intercept = nextcords[1] - slope * nextcords[0];
+       
+       Line newlineKymo = new Line(cords[0], cords[1] , nextcords[0] , nextcords[1] );
+		 overlaysec.setStrokeColor(Color.RED);
+			
+			overlaysec.add(newlineKymo);
+			Kymoimp.setOverlay(overlaysec);
+       
        
        for (int y = (int)cords[1]; y < nextcords[1]; ++y){
     	   
     	 
  		  
- 		  float[] cordsLine = {(y - intercept) / (slope), y};
+ 		  float[] cordsLine = {(y - intercept) / (slope), (int)y};
  		  
  		  
  		  
@@ -1422,43 +1429,50 @@ public void MakeRois(){
         		  
           }
           
-         
+      
         	
-          
-          /********
-  		 * The part below removes the duplicate entries in the array
-  		 * dor the time co-ordinate
-  		 ********/
+        
   		
-  			int j = 0;
 
-  			for (int index = 0; index < Mask.size() - 1; ++index) {
-  				
-  				
-  				j = index + 1;
-  				
-  				if (Mask.get(j)[0]== Float.NaN)
-  					Mask.get(j)[0] = Mask.get(index)[0];
-  					
-  					
-  				while (j < Mask.size()) {
+          /********
+     		 * The part below removes the duplicate entries in the array
+     		 * dor the time co-ordinate
+     		 ********/
+     		
+     			int j = 0;
 
-  					if (Mask.get(index)[1] == Mask.get(j)[1]) {
+     			for (int index = 0; index < Mask.size() - 1; ++index) {
+     				
+     				
+     				j = index + 1;
+     				
+     				if (Mask.get(index)[0]== Float.NaN )
+     					
+     					Mask.get(index)[0] = Mask.get( index - 1)[0];
+     				
+     					
+     					
+     				while (j < Mask.size()) {
 
-  						Mask.remove(j);
-  					}
+     					if (Mask.get(index)[1] == Mask.get(j)[1]) {
 
-  					else {
-  						++j;
-  						
-  					}
-  					
-  					
+     						Mask.remove(j);
+     					}
 
-  				}
-  			}
-          
-          roimanager.close();
+     					else {
+     						++j;
+     						
+     					}
+     				}
+     				
+     			
+     			}
+             
+  		
+  		
+  		
+  		
+  		Kymoimp.show();
           
 		
 	}
@@ -1497,8 +1511,7 @@ public void MakeRois(){
            float[] cords = {xCord[index], yCord[index] } ;
            float[] nextcords = {xCord[index + 1], yCord[index + 1] };
            
-           float slope = (nextcords[1] - cords[1]) / (nextcords[0] - cords[0]);
-           float intercept = nextcords[1] - slope * nextcords[0];
+          
            
            for (int y = (int)cords[1]; y < nextcords[1]; ++y){
         	   
@@ -1521,41 +1534,7 @@ public void MakeRois(){
    				}
    			}
        
-        /********
-   		 * The part below removes the duplicate entries in the array
-   		 * dor the time co-ordinate
-   		 ********/
-   		
-   			int j = 0;
-
-   			for (int index = 0; index < Base.size() - 1; ++index) {
-   				
-   				
-   				j = index + 1;
-   				
-   				if (Base.get(j)[0]== Float.NaN && Base.get(index)[0]!=Float.NaN)
-   					Base.get(j)[0] = Base.get(index)[0];
-   				else{
-   				Base.remove(j);	
-   				Base.remove(index);
-   				}
-   					
-   					
-   				while (j < Base.size()) {
-
-   					if (Base.get(index)[1] == Base.get(j)[1]) {
-
-   						Base.remove(j);
-   					}
-
-   					else {
-   						++j;
-   						
-   					}
-   				}
-   				
-   			
-   			}
+      
            
    			for (int index = 0; index < Base.size() ; ++index) {
    		 System.out.println(Base.get(index)[1] + " " + Base.get(index)[0]  );
@@ -1565,7 +1544,7 @@ public void MakeRois(){
 	  protected class GetCords implements ActionListener {
   		@Override
   		public void actionPerformed(final ActionEvent arg0) {
-  			
+  	    
   			MakeRois();
   			
   			
@@ -1589,8 +1568,9 @@ public void MakeRois(){
       protected class GetLength implements ActionListener {
   		@Override
   		public void actionPerformed(final ActionEvent arg0) {
-  			FileWriter fw;
+  		
   			File fichierKy = new File(usefolder + "//" + addToName + "KymoWill-start"  + ".txt");
+  			FileWriter fw;
 				try {
 					fw = new FileWriter(fichierKy);
 					BufferedWriter bw = new BufferedWriter(fw);
@@ -1608,7 +1588,7 @@ public void MakeRois(){
 					
 					meanbase /= Base.size(); 
 					
-  			int size = Mask.size() - Base.size();
+  			
   			int listsize =  Mask.size();
   			for (int index = 0; index <listsize; ++index){
   				
@@ -1628,7 +1608,11 @@ public void MakeRois(){
 					e.printStackTrace();
 				}
 				
+				Mask.clear();
+				Base.clear();
+				
   		}
+  		
       
       }
       
@@ -2557,6 +2541,352 @@ public void MakeRois(){
 		 
 	 }
 	 
+ 
+ protected class AnalyzeListener implements ItemListener{
+	 
+	 @Override
+  		public void itemStateChanged(ItemEvent arg0) {
+		 if (arg0.getStateChange() == ItemEvent.DESELECTED)
+			 showAnalysis = false;
+		 
+		  else if (arg0.getStateChange() == ItemEvent.SELECTED){
+			  showAnalysis = true;
+		 
+	  DialogueAnalysis();
+	  
+	  ArrayList<float[]> deltaL = new ArrayList<>();
+		if (numberKymo){
+			
+			for (int index = 1 ; index < Length.size(); ++index){
+				
+				float delta = Length.get(index)[0] - Length.get(index - 1)[0];
+				
+				float[] deltalt = {delta, Length.get(index)[1]};
+				
+				deltaL.add(deltalt);
+				
+			}
+			
+			double velocity = 0;
+			for (int index  = 0 ; index < deltaL.size(); ++index){
+				
+				if (deltaL.get(index)[1] >= starttime && deltaL.get(index)[1] <= endtime){
+			velocity+= deltaL.get(index)[0];	
+				
+				}
+			}
+			
+			velocity /= (endtime - starttime);
+			FileWriter vw;
+				File fichierKyvel = new File(usefolder + "//" + addToName + "KymoWill-velocity"  + ".txt");
+			try {
+				vw = new FileWriter(fichierKyvel);
+				BufferedWriter bvw = new BufferedWriter(vw);
+				System.out.println("KymoResult: " + "\t" + starttime + "\t" + endtime+ "\t" + velocity + "\n");
+				IJ.log("KymoResult: " + "\t" + starttime + "\t" + endtime+ "\t" + velocity + "\n");
+				bvw.write(
+						"\tStarttime\tEndtime\tRate(velocity pixel units)\n");
+				bvw.write("\t" + starttime + "\t" + endtime+ "\t" + velocity);
+			
+				
+				bvw.close();
+				vw.close();
+			}
+			
+			
+			catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			
+		}
+		
+		
+		
+
+		
+		
+		
+		
+		
+		ArrayList<float[]> deltaLstart = new ArrayList<>();
+		ArrayList<float[]> deltaLend = new ArrayList<>();
+		
+		ArrayList<float[]> deltadeltaLstart = new ArrayList<>();
+		ArrayList<float[]> deltadeltaLend = new ArrayList<>();
+		ArrayList<float[]> deltadstart = new ArrayList<>();
+		ArrayList<float[]> deltadend = new ArrayList<>();
+		
+		ArrayList<float[]> deltad = new ArrayList<>();
+		ArrayList<float[]> deltadeltaL = new ArrayList<>();
+		if (numberTracker){
+			
+			
+			for (int index = 1 ; index < lengthtimestart.size(); ++index){
+				
+				float delta = (float) (lengthtimestart.get(index)[0] - lengthtimestart.get(index - 1)[0]);
+				
+				float[] deltalt = {delta, (float) lengthtimestart.get(index)[1]};
+				
+				deltaLstart.add(deltalt);
+			}
+				
+				for (int index = 1 ; index < lengthtimeend.size(); ++index){
+					
+					float delta = (float) (lengthtimeend.get(index)[0] - lengthtimeend.get(index - 1)[0]);
+					
+					float[] deltalt = {delta, (float) lengthtimeend.get(index)[1]};
+					
+					deltaLend.add(deltalt);
+				
+			}
+				
+			if (numberKymo){	
+				for (int index = 0 ; index < deltaLstart.size() ; ++index){
+					
+					int time = (int) deltaLstart.get(index)[1];
+					
+					for (int secindex = 0; secindex < deltaL.size(); ++secindex){
+						
+						if ((int)deltaL.get(secindex)[1] == time){
+							
+							float delta = deltaLstart.get(index)[0] - deltaL.get(secindex)[0];
+							float[] cudeltadeltaLstart = {delta,time};
+							deltadeltaLstart.add(cudeltadeltaLstart);
+							
+							
+						}
+						
+						
+						
+					}
+					
+				}
+				
+                for (int index = 0 ; index < deltaLend.size() ; ++index){
+					
+					int time = (int) deltaLend.get(index)[1];
+					
+					for (int secindex = 0; secindex < deltaL.size(); ++secindex){
+						
+						if ((int)deltaL.get(secindex)[1] == time){
+							
+							float delta = deltaLend.get(index)[0] - deltaL.get(secindex)[0];
+							float[] cudeltadeltaLend = {delta,time};
+							deltadeltaLend.add(cudeltadeltaLend);
+							
+							
+						}
+						
+						
+						
+					}
+					
+				}
+				
+				
+              for (int index = 0 ; index < lengthtimestart.size() ; ++index){
+					
+					int time = (int) lengthtimestart.get(index)[1];
+					
+					for (int secindex = 0; secindex < Length.size(); ++secindex){
+						
+						if ((int)Length.get(secindex)[1] == time){
+							
+							float delta = (float) (lengthtimestart.get(index)[0] - Length.get(secindex)[0]);
+							float[] cudeltadeltaLstart = {delta,time};
+							deltadstart.add(cudeltadeltaLstart);
+							System.out.println(delta);
+							
+						}
+						
+						
+						
+					}
+					
+				}
+				
+                for (int index = 0 ; index < lengthtimeend.size() ; ++index){
+					
+					int time = (int) lengthtimeend.get(index)[1];
+					
+					for (int secindex = 0; secindex < Length.size(); ++secindex){
+						
+						if ((int)Length.get(secindex)[1] == time){
+							
+							float delta = (float) (lengthtimeend.get(index)[0] - Length.get(secindex)[0]);
+							float[] cudeltadeltaLend = {delta,time};
+							deltadend.add(cudeltadeltaLend);
+							System.out.println(delta);
+							
+						}
+						
+						
+						
+					}
+					
+				}
+		}
+                
+				// Choosing the faster end 
+			
+				double velocitystart = 0;
+				for (int index  = 0 ; index < deltaLstart.size(); ++index){
+					
+					if (deltaLstart.get(index)[1] >= starttime && deltaLstart.get(index)[1] <= endtime){
+				velocitystart+= deltaLstart.get(index)[0];	
+					
+					}
+				}
+				
+				velocitystart /= (endtime - starttime);
+				
+				double velocityend = 0;
+				for (int index  = 0 ; index < deltaLstart.size(); ++index){
+					
+					if (deltaLstart.get(index)[1] >= starttime && deltaLstart.get(index)[1] <= endtime){
+				velocityend+= deltaLstart.get(index)[0];	
+					
+					}
+				}
+				
+				velocityend /= (endtime - starttime);
+				
+				
+				double velocity = ((Math.abs(velocityend) - Math.abs(velocitystart)) >= 0) ? velocityend:velocitystart;
+				if (numberKymo){
+				deltad = ((Math.abs(velocityend) - Math.abs(velocitystart)) >= 0) ? deltadend:deltadstart;
+				deltadeltaL = ((Math.abs(velocityend) - Math.abs(velocitystart)) >= 0) ? deltadeltaLend: deltadeltaLstart;
+				
+				FileWriter deltaw;
+				File fichierKydel = new File(usefolder + "//" + addToName + "MTtracker-deltad"  + ".txt");
+				
+				try {
+					deltaw = new FileWriter(fichierKydel);
+					BufferedWriter bdeltaw = new BufferedWriter(deltaw);
+					
+					bdeltaw.write(
+							"\ttime\tDeltad(pixel units)\n");
+					
+					for (int index = 0; index < deltad.size(); ++index){
+					bdeltaw.write("\t" +deltad.get(index)[1]+ "\t" + deltad.get(index)[0]+ "\n");
+					
+					}
+				
+					
+					bdeltaw.close();
+					deltaw.close();
+				}
+				
+				
+				catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+				
+				FileWriter deltal;
+				File fichierKylel = new File(usefolder + "//" + addToName + "MTtracker-deltadeltal"  + ".txt");
+				
+				try {
+					deltal = new FileWriter(fichierKylel);
+					BufferedWriter bdeltal = new BufferedWriter(deltal);
+					
+					bdeltal.write(
+							"\ttime\tDeltaDeltal(pixel units)\n");
+					
+					for (int index = 0; index < deltadeltaL.size(); ++index){
+					bdeltal.write("\t" +deltadeltaL.get(index)[1]+ "\t" + deltadeltaL.get(index)[0]+ "\n");
+					
+					}
+				
+					
+					bdeltal.close();
+					deltal.close();
+				}
+				
+				
+				catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+				
+				}
+				
+				FileWriter vw;
+				File fichierKyvel = new File(usefolder + "//" + addToName + "MTtracker-velocity"  + ".txt");
+			try {
+				vw = new FileWriter(fichierKyvel);
+				BufferedWriter bvw = new BufferedWriter(vw);
+				System.out.println("MT tracker: " + "\t" + starttime + "\t" + endtime+ "\t" + velocity + "\n");
+				
+				IJ.log("MT tracker: " + "\t" + starttime + "\t" + endtime+ "\t" + velocity + "\n");
+				bvw.write(
+						"\tStarttime\tEndtime\tRate(velocity pixel units)\n");
+				bvw.write("\t" + starttime + "\t" + endtime+ "\t" + velocity );
+			
+				
+				bvw.close();
+				vw.close();
+			}
+			
+			
+			catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+				
+				
+		}
+	  
+		  }
+		 
+	 }
+	 
+ }
+ 
+ 
+ public boolean DialogueAnalysis(){
+	 
+	 GenericDialog gd = new GenericDialog("Analyze");
+	 
+		gd.addNumericField("Start time of event", starttime, 0);
+		gd.addNumericField("Enfd time of event", endtime, 0);
+		
+
+	
+		gd.addCheckbox("Compute Velocity from Kymograph", numberKymo);
+		
+		
+		
+		
+		gd.addCheckbox("Compute Velocity by Tracker", numberTracker);
+		
+		
+		gd.showDialog();
+		
+		
+	
+	
+	
+	starttime = (int) gd.getNextNumber();
+	endtime = (int) gd.getNextNumber();
+	numberKymo = gd.getNextBoolean();
+	numberTracker = 	gd.getNextBoolean();
+	
+	if (starttime < 0)
+		starttime = 0;
+	if (endtime > thirdDimensionSize)
+		endtime = thirdDimensionSize;
+
+	
+	
+	return !gd.wasCanceled(); 
+	 
+ }
+ 
      protected class SaveasXLS implements ItemListener{
 		 
 		 @Override
@@ -2858,7 +3188,6 @@ public void MakeRois(){
 						final double[] originalpoint = list.get(0).currentpoint;
 						double startlength = 0;
 						double startlengthpixel = 0;
-						ArrayList<double[]> lengthtimestart = new ArrayList<double[]>();
 					for (int index = 1; index < list.size(); ++index) {
 						
 
@@ -2937,49 +3266,29 @@ public void MakeRois(){
 					for (int index = 0; index < lengthtimestart.size() - 1; ++index){
 						
 						Overlay overlay = Kymoimp.getOverlay();
-						Overlay overlaysec = Kymoimp.getOverlay();
+						
 						if (overlay == null) {
 							overlay = new Overlay();
 							
 							Kymoimp.setOverlay(overlay);
 							
 						}
-						if (overlaysec == null) {
-							overlaysec = new Overlay();
-							
-							Kymoimp.setOverlay(overlaysec);
-							
-						}
+						
 
 						
 						
 						
 						Line newline = new Line(lengthtimestart.get(index)[0], lengthtimestart.get(index)[1], lengthtimestart.get(index + 1)[0], lengthtimestart.get(index + 1)[1]);
-						
-						for (int Kymol = 0; Kymol < Length.size() - 1; ++Kymol){
-							
-							
-							int time = (int)Length.get(Kymol)[0];
-							if (lengthtimestart.get(index)[1] == time){
-						Line newlineKymo = new Line(Length.get(Kymol)[1], Length.get(Kymol)[0] , Length.get(Kymol + 1)[1] , Length.get(Kymol + 1)[1] );
-						 overlaysec.setStrokeColor(Color.RED);
-							
-							overlaysec.add(newlineKymo);
-								
-							}
-							
-							
-						}
-						
-						overlay.setStrokeColor(colorDraw);
+					
+						newline.setFillColor(colorDraw);
 						
 						overlay.add(newline);
 						
                        
 						
 						
-						newimp.setOverlay(overlay);
-						newimp.setOverlay(overlaysec);
+						Kymoimp.setOverlay(overlay);
+						
 						
 						RoiManager roimanager = RoiManager.getInstance();
 						
@@ -2988,7 +3297,7 @@ public void MakeRois(){
 						
 						}
 					
-					newimp.show();
+					Kymoimp.show();
 					}
 					
 					
@@ -3040,7 +3349,6 @@ public void MakeRois(){
 						final double[] originalpoint = list.get(0).currentpoint;
 						double endlength = 0;
 						double endlengthpixel = 0;
-						ArrayList<double[]> lengthtimeend = new ArrayList<double[]>();
 					for (int index = 1; index < list.size() - 1; ++index) {
 						
 
@@ -3113,42 +3421,22 @@ public void MakeRois(){
 							for (int index = 0; index < lengthtimeend.size() - 1; ++index){
 								
 								Overlay overlay = Kymoimp.getOverlay();
-								Overlay overlaysec = Kymoimp.getOverlay();
 								if (overlay == null) {
 									overlay = new Overlay();
 									
 									Kymoimp.setOverlay(overlay);
 									
 								}
-								if (overlaysec == null) {
-									overlaysec = new Overlay();
-									
-									Kymoimp.setOverlay(overlaysec);
-									
-								}
 								
-								for (int Kymol = 0; Kymol < Length.size() - 1; ++Kymol){
-									
-									
-									int time = (int)Length.get(Kymol)[0];
-									if (lengthtimeend.get(index)[1] == time){
-								Line newlineKymo = new Line(Length.get(Kymol)[1], Length.get(Kymol)[0] , Length.get(Kymol + 1)[1] , Length.get(Kymol + 1)[1] );
-								 overlaysec.setStrokeColor(Color.RED);
-									
-									overlaysec.add(newlineKymo);
-										
-									}
-									
-									
-								}
+								
+							
 								Line newline = new Line(lengthtimeend.get(index)[0], lengthtimeend.get(index)[1], lengthtimeend.get(index + 1)[0], lengthtimeend.get(index + 1)[1]);
-								overlay.setStrokeColor(colorDraw);
+								newline.setFillColor(colorDraw);
 								
 								overlay.add(newline);
 								
 								
-								newimp.setOverlay(overlay);
-								newimp.setOverlay(overlaysec);
+								Kymoimp.setOverlay(overlay);
 								RoiManager roimanager = RoiManager.getInstance();
 								
 								
@@ -3156,7 +3444,7 @@ public void MakeRois(){
 								
 								}
 							
-							newimp.show();
+							Kymoimp.show();
 		                       }
 				}
 					
@@ -3309,7 +3597,6 @@ public void MakeRois(){
 					
 					
 							
-					ArrayList<double[]> lengthtimestart = new ArrayList<double[]>();
 						for (int index = 0; index < lengthliststart.size(); ++index) {
 							if (lengthliststart.get(index).fst[1] == seedID){
 							rt.incrementCounter();
@@ -3353,43 +3640,23 @@ public void MakeRois(){
 								for (int index = 0; index < lengthtimestart.size() - 1; ++index){
 									
 									Overlay overlay = Kymoimp.getOverlay();
-									Overlay overlaysec = Kymoimp.getOverlay();
 									if (overlay == null) {
 										overlay = new Overlay();
 										
 										Kymoimp.setOverlay(overlay);
 										
 									}
-									if (overlaysec == null) {
-										overlaysec = new Overlay();
-										
-										Kymoimp.setOverlay(overlaysec);
-										
-									}
+									
 
-									for (int Kymol = 0; Kymol < Length.size() - 1; ++Kymol){
-										
-										
-										int time = (int)Length.get(Kymol)[0];
-										if (lengthtimestart.get(index)[1] == time){
-									Line newlineKymo = new Line(Length.get(Kymol)[1], Length.get(Kymol)[0] , Length.get(Kymol + 1)[1] , Length.get(Kymol + 1)[1] );
-									 overlaysec.setStrokeColor(Color.RED);
-										
-										overlaysec.add(newlineKymo);
-											
-										}
-										
-										
-									}
+								
 									
 									Line newline = new Line(lengthtimestart.get(index)[0], lengthtimestart.get(index)[1], lengthtimestart.get(index + 1)[0], lengthtimestart.get(index + 1)[1]);
-									overlay.setStrokeColor(colorDraw);
+									newline.setFillColor(colorDraw);
 									
 									overlay.add(newline);
 								
 									
-									newimp.setOverlay(overlay);
-									newimp.setOverlay(overlaysec);
+									Kymoimp.setOverlay(overlay);
 									RoiManager roimanager = RoiManager.getInstance();
 									
 									
@@ -3398,7 +3665,7 @@ public void MakeRois(){
 									
 									}
 								
-								newimp.show();
+								Kymoimp.show();
 			                       }
 						
 						
@@ -3542,7 +3809,6 @@ public void MakeRois(){
 					
 					
 					
-					ArrayList<double[]> lengthtimeend = new ArrayList<double[]>();
 						for (int index = 0; index < lengthlistend.size(); ++index) {
 							if (lengthlistend.get(index).fst[1] == seedID){
 							rtend.incrementCounter();
@@ -3593,34 +3859,15 @@ public void MakeRois(){
 										Kymoimp.setOverlay(overlay);
 										
 									}
-									if (overlaysec == null) {
-										overlaysec = new Overlay();
-										
-										Kymoimp.setOverlay(overlaysec);
-										
-									}
-	                                  for (int Kymol = 0; Kymol < Length.size() - 1; ++Kymol){
-										
-										
-										int time = (int)Length.get(Kymol)[0];
-										if (lengthtimeend.get(index)[1] == time){
-									Line newlineKymo = new Line(Length.get(Kymol)[1], Length.get(Kymol)[0] , Length.get(Kymol + 1)[1] , Length.get(Kymol + 1)[1] );
-									 overlaysec.setStrokeColor(Color.RED);
-										
-										overlaysec.add(newlineKymo);
-											
-										}
-										
-										
-									}
+									
+	                                 
 									
 									Line newline = new Line(lengthtimeend.get(index)[0], lengthtimeend.get(index)[1], lengthtimeend.get(index + 1)[0], lengthtimeend.get(index + 1)[1]);
-									overlay.setStrokeColor(colorDraw);
+									newline.setFillColor(colorDraw);
 									
 									overlay.add(newline);
 									
-									newimp.setOverlay(overlay);
-									newimp.setOverlay(overlaysec);
+									Kymoimp.setOverlay(overlay);
 									RoiManager roimanager = RoiManager.getInstance();
 									
 									
@@ -3629,7 +3876,7 @@ public void MakeRois(){
 									
 									}
 								
-								newimp.show();
+								Kymoimp.show();
 			                       }
 						
 						if (SaveXLS)
@@ -3875,7 +4122,7 @@ public void MakeRois(){
 						double startlength = 0;
 						double startlengthpixel = 0;
 
-						ArrayList<double[]> lengthtimestart = new ArrayList<double[]>();
+						
 					for (int index = 1; index < list.size() - 1; ++index) {
 						
 						
@@ -3939,50 +4186,30 @@ public void MakeRois(){
 
 					}
 					 if (Kymoimg!=null){
-						 ImagePlus newimp = Kymoimp.duplicate();	
 							for (int index = 0; index < lengthtimestart.size() - 1; ++index){
 								
 								Overlay overlay = Kymoimp.getOverlay();
-								Overlay overlaysec = Kymoimp.getOverlay();
 								if (overlay == null) {
 									overlay = new Overlay();
 									
 									Kymoimp.setOverlay(overlay);
 								}
-								if (overlaysec == null) {
-									overlaysec = new Overlay();
-									
-									Kymoimp.setOverlay(overlaysec);
-								}
-								  for (int Kymol = 0; Kymol < Length.size() - 1; ++Kymol){
-										
-										
-										int time = (int)Length.get(Kymol)[0];
-										if (lengthtimestart.get(index)[1] == time){
-									Line newlineKymo = new Line(Length.get(Kymol)[1], Length.get(Kymol)[0] , Length.get(Kymol + 1)[1] , Length.get(Kymol + 1)[1] );
-									 overlaysec.setStrokeColor(Color.RED);
-										
-										overlaysec.add(newlineKymo);
-											
-										}
-										
-										
-									}
+								
+								 
 								
 								Line newline = new Line(lengthtimestart.get(index)[0], lengthtimestart.get(index)[1], lengthtimestart.get(index + 1)[0], lengthtimestart.get(index + 1)[1]);
-								overlay.setStrokeColor(colorDraw);
+								newline.setFillColor(colorDraw);
 								
 								overlay.add(newline);
 								
-								newimp.setOverlay(overlay);
-								newimp.setOverlay(overlaysec);
+								Kymoimp.setOverlay(overlay);
 								RoiManager roimanager = RoiManager.getInstance();
 								
 								
 								roimanager.addRoi(newline);
 								
 								}
-							newimp.show();
+							Kymoimp.show();
 		                       }
 					
 					
@@ -4034,7 +4261,7 @@ public void MakeRois(){
 						final double[] originalpoint = list.get(0).originalpoint;
 						
 
-						ArrayList<double[]> lengthtimeend= new ArrayList<double[]>();
+						
 					for (int index = 1; index < list.size() - 1; ++index) {
 						
 						
@@ -4102,45 +4329,27 @@ public void MakeRois(){
 							for (int index = 0; index < lengthtimeend.size() - 1; ++index){
 								
 								Overlay overlay = Kymoimp.getOverlay();
-								Overlay overlaysec = Kymoimp.getOverlay();
 								if (overlay == null) {
 									overlay = new Overlay();
 									Kymoimp.setOverlay(overlay);
 								}
-								if (overlaysec == null) {
-									overlaysec = new Overlay();
-									Kymoimp.setOverlay(overlaysec);
-								}
-								 for (int Kymol = 0; Kymol < Length.size() - 1; ++Kymol){
-										
-										
-										int time = (int)Length.get(Kymol)[0];
-										if (lengthtimeend.get(index)[1] == time){
-									Line newlineKymo = new Line(Length.get(Kymol)[1], Length.get(Kymol)[0] , Length.get(Kymol + 1)[1] , Length.get(Kymol + 1)[1] );
-									 overlaysec.setStrokeColor(Color.RED);
-										
-										overlaysec.add(newlineKymo);
-											
-										}
-										
-										
-									}
+								
+								
 								
 								Line newline = new Line(lengthtimeend.get(index)[0], lengthtimeend.get(index)[1], lengthtimeend.get(index + 1)[0], lengthtimeend.get(index + 1)[1]);
-								overlay.setStrokeColor(colorDraw);
+								newline.setFillColor(colorDraw);
 								
 								overlay.add(newline);
 								
 									
-								newimp.setOverlay(overlay);
-								newimp.setOverlay(overlaysec);
+								Kymoimp.setOverlay(overlay);
 								RoiManager roimanager = RoiManager.getInstance();
 								
 								
 								roimanager.addRoi(newline);
 								
 								}
-							newimp.show();
+							Kymoimp.show();
 		                       }
 					
 					if (SaveXLS && list.size() > 0.5 * thirdDimensionSize)
@@ -4298,7 +4507,6 @@ public void MakeRois(){
 					
 					
 					
-					ArrayList<double[]> lengthtimestart = new ArrayList<double[]>();
 						for (int index = 0; index < Allstart.size(); ++index) {
 							if (lengthliststart.get(index).fst[1] == seedID){
 							rt.incrementCounter();
@@ -4348,45 +4556,27 @@ public void MakeRois(){
 								for (int index = 0; index < lengthtimestart.size() - 1; ++index){
 									
 									Overlay overlay = Kymoimp.getOverlay();
-									Overlay overlaysec = Kymoimp.getOverlay();
 									if (overlay == null) {
 										overlay = new Overlay();
 										Kymoimp.setOverlay(overlay);
 									}
-									if (overlaysec == null) {
-										overlaysec = new Overlay();
-										Kymoimp.setOverlay(overlaysec);
-									}
 									
-									 for (int Kymol = 0; Kymol < Length.size() - 1; ++Kymol){
-											
-											
-											int time = (int)Length.get(Kymol)[0];
-											if (lengthtimestart.get(index)[1] == time){
-										Line newlineKymo = new Line(Length.get(Kymol)[1], Length.get(Kymol)[0] , Length.get(Kymol + 1)[1] , Length.get(Kymol + 1)[1] );
-										 overlaysec.setStrokeColor(Color.RED);
-											
-											overlaysec.add(newlineKymo);
-												
-											}
-											
-											
-										}
+									
+									
 									Line newline = new Line(lengthtimestart.get(index)[0], lengthtimestart.get(index)[1], lengthtimestart.get(index + 1)[0], lengthtimestart.get(index + 1)[1]);
-									overlay.setStrokeColor(colorDraw);
+									newline.setFillColor(colorDraw);
 									
 									overlay.add(newline);
 									
 									
-									newimp.setOverlay(overlay);
-									newimp.setOverlay(overlaysec);
+									Kymoimp.setOverlay(overlay);
 									RoiManager roimanager = RoiManager.getInstance();
 									
 									
 									roimanager.addRoi(newline);
 									
 									}
-								newimp.show();
+								Kymoimp.show();
 			                       }
 						
 						if (SaveXLS)
@@ -4546,7 +4736,6 @@ public void MakeRois(){
 				
 				
 					
-					ArrayList<double[]> lengthtimeend = new ArrayList<double[]>();
 						for (int index = 0; index < Allend.size(); ++index) {
 							
 							
@@ -4594,46 +4783,28 @@ public void MakeRois(){
 								for (int index = 0; index < lengthtimeend.size() - 1; ++index){
 									
 									Overlay overlay = Kymoimp.getOverlay();
-									Overlay overlaysec = Kymoimp.getOverlay();
 									if (overlay == null) {
 										overlay = new Overlay();
 										Kymoimp.setOverlay(overlay);
 									}
-									if (overlaysec == null) {
-										overlaysec = new Overlay();
-										Kymoimp.setOverlay(overlaysec);
-									}
+									
 
-									 for (int Kymol = 0; Kymol < Length.size() - 1; ++Kymol){
-											
-											
-											int time = (int)Length.get(Kymol)[0];
-											if (lengthtimeend.get(index)[1] == time){
-										Line newlineKymo = new Line(Length.get(Kymol)[1], Length.get(Kymol)[0] , Length.get(Kymol + 1)[1] , Length.get(Kymol + 1)[1] );
-										 overlaysec.setStrokeColor(Color.RED);
-											
-											overlaysec.add(newlineKymo);
-												
-											}
-											
-											
-										}
+									
 									
 									Line newline = new Line(lengthtimeend.get(index)[0], lengthtimeend.get(index)[1], lengthtimeend.get(index + 1)[0], lengthtimeend.get(index + 1)[1]);
-									overlay.setStrokeColor(colorDraw);
+									newline.setFillColor(colorDraw);
 									
 									overlay.add(newline);
 									
 									
 									
-									newimp.setOverlay(overlay);
-									newimp.setOverlay(overlaysec);
+									Kymoimp.setOverlay(overlay);
 									RoiManager roimanager = RoiManager.getInstance();
 									
 									
 									roimanager.addRoi(newline);
 									}
-								newimp.show();
+								Kymoimp.show();
 			                       }
 						
 						if (SaveXLS)
@@ -5377,12 +5548,108 @@ public void MakeRois(){
 		@Override
 		public void itemStateChanged(final ItemEvent arg0) {
 			boolean oldState = analyzekymo;
-			if (arg0.getStateChange() == ItemEvent.DESELECTED)
+			if (arg0.getStateChange() == ItemEvent.DESELECTED){
 				analyzekymo = false;
+				
+				panelSixth.removeAll();
+				panelSixth.repaint();
+				final GridBagLayout layout = new GridBagLayout();
+				final GridBagConstraints c = new GridBagConstraints();
+				panelSixth.setLayout(layout);
+				c.fill = GridBagConstraints.HORIZONTAL;
+				c.gridx = 0;
+				c.gridy = 0;
+				c.weightx = 1;
+				final Checkbox KalmanTracker = new Checkbox("Use Kalman Filter for tracking");
+				final Checkbox DeterTracker = new Checkbox("Use Deterministic method for tracking");
+				final Checkbox KymoExtract = new Checkbox("Extract Kymo (for the single chosen MT)");
+				final Label Kal = new Label("Use Kalman Filter for probabilistic tracking");
+				final Label Det = new Label("Use Deterministic tracker using the fixed Seed points");
+				Kal.setBackground(new Color(1, 0, 1));
+				Kal.setForeground(new Color(255, 255, 255));
+				Det.setBackground(new Color(1, 0, 1));
+				Det.setForeground(new Color(255, 255, 255));
+				
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelSixth.add(Kal, c);
+				
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelSixth.add(KalmanTracker, c);
+				
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelSixth.add(Det, c);
+				
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelSixth.add(DeterTracker, c);
+				
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelSixth.add(DeterTracker, c);
+				
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelSixth.add(KymoExtract, c);
+				
+				KalmanTracker.addItemListener(new KalmanchoiceListener());
+				DeterTracker.addItemListener(new DeterchoiceListener());
+				KymoExtract.addItemListener(new KymoExtractListener());
+			}
 			
 			
-			else if (arg0.getStateChange() == ItemEvent.SELECTED)
+			else if (arg0.getStateChange() == ItemEvent.SELECTED){
 				analyzekymo = true;
+				panelSixth.removeAll();
+				panelSixth.repaint();
+				final GridBagLayout layout = new GridBagLayout();
+				final GridBagConstraints c = new GridBagConstraints();
+				panelSixth.setLayout(layout);
+				c.fill = GridBagConstraints.HORIZONTAL;
+				c.gridx = 0;
+				c.gridy = 0;
+				c.weightx = 1;
+				final Checkbox KalmanTracker = new Checkbox("Use Kalman Filter for tracking");
+				final Checkbox DeterTracker = new Checkbox("Use Deterministic method for tracking");
+				final Checkbox KymoExtract = new Checkbox("Extract Kymo (for the single chosen MT)");
+				final Label Kal = new Label("Use Kalman Filter for probabilistic tracking");
+				final Label Det = new Label("Use Deterministic tracker using the fixed Seed points");
+				Kal.setBackground(new Color(1, 0, 1));
+				Kal.setForeground(new Color(255, 255, 255));
+				Det.setBackground(new Color(1, 0, 1));
+				Det.setForeground(new Color(255, 255, 255));
+				
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelSixth.add(Kal, c);
+				
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelSixth.add(KalmanTracker, c);
+				
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelSixth.add(Det, c);
+				
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelSixth.add(DeterTracker, c);
+				
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelSixth.add(DeterTracker, c);
+				
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelSixth.add(KymoExtract, c);
+				
+				KalmanTracker.addItemListener(new KalmanchoiceListener());
+				DeterTracker.addItemListener(new DeterchoiceListener());
+				KymoExtract.addItemListener(new KymoExtractListener());
+				
+			}
 
 		}
 		
