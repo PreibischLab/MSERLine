@@ -110,19 +110,26 @@ public class InteractiveKymoAnalyze implements PlugIn {
        
        float slope = (nextcords[1] - cords[1]) / (nextcords[0] - cords[0]);
        float intercept = nextcords[1] - slope * nextcords[0];
-       
+       float[] cordsLine = new float[n];
        for (int y = (int)cords[1]; y < nextcords[1]; ++y){
     	   
-    	 
+    	   cordsLine[1] =  y;
+ 		  if (nextcords[0] != cords[0]){
+ 		   cordsLine[0] = (y - intercept) / (slope);
+ 		 
  		  
- 		  float[] cordsLine = {(y - intercept) / (slope), y};
+       }
  		  
- 		  
+ 		  else{
+ 			 cordsLine[0] = cords[0];
+ 			 
+ 			  
+ 		  }
  		  
  		  
  		  Mask.add(cordsLine);
     	   
- 		  System.out.println(cordsLine[1] + " " + cordsLine[0]  );
+ 		  System.out.println(cordsLine[1] + " " + cordsLine[0] );
        }
       
        
@@ -132,7 +139,7 @@ public class InteractiveKymoAnalyze implements PlugIn {
         		  
           }
           
-         
+          
         	
           
           /********
@@ -147,8 +154,7 @@ public class InteractiveKymoAnalyze implements PlugIn {
   				
   				j = index + 1;
   				
-  				if (Mask.get(j)[0]== Float.NaN)
-  					Mask.get(j)[0] = Mask.get(index)[0];
+  				
   					
   					
   				while (j < Mask.size()) {
@@ -413,7 +419,7 @@ public class InteractiveKymoAnalyze implements PlugIn {
 				//IJ.getDirectory("imagej");
 		String addToName = "MT4porcineWH";
 		
-		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("/Users/varunkapoor/Documents/20170229/Video4/Kymograph4.tif"),
+		RandomAccessibleInterval<FloatType> img = util.ImgLib2Util.openAs32Bit(new File("/Users/varunkapoor/Documents/20170229/Video4/Kymograph3-1.tif"),
 				new ArrayImgFactory<FloatType>());
 		
 		File fichier = new File(usefolder + "//" + addToName + "ID" + 0 + ".txt");

@@ -2235,5 +2235,4 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 		}
 
 	}
-
 }

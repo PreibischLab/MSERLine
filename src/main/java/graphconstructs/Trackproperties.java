@@ -62,12 +62,13 @@ public class Trackproperties extends AbstractEuclideanSpace implements RealLocal
 	public final double[] originalpoint;
 	public final double[] originalds;
 	
+	
 	/*
 	 * CONSTRUCTORS
 	 */
 	
 	public Trackproperties(final int Framenumber, final int Label, 
-			final double[] oldpoint, final double[] newpoint, final double newslope, final double newintercept,
+			final double[] oldpoint, final double[] newpoint, final double newslope, final double newintercept, 
 			final double originalslope, final double originalintercept, final int seedlabel, final double[] originalpoint, final double[] originalds ) {
 		super( 3 );
 		this.ID = IDcounter.incrementAndGet();
@@ -91,6 +92,7 @@ public class Trackproperties extends AbstractEuclideanSpace implements RealLocal
 		this.seedlabel = seedlabel;
 		this.originalpoint = originalpoint;
 		this.originalds = originalds;
+		
 		
 
 	}

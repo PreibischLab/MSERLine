@@ -81,6 +81,21 @@ public class Boundingboxes {
 		return minVal;
 
 	}
+	
+	public static int Farnessscore (final double[] testpoint, final double slope, final double intercept, final double curvature, final double inflection){
+		
+		int score = 0;
+		
+		final int[] testintpoint = new int[testpoint.length];
+		
+		for (int d = 0;  d < testpoint.length; ++d)
+			testintpoint[d] = (int) testpoint[d];
+		
+		score = (int) Math.abs(testpoint[1] - inflection * testpoint[0] * testpoint[0] * testpoint[0] - curvature * testpoint[0] * testpoint[0] - slope * testpoint[0] - intercept );
+		
+		
+		return score;
+	}
 
 	public static double GetBoundingbox(RandomAccessibleInterval<IntType> inputimg, int label) {
 

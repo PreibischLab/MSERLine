@@ -60,12 +60,13 @@ public class KalmanTrackproperties extends AbstractEuclideanSpace implements Rea
 	public final int seedlabel;
 	public final double[] originalds;
 	
+	
 	/*
 	 * CONSTRUCTORS
 	 */
 	
 	public KalmanTrackproperties(final int thirdDimension, final int Label,  final double size,
-			 final double[] currentpoint,final double[] originalpoint, final double newslope, final double newintercept,
+			 final double[] currentpoint,final double[] originalpoint, final double newslope, final double newintercept, 
 			final double originalslope, final double originalintercept, final int seedlabel, final double[] originalds ) {
 		super( 3 );
 		this.ID = IDcounter.incrementAndGet();
@@ -92,6 +93,7 @@ public class KalmanTrackproperties extends AbstractEuclideanSpace implements Rea
 		this.originalintercept = originalintercept;
 		this.seedlabel = seedlabel;
 		this.originalds = originalds;
+		
 		
 
 	}
