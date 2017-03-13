@@ -59,8 +59,19 @@ implements OutputAlgorithm<Pair<ArrayList<KalmanIndexedlength>, ArrayList<Kalman
 	public int iterations = 500;
 	public double cutoffdistance = 10;
 	public boolean halfgaussian = false;
-    public double Intensityratio = 0.5;
-    
+    public double Intensityratio;
+    public double Inispacing;
+	
+  	public void setInispacing (double Inispacing){
+  		
+  		this.Inispacing = Inispacing;
+  		
+  	}
+  	
+  	public double getInispacing (){
+  		
+  		return Inispacing;
+  	}
     
     /**
      * 
@@ -197,7 +208,8 @@ implements OutputAlgorithm<Pair<ArrayList<KalmanIndexedlength>, ArrayList<Kalman
 	@Override
 	public boolean process() {
 		
-		
+		Intensityratio = getIntensityratio();
+		Inispacing = getInispacing();
 		startlist = new ArrayList<KalmanIndexedlength>();
 		endlist = new ArrayList<KalmanIndexedlength>();
 		for (int index = 0; index < imgs.size() ; ++index) {
@@ -291,7 +303,7 @@ public ArrayList<KalmanIndexedlength> getEndPoints(){
 		
 
 		// This parameter is guess estimate for spacing between the Gaussians
-		MinandMax[2 * ndims] =   0.5 *Math.min(psf[0], psf[1]);
+		MinandMax[2 * ndims] =   Inispacing;
 		MinandMax[2 * ndims + 1] = maxintensityline; 
 		// This parameter guess estimates the background noise level
 		MinandMax[2 * ndims + 2] = 0.0; 
@@ -410,7 +422,7 @@ public ArrayList<KalmanIndexedlength> getEndPoints(){
    			
 
    			// This parameter is guess estimate for spacing between the Gaussians
-   			MinandMax[2 * ndims] =  0.5 * Math.min(psf[0], psf[1]);
+   			MinandMax[2 * ndims] = Inispacing;
    			MinandMax[2 * ndims + 1] = maxintensityline; 
    			// This parameter guess estimates the background noise level
    			MinandMax[2 * ndims + 2] = 0; 

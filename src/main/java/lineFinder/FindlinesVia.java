@@ -33,7 +33,7 @@ public  class FindlinesVia {
 	public static Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> LinefindingMethod(final RandomAccessibleInterval<FloatType> source,
 			final RandomAccessibleInterval<FloatType> Preprocessedsource, final int minlength, 
 			final int framenumber, final double[] psf, final Linefinder linefinder, final UserChoiceModel model, 
-			final boolean DoMask ) {
+			final boolean DoMask, final double Intensityratio, final double Inispacing ) {
 
 		
 		Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>>	PrevFrameparam = null;
@@ -41,6 +41,8 @@ public  class FindlinesVia {
 
 			
 			SubpixelLengthPCLine MTline = new SubpixelLengthPCLine(source, linefinder, psf, minlength, model, 0, DoMask);
+			MTline.setIntensityratio(Intensityratio);
+			MTline.setInispacing(Inispacing);
 			MTline.checkInput();
 			MTline.process();
 			PrevFrameparam = MTline.getResult();
@@ -52,7 +54,7 @@ public  class FindlinesVia {
 	public static Pair<ArrayList<KalmanIndexedlength>,ArrayList<KalmanIndexedlength>> LinefindingMethodKalman(final RandomAccessibleInterval<FloatType> source,
 			final RandomAccessibleInterval<FloatType> Preprocessedsource, final int minlength, 
 			final int framenumber, final double[] psf, final Linefinder linefinder, final UserChoiceModel model, 
-			final boolean DoMask ) {
+			final boolean DoMask, final double Intensityratio, final double Inispacing ) {
 
 		
 		Pair<ArrayList<KalmanIndexedlength>,ArrayList<KalmanIndexedlength>>	PrevFrameparam = null;
@@ -60,6 +62,8 @@ public  class FindlinesVia {
 
 			
 			SubpixelLengthPCKalmanLine MTline = new SubpixelLengthPCKalmanLine(source, linefinder, psf, minlength, model, 0, DoMask);
+			MTline.setIntensityratio(Intensityratio);
+			MTline.setInispacing(Inispacing);
 			MTline.checkInput();
 			MTline.process();
 			PrevFrameparam = MTline.getResult();
@@ -72,7 +76,7 @@ public  class FindlinesVia {
 	LinefindingMethodHF(final RandomAccessibleInterval<FloatType> source,
 			final RandomAccessibleInterval<FloatType> Preprocessedsource,Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam,
 			final int minlength, final int framenumber, final double[] psf,  final LinefinderHF linefinder, final UserChoiceModel model,
-			final boolean DoMask) {
+			final boolean DoMask, final double intensityratio, final double Inispacing) {
 
 		Pair<Pair<ArrayList<Trackproperties>, ArrayList<Trackproperties>>,Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>>> returnVector = null;
 		
@@ -80,6 +84,8 @@ public  class FindlinesVia {
 
 			final SubpixelVelocityPCLine growthtracker = new SubpixelVelocityPCLine(source, linefinder,
 					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber, model, DoMask);
+			growthtracker.setIntensityratio(intensityratio);
+			growthtracker.setInispacing(Inispacing);
 			growthtracker.checkInput();
 			growthtracker.process();
 			
@@ -108,7 +114,7 @@ public  class FindlinesVia {
 	LinefindingMethodHFKalman(final RandomAccessibleInterval<FloatType> source,
 			final RandomAccessibleInterval<FloatType> Preprocessedsource,Pair<ArrayList<KalmanIndexedlength>,ArrayList<KalmanIndexedlength>> PrevFrameparam,
 			final int minlength, final int framenumber, final double[] psf,  final LinefinderHF linefinder, final UserChoiceModel model,
-			final boolean DoMask, final int KalmanCount) {
+			final boolean DoMask, final int KalmanCount, final double Intensityratio, final double Inispacing) {
 
 		Pair<Pair<ArrayList<KalmanTrackproperties>, ArrayList<KalmanTrackproperties>>,Pair<ArrayList<KalmanIndexedlength>,ArrayList<KalmanIndexedlength>>> returnVector = null;
 		
@@ -116,6 +122,8 @@ public  class FindlinesVia {
 
 			final SubpixelVelocityPCKalmanLine growthtracker = new SubpixelVelocityPCKalmanLine(source, linefinder,
 					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber, model, DoMask, KalmanCount);
+			growthtracker.setIntensityratio(Intensityratio);
+			growthtracker.setInispacing(Inispacing);
 			growthtracker.checkInput();
 			growthtracker.process();
 			

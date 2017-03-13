@@ -159,11 +159,10 @@ public class InteractiveMT implements PlugIn {
 
 	String usefolder = "/Users/varunkapoor/Documents/2017022Video1/";
 	// IJ.getDirectory("imagej");
-	String addToName = "MT3porcineVK";
-	String addTrackToName = "MT3porcineVK";
-	ArrayList<float[]> Mask = new ArrayList<float[]>();
-	ArrayList<float[]> Base = new ArrayList<float[]>();
-	ArrayList<float[]> Length = new ArrayList<float[]>();
+	String addToName = "MT8porcineVKR0.65";
+	String addTrackToName = "MT8porcineVKR0.65";
+
+	ArrayList<float[]> Length;
 	final int scrollbarSize = 1000;
 	final int scrollbarSizebig = 1000;
 	// steps per octave
@@ -192,6 +191,8 @@ public class InteractiveMT implements PlugIn {
 	long maxSizemin = 100;
 	long maxSizemax = 10000;
 
+	double Intensityratio = 0.5;
+	double Inispacing = 0.5;
 	int thirdDimensionslider = 0;
 	int thirdDimensionsliderInit = 1;
 	int timeMin = 1;
@@ -247,6 +248,7 @@ public class InteractiveMT implements PlugIn {
 	boolean MedianAll = false;
 	boolean AutoDelta = false;
 	boolean Domask = false;
+	boolean DoRloop = false;
 	boolean SaveTxt = false;
 	boolean SaveXLS = true;
 	int nbRois;
@@ -282,7 +284,7 @@ public class InteractiveMT implements PlugIn {
 
 	int channel = 0;
 	int thirdDimensionSize = 0;
-	ImagePlus Kymoimp;
+	ImagePlus KymoimpA, KymoimpB;
 	RandomAccessibleInterval<FloatType> originalimg;
 	RandomAccessibleInterval<FloatType> originalPreprocessedimg;
 	RandomAccessibleInterval<FloatType> Kymoimg;
@@ -291,7 +293,7 @@ public class InteractiveMT implements PlugIn {
 	int inix = 20;
 	int iniy = 20;
 	double[] calibration;
-	double radiusfactor = 1;
+	double radiusfactor = 1.5;
 	MserTree<UnsignedByteType> newtree;
 	// Image 2d at the current slice
 	RandomAccessibleInterval<FloatType> currentimg;
@@ -583,8 +585,10 @@ public class InteractiveMT implements PlugIn {
 			return;
 		}
 
-		if (Kymoimg != null)
-			Kymoimp = ImageJFunctions.show(Kymoimg);
+		if (Kymoimg != null){
+			KymoimpA = ImageJFunctions.show(Kymoimg);
+			KymoimpB = ImageJFunctions.show(Kymoimg).duplicate();
+		}
 
 		CurrentView = getCurrentView();
 		CurrentPreprocessedView = getCurrentPreView();
@@ -1273,8 +1277,8 @@ public class InteractiveMT implements PlugIn {
 
 			}
 
-			Kymoimp = ImageJFunctions.show(Kymoimg);
-
+			KymoimpA = ImageJFunctions.show(Kymoimg);
+			KymoimpB = ImageJFunctions.show(Kymoimg).duplicate();
 			final Label Select = new Label("Make Segmented Line selection");
 			final Button ExtractKymo = new Button("Extract Mask Co-ordinates :");
 			final Button ExtractBaseLine = new Button("Extract Baseline Co-ordinates :");
@@ -1290,21 +1294,12 @@ public class InteractiveMT implements PlugIn {
 				c.insets = new Insets(10, 10, 0, 0);
 				panelSeventh.add(ExtractKymo, c);
 
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSeventh.add(ExtractBaseLine, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSeventh.add(GetLength, c);
-
+				
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 0);
 				panelSeventh.add(Result, c);
 
 				ExtractKymo.addActionListener(new GetCords());
-				ExtractBaseLine.addActionListener(new GetBaseCords());
-				GetLength.addActionListener(new GetLength());
 			}
 			if (showDeterministic) {
 				final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
@@ -1410,7 +1405,7 @@ public class InteractiveMT implements PlugIn {
 
 		RoiManager roimanager = RoiManager.getInstance();
 
-		rorig = Kymoimp.getRoi();
+		rorig = KymoimpA.getRoi();
 
 		if (rorig == null) {
 			IJ.showMessage("Roi required");
@@ -1418,28 +1413,35 @@ public class InteractiveMT implements PlugIn {
 		nbRois = roimanager.getCount();
 		Roi[] RoisOrig = roimanager.getRoisAsArray();
 
-		Overlay overlaysec = Kymoimp.getOverlay();
+		Overlay overlaysec = KymoimpA.getOverlay();
 
 		if (overlaysec == null) {
 			overlaysec = new Overlay();
 
-			Kymoimp.setOverlay(overlaysec);
+			KymoimpA.setOverlay(overlaysec);
 
 		}
 		overlaysec.clear();
-
+		Length   = new ArrayList<float[]>();
 		for (int i = 0; i < nbRois; ++i) {
-
+			
 			PolygonRoi l = (PolygonRoi) RoisOrig[i];
 
 			int n = l.getNCoordinates();
 			float[] xCord = l.getFloatPolygon().xpoints;
 			int[] yCord = l.getYCoordinates();
-
+			try {
+				FileWriter fw;
+				File fichierKy = new File(usefolder + "//" + addToName + "KymoWill-start"  + ".txt");
+				fw = new FileWriter(fichierKy);
+				BufferedWriter bw = new BufferedWriter(fw);
+				bw.write(
+    					"\tFramenumber\tLength\n");
+				
 			for (int index = 0; index < n - 1; index++) {
 
-				float[] cords = { xCord[index], yCord[index] };
-				float[] nextcords = { xCord[index + 1], yCord[index + 1] };
+				float[] cords = { xCord[index], (int)yCord[index] };
+				float[] nextcords = { xCord[index + 1], (int)yCord[index + 1] };
 
 				float slope = (float) ((nextcords[1] - cords[1]) / (nextcords[0] - cords[0]));
 				float intercept = nextcords[1] - slope * nextcords[0];
@@ -1448,111 +1450,57 @@ public class InteractiveMT implements PlugIn {
 				overlaysec.setStrokeColor(Color.RED);
 
 				overlaysec.add(newlineKymo);
-				Kymoimp.setOverlay(overlaysec);
+				KymoimpA.setOverlay(overlaysec);
 				float[] cordsLine = new float[n];
-
+			
 				for (int y = (int) cords[1]; y < nextcords[1]; ++y) {
 
-					cordsLine[1] = y;
+					cordsLine[1] =  y;
 					if (nextcords[0] != cords[0]) {
 						cordsLine[0] = (y - intercept) / (slope);
-
+						bw.write("\t" + (cordsLine[1]) + "\t" + (cordsLine[0] + "\n"));
+						Length.add(new float[] {cordsLine[0], cordsLine[1]});
 					}
 
 					else {
 						cordsLine[0] = cords[0];
-
+						bw.write("\t" + (cordsLine[1]) + "\t" + (cordsLine[0] + "\n"));
+						Length.add(new float[] {cordsLine[0], cordsLine[1]});
 					}
 
-					Mask.add(cordsLine);
+					
+						
+						
+						
+					
+					
 
 					System.out.println(cordsLine[1] + " " + cordsLine[0]);
 				}
+				
 
 			}
-
-		}
-
-		/********
-		 * The part below removes the duplicate entries in the array dor the
-		 * time co-ordinate
-		 ********/
-
-		int j = 0;
-
-		for (int index = 0; index < Mask.size() - 1; ++index) {
-
-			j = index + 1;
-
-			while (j < Mask.size()) {
-
-				if (Mask.get(index)[1] == Mask.get(j)[1]) {
-
-					Mask.remove(j);
-				}
-
-				else {
-					++j;
-
-				}
-			}
-
-		}
-
-		Kymoimp.show();
-
-	}
-
-	public void MakeBaseRois() {
-
-		RoiManager roimanager = RoiManager.getInstance();
-		if (roimanager == null) {
-			roimanager = new RoiManager();
-			roimanager.setVisible(true);
-		}
-		rorig = Kymoimp.getRoi();
-
-		nbRois = roimanager.getCount();
-		Roi[] RoisOrig = roimanager.getRoisAsArray();
-
-		if (rorig != null) {
-
-			for (int i = 0; i < nbRois; ++i) {
-
-				PolygonRoi l = (PolygonRoi) RoisOrig[i];
-
-				int n = l.getNCoordinates();
-				float[] xCord = l.getFloatPolygon().xpoints;
-				int[] yCord = l.getYCoordinates();
-
-				for (int index = 0; index < n - 1; index++) {
-
-					float[] cords = { xCord[index], yCord[index] };
-					float[] nextcords = { xCord[index + 1], yCord[index + 1] };
-
-					for (int y = (int) cords[1]; y < nextcords[1]; ++y) {
-
-						float[] cordsLine = { xCord[index], y };
-
-						Base.add(cordsLine);
-
-					}
-
-				}
-
-			}
-		}
-		
-		else {
+			bw.close();
+			fw.close();
 			
-			float[] cordsLine = {0,0};
-			Base.add(cordsLine);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
 		}
 
-		for (int index = 0; index < Base.size(); ++index) {
-			System.out.println(Base.get(index)[1] + " " + Base.get(index)[0]);
-		}
+		for (int index = 0; index < Length.size(); ++index)
+			System.out.println(Length.get(index)[0] + " " + Length.get(index)[1]);
+  
+
+		
+
+		KymoimpA.show();
+
 	}
+
+	
 
 	protected class GetCords implements ActionListener {
 		@Override
@@ -1564,61 +1512,7 @@ public class InteractiveMT implements PlugIn {
 
 	}
 
-	protected class GetBaseCords implements ActionListener {
-		@Override
-		public void actionPerformed(final ActionEvent arg0) {
-
-			MakeBaseRois();
-
-		}
-
-	}
-
-	protected class GetLength implements ActionListener {
-		@Override
-		public void actionPerformed(final ActionEvent arg0) {
-
-			File fichierKy = new File(usefolder + "//" + addToName + "KymoWill-start" + ".txt");
-			FileWriter fw;
-			try {
-				fw = new FileWriter(fichierKy);
-				BufferedWriter bw = new BufferedWriter(fw);
-				bw.write("\tFramenumber\tLength\n");
-
-				float meanbase = 0;
-				for (int index = 0; index < Base.size(); ++index) {
-
-					meanbase += Base.get(index)[0];
-
-				}
-
-				meanbase /= Base.size();
-
-				int listsize = Mask.size();
-				for (int index = 0; index < listsize; ++index) {
-
-					float currentlength = Mask.get(index)[0] - meanbase;
-
-					float[] lengthtime = { currentlength, Mask.get(index)[1] };
-
-					Length.add(lengthtime);
-					bw.write("\t" + ((int) lengthtime[1]) + "\t" + (lengthtime[0] + "\n"));
-					System.out.println(lengthtime[1] + " " + lengthtime[0]);
-				}
-				bw.close();
-				fw.close();
-
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-
-			Mask.clear();
-			Base.clear();
-
-		}
-
-	}
+	
 
 	protected class DeterchoiceListener implements ItemListener {
 		@Override
@@ -2031,7 +1925,7 @@ public class InteractiveMT implements PlugIn {
 							newtree, minlength, thirdDimension);
 
 					PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength,
-							thirdDimension, psf, newlineMser, UserChoiceModel.Line, Domask);
+							thirdDimension, psf, newlineMser, UserChoiceModel.Line, Domask, Intensityratio, Inispacing);
 
 					if (displaySeedLabels) {
 
@@ -2112,7 +2006,7 @@ public class InteractiveMT implements PlugIn {
 							groundframepre, intimg, Maxlabel, thetaPerPixel, rhoPerPixel, thirdDimension);
 
 					PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength,
-							thirdDimension, psf, newlineHough, UserChoiceModel.Line, Domask);
+							thirdDimension, psf, newlineHough, UserChoiceModel.Line, Domask,Intensityratio, Inispacing);
 
 					if (displaySeedLabels) {
 
@@ -2190,7 +2084,7 @@ public class InteractiveMT implements PlugIn {
 							groundframepre, newtree, minlength, thirdDimension, thetaPerPixel, rhoPerPixel);
 
 					PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength,
-							thirdDimension, psf, newlineMserwHough, UserChoiceModel.Line, Domask);
+							thirdDimension, psf, newlineMserwHough, UserChoiceModel.Line, Domask,Intensityratio, Inispacing);
 
 					if (displaySeedLabels) {
 
@@ -2639,6 +2533,8 @@ public class InteractiveMT implements PlugIn {
 				}
 			}
 			velocityend /= endtime - starttime;
+			System.out.println(velocityend);
+			System.out.println(velocitystart);
 			double velocity = ((Math.abs(velocityend) - Math.abs(velocitystart)) >= 0) ? velocityend : velocitystart;
 			if (numberKymo) {
 				deltad = ((Math.abs(velocityend) - Math.abs(velocitystart)) >= 0) ? deltadend : deltadstart;
@@ -2829,7 +2725,34 @@ public class InteractiveMT implements PlugIn {
 				next = 2;
 
 			maxStack();
-
+/*
+			int loopsize = 0;
+			
+			double currentrationeg = Intensityratio;
+			double currentratiopos = Intensityratio;
+			int negcount = 0;
+			int poscount = 0;
+			while (currentrationeg >= 0.2) {
+				negcount++;
+				currentrationeg-=0.1;
+				
+			};
+			
+			while (currentratiopos <= 0.2) {
+				poscount++;
+				currentratiopos+=0.1;
+				
+			};
+			loopsize = negcount + poscount;
+			
+			for (int loop = 0; loop < loopsize && DoRloop;++loop){
+				
+				
+				Intensityratio = currentrationeg + loop*0.1;
+				
+			}
+			*/
+			
 			int Kalmancount = 0;
 			for (int index = next; index <= thirdDimensionSize; ++index) {
 
@@ -2872,11 +2795,11 @@ public class InteractiveMT implements PlugIn {
 
 					if (showDeterministic)
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
-								minlength, thirdDimension, psf, newlineMser, userChoiceModel, Domask);
+								minlength, thirdDimension, psf, newlineMser, userChoiceModel, Domask, Intensityratio, Inispacing);
 					if (showKalman) {
 						returnVectorKalman = FindlinesVia.LinefindingMethodHFKalman(groundframe, groundframepre,
 								PrevFrameparamKalman, minlength, thirdDimension, psf, newlineMser, userChoiceModel,
-								Domask, Kalmancount);
+								Domask, Kalmancount,Intensityratio, Inispacing);
 					}
 
 				}
@@ -2893,12 +2816,12 @@ public class InteractiveMT implements PlugIn {
 							groundframepre, intimg, Maxlabel, thetaPerPixel, rhoPerPixel, thirdDimension);
 					if (showDeterministic)
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
-								minlength, thirdDimension, psf, newlineHough, userChoiceModel, Domask);
+								minlength, thirdDimension, psf, newlineHough, userChoiceModel, Domask, Intensityratio, Inispacing);
 
 					if (showKalman) {
 						returnVectorKalman = FindlinesVia.LinefindingMethodHFKalman(groundframe, groundframepre,
 								PrevFrameparamKalman, minlength, thirdDimension, psf, newlineHough, userChoiceModel,
-								Domask, Kalmancount);
+								Domask, Kalmancount,Intensityratio, Inispacing);
 					}
 				}
 
@@ -2915,12 +2838,12 @@ public class InteractiveMT implements PlugIn {
 
 					if (showDeterministic)
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
-								minlength, thirdDimension, psf, newlineMserwHough, userChoiceModel, Domask);
+								minlength, thirdDimension, psf, newlineMserwHough, userChoiceModel, Domask, Intensityratio, Inispacing);
 
 					if (showKalman) {
 						returnVectorKalman = FindlinesVia.LinefindingMethodHFKalman(groundframe, groundframepre,
 								PrevFrameparamKalman, minlength, thirdDimension, psf, newlineMserwHough,
-								userChoiceModel, Domask, Kalmancount);
+								userChoiceModel, Domask, Kalmancount,Intensityratio, Inispacing);
 
 					}
 
@@ -3064,7 +2987,7 @@ public class InteractiveMT implements PlugIn {
 
 						final boolean shrink = seedtoold > seedtocurrent ? true : false;
 						final boolean growth = seedtoold > seedtocurrent ? false : true;
-						if (shrink  && startlengthpixel -lengthpixel >= -minlength) {
+						if (shrink  ) {
 
 							// MT shrank
 
@@ -3116,15 +3039,14 @@ public class InteractiveMT implements PlugIn {
 					}
 
 					if (Kymoimg != null) {
-						ImagePlus newimp = Kymoimp.duplicate();
 						for (int index = 0; index < lengthtimestart.size() - 1; ++index) {
 
-							Overlay overlay = Kymoimp.getOverlay();
+							Overlay overlay = KymoimpA.getOverlay();
 
 							if (overlay == null) {
 								overlay = new Overlay();
 
-								Kymoimp.setOverlay(overlay);
+								KymoimpA.setOverlay(overlay);
 
 							}
 
@@ -3135,7 +3057,7 @@ public class InteractiveMT implements PlugIn {
 
 							overlay.add(newline);
 
-							Kymoimp.setOverlay(overlay);
+							KymoimpA.setOverlay(overlay);
 
 							RoiManager roimanager = RoiManager.getInstance();
 
@@ -3143,7 +3065,7 @@ public class InteractiveMT implements PlugIn {
 
 						}
 
-						Kymoimp.show();
+						KymoimpA.show();
 					}
 
 					if (SaveXLS && list.size() > 0.5 * thirdDimensionSize)
@@ -3207,7 +3129,7 @@ public class InteractiveMT implements PlugIn {
 					
 						
 						
-						if (shrink && endlengthpixel - lengthpixel > -minlength) {
+						if (shrink ) {
 							// MT shrank
 							endlength -= length;
 
@@ -3259,31 +3181,30 @@ public class InteractiveMT implements PlugIn {
 						saveResultsToExcel(usefolder + "//" + addTrackToName + "KalmanEnd" + id + ".xls", rt, id);
 
 					if (Kymoimg != null) {
-						ImagePlus newimp = Kymoimp.duplicate();
 						for (int index = 0; index < lengthtimeend.size() - 1; ++index) {
 
-							Overlay overlay = Kymoimp.getOverlay();
-							if (overlay == null) {
-								overlay = new Overlay();
+							Overlay overlayB = KymoimpB.getOverlay();
+							if (overlayB == null) {
+								overlayB = new Overlay();
 
-								Kymoimp.setOverlay(overlay);
+								KymoimpB.setOverlay(overlayB);
 
 							}
-
+							
 							Line newline = new Line(lengthtimeend.get(index)[0], lengthtimeend.get(index)[1],
 									lengthtimeend.get(index + 1)[0], lengthtimeend.get(index + 1)[1]);
 							newline.setFillColor(colorDraw);
 
-							overlay.add(newline);
+							overlayB.add(newline);
 
-							Kymoimp.setOverlay(overlay);
-							RoiManager roimanager = RoiManager.getInstance();
+							KymoimpB.setOverlay(overlayB);
+						//	RoiManager roimanager = RoiManager.getInstance();
 
-							roimanager.addRoi(newline);
+							//roimanager.addRoi(newline);
 
 						}
 
-						Kymoimp.show();
+						KymoimpB.show();
 					}
 				}
 
@@ -3330,7 +3251,7 @@ public class InteractiveMT implements PlugIn {
 								final boolean growth = seedtoold > seedtocurrent ? false : true;
 								
 							
-								if (shrink && startlengthpixel- lengthpixel  > -minlength) {
+								if (shrink ) {
 									// MT shrank
 									startlength -= length;
 									startlengthpixel -= lengthpixel;
@@ -3451,33 +3372,33 @@ public class InteractiveMT implements PlugIn {
 						}
 
 					}
-
+					ArrayList<Line> allline = new ArrayList<Line>();
 					if (Kymoimg != null) {
-						ImagePlus newimp = Kymoimp.duplicate();
 						for (int index = 0; index < lengthtimestart.size() - 1; ++index) {
 
-							Overlay overlay = Kymoimp.getOverlay();
+							Overlay overlay = KymoimpA.getOverlay();
 							if (overlay == null) {
 								overlay = new Overlay();
 
-								Kymoimp.setOverlay(overlay);
+								KymoimpA.setOverlay(overlay);
 
 							}
-
 							Line newline = new Line(lengthtimestart.get(index)[0], lengthtimestart.get(index)[1],
 									lengthtimestart.get(index + 1)[0], lengthtimestart.get(index + 1)[1]);
 							newline.setFillColor(colorDraw);
 
 							overlay.add(newline);
 
-							Kymoimp.setOverlay(overlay);
+							KymoimpA.setOverlay(overlay);
+							
+						    allline.add(newline);
 							RoiManager roimanager = RoiManager.getInstance();
 
 							roimanager.addRoi(newline);
 
 						}
 
-						Kymoimp.show();
+						KymoimpA.show();
 					}
 
 					if (SaveXLS)
@@ -3521,7 +3442,7 @@ public class InteractiveMT implements PlugIn {
 								final boolean growth = seedtoold > seedtocurrent ? false : true;
 								
 								
-								if (shrink && endlengthpixel- lengthpixel > -minlength ) {
+								if (shrink  ) {
 
 									// MT shrank
 									endlength -= length;
@@ -3634,31 +3555,30 @@ public class InteractiveMT implements PlugIn {
 					}
 					
 					if (Kymoimg != null) {
-						ImagePlus newimp = Kymoimp.duplicate();
+						ImagePlus newimp = KymoimpB.duplicate();
 						for (int index = 0; index < lengthtimeend.size() - 1; ++index) {
 
-							Overlay overlay = Kymoimp.getOverlay();
-							if (overlay == null) {
-								overlay = new Overlay();
+							Overlay overlayB = KymoimpB.getOverlay();
+							if (overlayB == null) {
+								overlayB = new Overlay();
 
-								Kymoimp.setOverlay(overlay);
+								KymoimpB.setOverlay(overlayB);
 
 							}
-
 							Line newline = new Line(lengthtimeend.get(index)[0], lengthtimeend.get(index)[1],
 									lengthtimeend.get(index + 1)[0], lengthtimeend.get(index + 1)[1]);
 							newline.setFillColor(colorDraw);
 
-							overlay.add(newline);
+							overlayB.add(newline);
 
-							Kymoimp.setOverlay(overlay);
+							KymoimpB.setOverlay(overlayB);
 							RoiManager roimanager = RoiManager.getInstance();
 
 							roimanager.addRoi(newline);
 
 						}
 
-						Kymoimp.show();
+						KymoimpB.show();
 					}
 
 					if (SaveXLS)
@@ -3713,12 +3633,12 @@ public class InteractiveMT implements PlugIn {
 							groundframepre, newtree, minlength, thirdDimension);
 					if (showDeterministic)
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
-								minlength, thirdDimension, psf, newlineMser, userChoiceModel, Domask);
+								minlength, thirdDimension, psf, newlineMser, userChoiceModel, Domask, Intensityratio, Inispacing);
 
 					if (showKalman) {
 						returnVectorKalman = FindlinesVia.LinefindingMethodHFKalman(groundframe, groundframepre,
 								PrevFrameparamKalman, minlength, thirdDimension, psf, newlineMser, userChoiceModel,
-								Domask, Kalmancount);
+								Domask, Kalmancount,Intensityratio, Inispacing);
 					}
 
 				}
@@ -3736,12 +3656,12 @@ public class InteractiveMT implements PlugIn {
 							groundframepre, intimg, Maxlabel, thetaPerPixel, rhoPerPixel, thirdDimension);
 					if (showDeterministic)
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
-								minlength, thirdDimension, psf, newlineHough, userChoiceModel, Domask);
+								minlength, thirdDimension, psf, newlineHough, userChoiceModel, Domask, Intensityratio, Inispacing);
 
 					if (showKalman) {
 						returnVectorKalman = FindlinesVia.LinefindingMethodHFKalman(groundframe, groundframepre,
 								PrevFrameparamKalman, minlength, thirdDimension, psf, newlineHough, userChoiceModel,
-								Domask, Kalmancount);
+								Domask, Kalmancount,Intensityratio, Inispacing);
 					}
 
 				}
@@ -3758,11 +3678,11 @@ public class InteractiveMT implements PlugIn {
 							rhoPerPixel);
 					if (showDeterministic)
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
-								minlength, thirdDimension, psf, newlineMserwHough, userChoiceModel, Domask);
+								minlength, thirdDimension, psf, newlineMserwHough, userChoiceModel, Domask, Intensityratio, Inispacing);
 					if (showKalman) {
 						returnVectorKalman = FindlinesVia.LinefindingMethodHFKalman(groundframe, groundframepre,
 								PrevFrameparamKalman, minlength, thirdDimension, psf, newlineMserwHough,
-								userChoiceModel, Domask, Kalmancount);
+								userChoiceModel, Domask, Kalmancount,Intensityratio, Inispacing);
 					}
 
 				}
@@ -3961,26 +3881,25 @@ public class InteractiveMT implements PlugIn {
 					if (Kymoimg != null) {
 						for (int index = 0; index < lengthtimestart.size() - 1; ++index) {
 
-							Overlay overlay = Kymoimp.getOverlay();
+							Overlay overlay = KymoimpA.getOverlay();
 							if (overlay == null) {
 								overlay = new Overlay();
 
-								Kymoimp.setOverlay(overlay);
+								KymoimpA.setOverlay(overlay);
 							}
-
 							Line newline = new Line(lengthtimestart.get(index)[0], lengthtimestart.get(index)[1],
 									lengthtimestart.get(index + 1)[0], lengthtimestart.get(index + 1)[1]);
 							newline.setFillColor(colorDraw);
 
 							overlay.add(newline);
 
-							Kymoimp.setOverlay(overlay);
+							KymoimpA.setOverlay(overlay);
 							RoiManager roimanager = RoiManager.getInstance();
 
 							roimanager.addRoi(newline);
 
 						}
-						Kymoimp.show();
+						KymoimpA.show();
 					}
 
 					if (SaveXLS && list.size() > 0.5 * thirdDimensionSize)
@@ -4093,28 +4012,27 @@ public class InteractiveMT implements PlugIn {
 
 					}
 					if (Kymoimg != null) {
-						ImagePlus newimp = Kymoimp.duplicate();
+						ImagePlus newimp = KymoimpB.duplicate();
 						for (int index = 0; index < lengthtimeend.size() - 1; ++index) {
 
-							Overlay overlay = Kymoimp.getOverlay();
-							if (overlay == null) {
-								overlay = new Overlay();
-								Kymoimp.setOverlay(overlay);
+							Overlay overlayB = KymoimpB.getOverlay();
+							if (overlayB == null) {
+								overlayB = new Overlay();
+								KymoimpB.setOverlay(overlayB);
 							}
-
 							Line newline = new Line(lengthtimeend.get(index)[0], lengthtimeend.get(index)[1],
 									lengthtimeend.get(index + 1)[0], lengthtimeend.get(index + 1)[1]);
 							newline.setFillColor(colorDraw);
 
-							overlay.add(newline);
+							overlayB.add(newline);
 
-							Kymoimp.setOverlay(overlay);
-							RoiManager roimanager = RoiManager.getInstance();
+							KymoimpB.setOverlay(overlayB);
+						//	RoiManager roimanager = RoiManager.getInstance();
 
-							roimanager.addRoi(newline);
+						//	roimanager.addRoi(newline);
 
 						}
-						Kymoimp.show();
+						KymoimpB.show();
 					}
 
 					if (SaveXLS && list.size() > 0.5 * thirdDimensionSize)
@@ -4286,32 +4204,31 @@ public class InteractiveMT implements PlugIn {
 						}
 
 					}
-					/*
+					
 					if (Kymoimg != null) {
-						ImagePlus newimp = Kymoimp.duplicate();
+						ImagePlus newimp = KymoimpA.duplicate();
 						for (int index = 0; index < lengthtimestart.size() - 1; ++index) {
 
-							Overlay overlay = Kymoimp.getOverlay();
+							Overlay overlay = KymoimpA.getOverlay();
 							if (overlay == null) {
 								overlay = new Overlay();
-								Kymoimp.setOverlay(overlay);
+								KymoimpA.setOverlay(overlay);
 							}
-
 							Line newline = new Line(lengthtimestart.get(index)[0], lengthtimestart.get(index)[1],
 									lengthtimestart.get(index + 1)[0], lengthtimestart.get(index + 1)[1]);
 							newline.setFillColor(colorDraw);
 
 							overlay.add(newline);
 
-							Kymoimp.setOverlay(overlay);
+							KymoimpA.setOverlay(overlay);
 							RoiManager roimanager = RoiManager.getInstance();
 
 							roimanager.addRoi(newline);
 
 						}
-						Kymoimp.show();
+						KymoimpA.show();
 					}
-*/
+
 					if (SaveXLS)
 						saveResultsToExcel(usefolder + "//" + addTrackToName + "start" + "SeedLabel" + seedID + ".xls",
 								rt, seedID);
@@ -4355,7 +4272,7 @@ public class InteractiveMT implements PlugIn {
 								
 								 
 							
-								if (shrink && endlengthpixel- lengthpixel > -minlength) {
+								if (shrink ) {
 
 									// MT shrank
 
@@ -4374,7 +4291,7 @@ public class InteractiveMT implements PlugIn {
 									
 									
 								}
-								
+									
 								
 								
 								final double[] endinfo = { oldpoint[0], oldpoint[1], newpoint[0], newpoint[1],
@@ -4486,28 +4403,28 @@ public class InteractiveMT implements PlugIn {
 						}
 
 					}
+					
 					if (Kymoimg != null) {
-						ImagePlus newimp = Kymoimp.duplicate();
+						ImagePlus newimp = KymoimpB.duplicate();
 						for (int index = 0; index < lengthtimeend.size() - 1; ++index) {
 
-							Overlay overlay = Kymoimp.getOverlay();
-							if (overlay == null) {
-								overlay = new Overlay();
-								Kymoimp.setOverlay(overlay);
+							Overlay overlayB = KymoimpB.getOverlay();
+							if (overlayB == null) {
+								overlayB = new Overlay();
+								KymoimpB.setOverlay(overlayB);
 							}
-
 							Line newline = new Line(lengthtimeend.get(index)[0], lengthtimeend.get(index)[1],
 									lengthtimeend.get(index + 1)[0], lengthtimeend.get(index + 1)[1]);
 							newline.setFillColor(colorDraw);
 
-							overlay.add(newline);
+							overlayB.add(newline);
 
-							Kymoimp.setOverlay(overlay);
-							RoiManager roimanager = RoiManager.getInstance();
+							KymoimpB.setOverlay(overlayB);
+						//	RoiManager roimanager = RoiManager.getInstance();
 
-							roimanager.addRoi(newline);
+						//	roimanager.addRoi(newline);
 						}
-						Kymoimp.show();
+						KymoimpB.show();
 					}
 
 					if (SaveXLS)
@@ -5980,10 +5897,16 @@ public class InteractiveMT implements PlugIn {
 
 		GenericDialog gd = new GenericDialog("Model Choice for sub-pixel Localization");
 		String[] LineModel = { "GaussianLines", "SecondOrderPolynomial", "ThridOrderPolynomial" };
+		
 		int indexmodel = 0;
 
 		gd.addChoice("Choose your model: ", LineModel, LineModel[indexmodel]);
 		gd.addCheckbox("Do Gaussian Mask Fits", Domask);
+		gd.addStringField("Advanced Options for the optimizer"," Options ");
+		gd.addNumericField("Min Intensity = R * Max Intensity along MT, R (enter 0.2 to 0.9) = ", Intensityratio, 3);
+		gd.addNumericField("Spacing between Gaussians = G * Min(Psf), G (enter 0.3 to 1.0) = ", Inispacing/ Math.min(psf[0], psf[1]), 3);
+		
+		
 		gd.showDialog();
 		indexmodel = gd.getNextChoiceIndex();
 		Domask = gd.getNextBoolean();
@@ -5994,7 +5917,11 @@ public class InteractiveMT implements PlugIn {
 			userChoiceModel = UserChoiceModel.Splineordersec;
 		if (indexmodel == 2)
 			userChoiceModel = UserChoiceModel.Splineorderthird;
-
+        Intensityratio = gd.getNextNumber();
+        Inispacing = gd.getNextNumber() * Math.min(psf[0], psf[1]);
+		
+        
+        
 		return !gd.wasCanceled();
 	}
 
@@ -6175,7 +6102,7 @@ public class InteractiveMT implements PlugIn {
 		final ImgFactory<UnsignedByteType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(input, type);
 		final Img<UnsignedByteType> output = factory.create(input, type);
 		// create a cursor for both images
-		RandomAccess<FloatType> ranac = input.randomAccess();
+		RandomAccess<FloatType> ranac = inputcopy.randomAccess();
 		Cursor<UnsignedByteType> cursorOutput = output.cursor();
 
 		// iterate over the input
@@ -6190,7 +6117,7 @@ public class InteractiveMT implements PlugIn {
 			// every Type supports T.set( T type )
 			cursorOutput.get().set((int) ranac.get().get());
 		}
-
+		
 		// return the copy
 		return output;
 	}
@@ -6228,11 +6155,22 @@ public class InteractiveMT implements PlugIn {
 				"/Users/varunkapoor/Documents/2017022Video1/2017-02-01_porcine_cy5seeds_cy3_12uM002_concatenated.tif");
 		ImagePlus Preprocessedimp = new Opener().openImage(
 				"/Users/varunkapoor/Documents/2017022Video1/BG2017-02-01_porcine_cy5seeds_cy3_12uM002_concatenated.tif");
-		ImagePlus kymoimp = new Opener().openImage("/Users/varunkapoor/Documents/2017022Video1/Kymograph3-1.tif");
+		ImagePlus kymoimp = new Opener().openImage("/Users/varunkapoor/Documents/2017022Video1/Kymograph8-1.tif");
+		
+		
 		RandomAccessibleInterval<FloatType> originalimg = ImageJFunctions.convertFloat(imp);
 		RandomAccessibleInterval<FloatType> originalPreprocessedimg = ImageJFunctions.convertFloat(Preprocessedimp);
 		RandomAccessibleInterval<FloatType> kymoimg = ImageJFunctions.convertFloat(kymoimp);
 
+		
+		new Normalize();
+
+		
+		FloatType minval = new FloatType(0);
+		FloatType maxval = new FloatType(1);
+		Normalize.normalize(Views.iterable(originalimg), minval, maxval);
+		Normalize.normalize(Views.iterable(originalPreprocessedimg), minval, maxval);
+		
 		double[] calibration = new double[] { imp.getCalibration().pixelWidth, imp.getCalibration().pixelHeight };
 
 		// MT2012017

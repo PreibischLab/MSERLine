@@ -58,8 +58,19 @@ implements OutputAlgorithm<Pair<ArrayList<Indexedlength>, ArrayList<Indexedlengt
 	public int iterations = 500;
 	public double cutoffdistance = 10;
 	public boolean halfgaussian = false;
-    public double Intensityratio = 0.5;
-    
+    public double Intensityratio;
+    public double Inispacing;
+	
+	public void setInispacing (double Inispacing){
+		
+		this.Inispacing = Inispacing;
+		
+	}
+	
+	public double getInispacing (){
+		
+		return Inispacing;
+	}
     
     /**
      * 
@@ -195,8 +206,8 @@ implements OutputAlgorithm<Pair<ArrayList<Indexedlength>, ArrayList<Indexedlengt
 
 	@Override
 	public boolean process() {
-		
-		
+		Intensityratio = getIntensityratio();
+		Inispacing = getInispacing();
 		startlist = new ArrayList<Indexedlength>();
 		endlist = new ArrayList<Indexedlength>();
 		for (int index = 0; index < imgs.size() ; ++index) {
@@ -290,7 +301,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 		
 
 		// This parameter is guess estimate for spacing between the Gaussians
-		MinandMax[2 * ndims] =   0.5 *Math.min(psf[0], psf[1]);
+		MinandMax[2 * ndims] =   Inispacing;
 		MinandMax[2 * ndims + 1] = maxintensityline; 
 		// This parameter guess estimates the background noise level
 		MinandMax[2 * ndims + 2] = 0.0; 
@@ -412,7 +423,7 @@ public ArrayList<Indexedlength> getEndPoints(){
    			
 
    			// This parameter is guess estimate for spacing between the Gaussians
-   			MinandMax[2 * ndims] =  0.5 * Math.min(psf[0], psf[1]);
+   			MinandMax[2 * ndims] =  Inispacing;
    			MinandMax[2 * ndims + 1] = maxintensityline; 
    			// This parameter guess estimates the background noise level
    			MinandMax[2 * ndims + 2] = 0; 
@@ -491,7 +502,7 @@ public ArrayList<Indexedlength> getEndPoints(){
 				}
 				fixed_param[ndims] = slope;
 				fixed_param[ndims + 1] = intercept;
-				fixed_param[ndims + 2] = 0.5 * Math.min(psf[0], psf[1]);
+				fixed_param[ndims + 2] = Inispacing;
 			
 				
 				

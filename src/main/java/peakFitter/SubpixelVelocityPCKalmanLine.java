@@ -64,13 +64,25 @@ import preProcessing.GetLocalmaxmin;
 		// LM solver iteration params
 		public int maxiter = 200;
 		public double lambda = 1e-2;
-		public double termepsilon = 1e-1;
+		public double termepsilon = 1e-2;
 		// Mask fits iteration param
 		public int iterations = 300;
 		public double cutoffdistance = 5;
 		public boolean halfgaussian = false;
-		public double Intensityratio = 0.25;
+		public double Intensityratio;
 		private final UserChoiceModel model;
+		public double Inispacing;
+		
+		public void setInispacing (double Inispacing){
+			
+			this.Inispacing = Inispacing;
+			
+		}
+		
+		public double getInispacing (){
+			
+			return Inispacing;
+		}
 
 		public void setCutoffdistance(double cutoffdistance) {
 			this.cutoffdistance = cutoffdistance;
@@ -155,7 +167,8 @@ import preProcessing.GetLocalmaxmin;
 
 		@Override
 		public boolean process() {
-
+			Intensityratio = getIntensityratio();
+			Inispacing = getInispacing();
 			final_paramliststart = new ArrayList<KalmanIndexedlength>();
 			final_paramlistend = new ArrayList<KalmanIndexedlength>();
 
@@ -362,7 +375,7 @@ import preProcessing.GetLocalmaxmin;
 					MinandMax[d + ndims] = maxVal[d];
 				}
 
-				MinandMax[2 * ndims] = 0.5 * Math.min(psf[0], psf[1]);
+				MinandMax[2 * ndims] = Inispacing;
 				MinandMax[2 * ndims + 1] = maxintensityline;
 				MinandMax[2 * ndims + 2] = 0;
 				for (int d = 0; d < ndims; ++d) {
@@ -459,7 +472,7 @@ import preProcessing.GetLocalmaxmin;
 					MinandMax[d + ndims] = maxVal[d];
 				}
 
-				MinandMax[2 * ndims] = 0.5 * Math.min(psf[0], psf[1]);
+				MinandMax[2 * ndims] = Inispacing;
 				MinandMax[2 * ndims + 1] = maxintensityline;
 				MinandMax[2 * ndims + 2] = 0;
 				for (int d = 0; d < ndims; ++d) {
@@ -614,7 +627,7 @@ import preProcessing.GetLocalmaxmin;
 				MinandMax[2 * ndims + 2] = maxintensityline;
 				MinandMax[2 * ndims + 3] = 0;
 				MinandMax[2 * ndims + 1] = iniparam.Curvature;
-				MinandMax[2 * ndims] =  0.5 * Math.min(psf[0], psf[1]);
+				MinandMax[2 * ndims] =  Inispacing;
 				
 				for (int d = 0; d < ndims; ++d) {
 
@@ -666,7 +679,7 @@ import preProcessing.GetLocalmaxmin;
 				MinandMax[2 * ndims + 3] = maxintensityline;
 				MinandMax[2 * ndims + 4] = 0;
 				MinandMax[2 * ndims + 1] = iniparam.Curvature;
-				MinandMax[2 * ndims] =  0.5 * Math.min(psf[0], psf[1]);
+				MinandMax[2 * ndims] =  Inispacing;
 				
 				for (int d = 0; d < ndims; ++d) {
 
@@ -713,7 +726,7 @@ import preProcessing.GetLocalmaxmin;
 				}
 				fixed_param[ndims] = iniparam.originalslope;
 				fixed_param[ndims + 1] = iniparam.originalintercept;
-				fixed_param[ndims + 2] =  0.5 * Math.min(psf[0], psf[1]);
+				fixed_param[ndims + 2] =  Inispacing;
 
 				PointSampleList<FloatType> datalist = gatherfullData(label);
 				final Cursor<FloatType> listcursor = datalist.localizingCursor();
