@@ -6,6 +6,7 @@ import java.awt.CardLayout;
 import java.awt.Checkbox;
 import java.awt.CheckboxGroup;
 import java.awt.Color;
+import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.Frame;
 import java.awt.GridBagConstraints;
@@ -51,6 +52,8 @@ import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
@@ -161,7 +164,9 @@ public class InteractiveMT implements PlugIn {
 	// IJ.getDirectory("imagej");
 	String addToName = "MT8porcineVKR0.65";
 	String addTrackToName = "MT8porcineVKR0.65";
-
+	ArrayList<float[]> deltadstart = new ArrayList<>();
+	ArrayList<float[]> deltadend = new ArrayList<>();
+	ArrayList<float[]> deltad = new ArrayList<>();
 	ArrayList<float[]> Length;
 	final int scrollbarSize = 1000;
 	final int scrollbarSizebig = 1000;
@@ -190,7 +195,7 @@ public class InteractiveMT implements PlugIn {
 	long minSizemax = 1000;
 	long maxSizemin = 100;
 	long maxSizemax = 10000;
-
+	double netdeltad = 0;
 	double Intensityratio = 0.5;
 	double Inispacing = 0.5;
 	int thirdDimensionslider = 0;
@@ -232,6 +237,7 @@ public class InteractiveMT implements PlugIn {
 	boolean isComputing = false;
 	boolean isStarted = false;
 	boolean redo = false;
+	boolean redoAccept = false;
 	boolean FindLinesViaMSER = false;
 	boolean FindLinesViaHOUGH = false;
 	boolean FindLinesViaMSERwHOUGH = false;
@@ -522,7 +528,7 @@ public class InteractiveMT implements PlugIn {
 		originalimg = ImageJFunctions.convertFloat(imp.duplicate());
 		originalPreprocessedimg = ImageJFunctions.convertFloat(preprocessedimp.duplicate());
 		calibration = new double[] { imp.getCalibration().pixelWidth, imp.getCalibration().pixelHeight };
-		Inispacing = 0.5 * Math.min(psf[0], psf[1]);
+		
 
 	}
 
@@ -571,6 +577,7 @@ public class InteractiveMT implements PlugIn {
 	public void run(String arg) {
 
 		UserchosenCostFunction = new SquareDistCostFunction();
+		Inispacing = 0.5 * Math.min(psf[0], psf[1]);
 		if (originalimg.numDimensions() < 3) {
 
 			thirdDimensionSize = 0;
@@ -859,6 +866,7 @@ public class InteractiveMT implements PlugIn {
 	JPanel panelSeventh = new JPanel();
 	JPanel panelEighth = new JPanel();
 	JPanel panelNinth = new JPanel();
+	JPanel panelTenth = new JPanel();
 
 	public void Card() {
 
@@ -875,6 +883,8 @@ public class InteractiveMT implements PlugIn {
 		panelCont.add(panelSeventh, "7");
 		panelCont.add(panelEighth, "8");
 		panelCont.add(panelNinth, "9");
+		panelCont.add(panelTenth, "10");
+		
 		// First Panel
 		panelFirst.setName("Preprocess and Determine Seeds");
 
@@ -968,7 +978,13 @@ public class InteractiveMT implements PlugIn {
 		mserwhough.addItemListener(new MserwHoughListener());
 
 		JPanel control = new JPanel();
+		
 		control.add(new JButton(new AbstractAction("\u22b2Prev") {
+
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1L;
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -977,6 +993,11 @@ public class InteractiveMT implements PlugIn {
 			}
 		}));
 		control.add(new JButton(new AbstractAction("Next\u22b3") {
+
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1L;
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -1231,8 +1252,8 @@ public class InteractiveMT implements PlugIn {
 		@Override
 		public void itemStateChanged(ItemEvent arg0) {
 
-			panelSeventh.removeAll();
-			panelSeventh.repaint();
+			
+			
 			final GridBagLayout layout = new GridBagLayout();
 			final GridBagConstraints c = new GridBagConstraints();
 			c.fill = GridBagConstraints.HORIZONTAL;
@@ -1253,9 +1274,16 @@ public class InteractiveMT implements PlugIn {
 			KymoimpB = ImageJFunctions.show(Kymoimg).duplicate();
 			final Label Select = new Label("Make Segmented Line selection");
 			final Button ExtractKymo = new Button("Extract Mask Co-ordinates :");
-			final Button ExtractBaseLine = new Button("Extract Baseline Co-ordinates :");
-			final Button GetLength = new Button("Get absolute Lengths :");
+			Select.setBackground(new Color(1, 0, 1));
+			Select.setForeground(new Color(255, 255, 255));
 			final Label Result = new Label("The generated file contains time (row 1) and length (row 2)");
+			Result.setBackground(new Color(1, 0, 1));
+			Result.setForeground(new Color(255, 255, 255));
+			
+			final Label Checkres = new Label("The tracker now performs an internal check on the results");
+			Checkres.setBackground(new Color(1, 0, 1));
+			Checkres.setForeground(new Color(255, 255, 255));
+		
 
 			if (analyzekymo) {
 				++c.gridy;
@@ -1277,17 +1305,29 @@ public class InteractiveMT implements PlugIn {
 				final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
 				final Button SkipframeandTrackEndPoints = new Button(
 						"TrackEndPoint (User specified first and last frame)");
-
+				final Button CheckResults = new Button("Check Results (then click next)");
 				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 200);
+				c.insets = new Insets(10, 10, 0, 175);
 				panelSeventh.add(TrackEndPoints, c);
 
 				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 200);
+				c.insets = new Insets(10, 10, 0, 175);
 				panelSeventh.add(SkipframeandTrackEndPoints, c);
+				
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 0);
+				panelSeventh.add(Checkres, c);
+				
+				++c.gridy;
+				c.insets = new Insets(10, 175, 0, 175);
+				panelSeventh.add(CheckResults, c);
+				
+			
+				
 
 				TrackEndPoints.addActionListener(new TrackendsListener());
 				SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
+				CheckResults.addActionListener(new CheckResultsListener());
 			}
 
 			if (showKalman) {
@@ -1353,20 +1393,35 @@ public class InteractiveMT implements PlugIn {
 				final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
 				final Button SkipframeandTrackEndPoints = new Button(
 						"TrackEndPoint (User specified first and last frame)");
+				final Button CheckResults = new Button("Check Results (then click next)");
+		
 
 				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 200);
+				c.insets = new Insets(10, 10, 0, 175);
 				panelSeventh.add(TrackEndPoints, c);
 
 				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 200);
+				c.insets = new Insets(10, 10, 0, 175);
 				panelSeventh.add(SkipframeandTrackEndPoints, c);
+				
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 0);
+				panelSeventh.add(Checkres, c);
+				
+				++c.gridy;
+				c.insets = new Insets(10, 175, 0, 175);
+				panelSeventh.add(CheckResults, c);
+				
+			
 
 				TrackEndPoints.addActionListener(new TrackendsListener());
 				SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
+				CheckResults.addActionListener(new CheckResultsListener());
+				
 
 			}
 
+			panelSeventh.validate();
 			panelSeventh.setVisible(true);
 
 		}
@@ -1495,29 +1550,6 @@ public class InteractiveMT implements PlugIn {
 
 				showDeterministic = true;
 
-				panelSeventh.removeAll();
-				panelSeventh.repaint();
-				final GridBagLayout layout = new GridBagLayout();
-				final GridBagConstraints c = new GridBagConstraints();
-				c.fill = GridBagConstraints.HORIZONTAL;
-				c.gridx = 0;
-				c.gridy = 0;
-				c.weightx = 1;
-				panelSeventh.setLayout(layout);
-				final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
-				final Button SkipframeandTrackEndPoints = new Button(
-						"TrackEndPoint (User specified first and last frame)");
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 200);
-				panelSeventh.add(TrackEndPoints, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 200);
-				panelSeventh.add(SkipframeandTrackEndPoints, c);
-
-				TrackEndPoints.addActionListener(new TrackendsListener());
-				SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
 			}
 
 		}
@@ -1533,88 +1565,7 @@ public class InteractiveMT implements PlugIn {
 			} else if (arg0.getStateChange() == ItemEvent.SELECTED) {
 
 				showKalman = true;
-				panelSeventh.removeAll();
-				panelSeventh.repaint();
-				final GridBagLayout layout = new GridBagLayout();
-				final GridBagConstraints c = new GridBagConstraints();
-				c.fill = GridBagConstraints.HORIZONTAL;
-				c.gridx = 0;
-				c.gridy = 0;
-				c.weightx = 1;
-				panelSeventh.setLayout(layout);
-
-				final Scrollbar rad = new Scrollbar(Scrollbar.HORIZONTAL, initialSearchradiusInit, 10, 0,
-						10 + scrollbarSize);
-				initialSearchradius = computeValueFromScrollbarPosition(initialSearchradiusInit, initialSearchradiusMin,
-						initialSearchradiusMax, scrollbarSize);
-
-				final Label SearchText = new Label("Initial Search Radius: " + initialSearchradius, Label.CENTER);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 50);
-				panelSeventh.add(SearchText, c);
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 50);
-				panelSeventh.add(rad, c);
-
-				final Scrollbar Maxrad = new Scrollbar(Scrollbar.HORIZONTAL, maxSearchradiusInit, 10, 0,
-						10 + scrollbarSize);
-				maxSearchradius = computeValueFromScrollbarPosition(maxSearchradiusInit, maxSearchradiusMin,
-						maxSearchradiusMax, scrollbarSize);
-				final Label MaxMovText = new Label("Max Movment of Objects per frame: " + maxSearchradius,
-						Label.CENTER);
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 50);
-				panelSeventh.add(MaxMovText, c);
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 50);
-				panelSeventh.add(Maxrad, c);
-
-				final Scrollbar Miss = new Scrollbar(Scrollbar.HORIZONTAL, missedframesInit, 10, 0, 10 + scrollbarSize);
-				Miss.setBlockIncrement(1);
-				missedframes = (int) computeValueFromScrollbarPosition(missedframesInit, missedframesMin,
-						missedframesMax, scrollbarSize);
-				final Label LostText = new Label("Objects allowed to be lost for #frames" + missedframes, Label.CENTER);
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 50);
-				panelSeventh.add(LostText, c);
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 50);
-				panelSeventh.add(Miss, c);
-
-				final Checkbox Costfunc = new Checkbox("Squared Distance Cost Function");
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 50);
-				panelSeventh.add(Costfunc, c);
-
-				rad.addAdjustmentListener(
-						new SearchradiusListener(SearchText, initialSearchradiusMin, initialSearchradiusMax));
-				Maxrad.addAdjustmentListener(
-						new maxSearchradiusListener(MaxMovText, maxSearchradiusMin, maxSearchradiusMax));
-				Miss.addAdjustmentListener(new missedFrameListener(LostText, missedframesMin, missedframesMax));
-
-				Costfunc.addItemListener(new CostfunctionListener());
-
-				MTtrackerstart = new KFsearch(AllstartKalman, UserchosenCostFunction, maxSearchradius,
-						initialSearchradius, thirdDimension, thirdDimensionSize, missedframes);
-
-				MTtrackerend = new KFsearch(AllendKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,
-						thirdDimension, thirdDimensionSize, missedframes);
-
-				final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
-				final Button SkipframeandTrackEndPoints = new Button(
-						"TrackEndPoint (User specified first and last frame)");
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 200);
-				panelSeventh.add(TrackEndPoints, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 200);
-				panelSeventh.add(SkipframeandTrackEndPoints, c);
-
-				TrackEndPoints.addActionListener(new TrackendsListener());
-				SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
+				
 
 			}
 
@@ -1666,7 +1617,8 @@ public class InteractiveMT implements PlugIn {
 			final GridBagConstraints c = new GridBagConstraints();
 
 			panelFourth.removeAll();
-			panelFourth.repaint();
+			
+			
 			panelFourth.setLayout(layout);
 			c.fill = GridBagConstraints.HORIZONTAL;
 			c.gridx = 0;
@@ -1712,7 +1664,8 @@ public class InteractiveMT implements PlugIn {
 			mser.addItemListener(new UpdateMserListener());
 			hough.addItemListener(new UpdateHoughListener());
 			mserwhough.addItemListener(new UpdateMserwHoughListener());
-
+			panelFourth.validate();
+			panelFourth.repaint();
 		}
 	}
 
@@ -1827,7 +1780,8 @@ public class InteractiveMT implements PlugIn {
 			final GridBagLayout layout = new GridBagLayout();
 			final GridBagConstraints c = new GridBagConstraints();
 			panelFourth.removeAll();
-			panelFourth.repaint();
+			
+			
 			panelFourth.setLayout(layout);
 			c.fill = GridBagConstraints.HORIZONTAL;
 			c.gridx = 0;
@@ -1872,7 +1826,8 @@ public class InteractiveMT implements PlugIn {
 			mser.addItemListener(new UpdateMserListener());
 			hough.addItemListener(new UpdateHoughListener());
 			mserwhough.addItemListener(new UpdateMserwHoughListener());
-
+			panelFourth.validate();
+			panelFourth.repaint();
 		}
 
 	}
@@ -2385,9 +2340,7 @@ public class InteractiveMT implements PlugIn {
 			ArrayList<float[]> deltadeltaLstart = new ArrayList<>();
 			ArrayList<float[]> deltadeltaLend = new ArrayList<>();
 			
-			ArrayList<float[]> deltadstart = new ArrayList<>();
-			ArrayList<float[]> deltadend = new ArrayList<>();
-			ArrayList<float[]> deltad = new ArrayList<>();
+			
 			ArrayList<float[]> deltadeltaL = new ArrayList<>();
 
 			for (int index = 1; index < lengthtimestart.size(); ++index) {
@@ -2683,6 +2636,428 @@ public class InteractiveMT implements PlugIn {
 		return this.imp;
 	}
 
+protected class AcceptResultsListener implements ActionListener {
+		
+		@Override
+		public void actionPerformed(final ActionEvent arg0) {
+			redoAccept = false;
+			
+			final GridBagLayout layout = new GridBagLayout();
+			final GridBagConstraints c = new GridBagConstraints();
+			
+			
+			panelNinth.removeAll();
+			
+			
+			panelNinth.setLayout(layout);
+			c.fill = GridBagConstraints.HORIZONTAL;
+			c.gridx = 0;
+			c.gridy = 0;
+			c.weightx = 4;
+			c.weighty = 1.5;
+			
+			final Button Analyze = new Button("Do Rough Analysis");
+
+			final Scrollbar startS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 10, 0,
+					10 + scrollbarSize);
+			final Scrollbar endS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 10, 0, 10 + scrollbarSize);
+			starttime = (int) computeValueFromScrollbarPosition(thirdDimensionsliderInit, 0, thirdDimensionSize,
+					scrollbarSize);
+			endtime = (int) computeValueFromScrollbarPosition(thirdDimensionsliderInit, 0, thirdDimensionSize,
+					scrollbarSize);
+			final Label startText = new Label("startFrame = ", Label.CENTER);
+			final Label endText = new Label("endFrame = ", Label.CENTER);
+			final Label Done = new Label("The results have been compiled and stored, you can now exit", Label.CENTER);
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelNinth.add(startText, c);
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelNinth.add(startS, c);
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelNinth.add(endText, c);
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelNinth.add(endS, c);
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelNinth.add(Analyze, c);
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 200);
+			panelNinth.add(Done, c);
+				startS.addAdjustmentListener(
+						new starttimeListener(startText, thirdDimensionsliderInit, thirdDimensionSize, scrollbarSize, startS));
+				endS.addAdjustmentListener(
+						new endtimeListener(endText, thirdDimensionsliderInit, thirdDimensionSize, scrollbarSize, endS));
+				Analyze.addActionListener(new AnalyzeListener());
+			
+			
+				panelNinth.validate();
+				panelNinth.repaint();
+			
+			panelTenth.removeAll();
+			
+			panelTenth.setLayout(layout);
+			c.fill = GridBagConstraints.HORIZONTAL;
+			c.gridx = 0;
+			c.gridy = 0;
+			c.weightx = 4;
+			c.weighty = 1.5;
+			
+		
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelTenth.add(startText, c);
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelTenth.add(startS, c);
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelTenth.add(endText, c);
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelTenth.add(endS, c);
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelTenth.add(Analyze, c);
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 200);
+			panelTenth.add(Done, c);
+				startS.addAdjustmentListener(
+						new starttimeListener(startText, thirdDimensionsliderInit, thirdDimensionSize, scrollbarSize, startS));
+				endS.addAdjustmentListener(
+						new endtimeListener(endText, thirdDimensionsliderInit, thirdDimensionSize, scrollbarSize, endS));
+				Analyze.addActionListener(new AnalyzeListener());
+				
+				panelTenth.validate();
+				panelTenth.repaint();
+		}
+		
+		
+		}
+	
+protected class RefuseResultsListener implements ActionListener {
+	
+	@Override
+	public void actionPerformed(final ActionEvent arg0) {
+		redoAccept = true;
+
+		Allstart.clear();
+		Allend.clear();
+		AllstartKalman.clear();
+		AllendKalman.clear();
+		lengthtimestart.clear();
+		lengthtimeend.clear();
+		deltad.clear();
+		deltadstart.clear();
+		deltadend.clear();
+		Accountedframes.clear();
+		final GridBagLayout layout = new GridBagLayout();
+		final GridBagConstraints c = new GridBagConstraints();
+		panelEighth.removeAll();
+		
+		panelEighth.setLayout(layout);
+		c.fill = GridBagConstraints.HORIZONTAL;
+		c.gridx = 0;
+		c.gridy = 0;
+		c.weightx = 4;
+		c.weighty = 1.5;
+		
+		
+		
+		
+		
+		if (showDeterministic) {
+			final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
+			final Button SkipframeandTrackEndPoints = new Button(
+					"TrackEndPoint (User specified first and last frame)");
+			final Button CheckResults = new Button("Check Results (then click next)");
+			
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 175);
+			panelEighth.add(TrackEndPoints, c);
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 175);
+			panelEighth.add(SkipframeandTrackEndPoints, c);
+			
+			++c.gridy;
+			c.insets = new Insets(10, 175, 0, 175);
+			panelEighth.add(CheckResults, c);
+			
+
+			TrackEndPoints.addActionListener(new TrackendsListener());
+			SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
+			CheckResults.addActionListener(new CheckResultsListener());
+			
+			panelEighth.validate();
+			panelEighth.repaint();
+			
+		}
+
+		if (showKalman) {
+
+			final Scrollbar rad = new Scrollbar(Scrollbar.HORIZONTAL, initialSearchradiusInit, 10, 0,
+					10 + scrollbarSize);
+			initialSearchradius = computeValueFromScrollbarPosition(initialSearchradiusInit, initialSearchradiusMin,
+					initialSearchradiusMax, scrollbarSize);
+
+			final Label SearchText = new Label("Initial Search Radius: " + initialSearchradius, Label.CENTER);
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelEighth.add(SearchText, c);
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelEighth.add(rad, c);
+
+			final Scrollbar Maxrad = new Scrollbar(Scrollbar.HORIZONTAL, maxSearchradiusInit, 10, 0,
+					10 + scrollbarSize);
+			maxSearchradius = computeValueFromScrollbarPosition(maxSearchradiusInit, maxSearchradiusMin,
+					maxSearchradiusMax, scrollbarSize);
+			final Label MaxMovText = new Label("Max Movment of Objects per frame: " + maxSearchradius,
+					Label.CENTER);
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelEighth.add(MaxMovText, c);
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelEighth.add(Maxrad, c);
+
+			final Scrollbar Miss = new Scrollbar(Scrollbar.HORIZONTAL, missedframesInit, 10, 0, 10 + scrollbarSize);
+			Miss.setBlockIncrement(1);
+			missedframes = (int) computeValueFromScrollbarPosition(missedframesInit, missedframesMin,
+					missedframesMax, scrollbarSize);
+			final Label LostText = new Label("Objects allowed to be lost for #frames" + missedframes, Label.CENTER);
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelEighth.add(LostText, c);
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelEighth.add(Miss, c);
+
+			final Checkbox Costfunc = new Checkbox("Squared Distance Cost Function");
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelEighth.add(Costfunc, c);
+
+			rad.addAdjustmentListener(
+					new SearchradiusListener(SearchText, initialSearchradiusMin, initialSearchradiusMax));
+			Maxrad.addAdjustmentListener(
+					new maxSearchradiusListener(MaxMovText, maxSearchradiusMin, maxSearchradiusMax));
+			Miss.addAdjustmentListener(new missedFrameListener(LostText, missedframesMin, missedframesMax));
+
+			Costfunc.addItemListener(new CostfunctionListener());
+
+			MTtrackerstart = new KFsearch(AllstartKalman, UserchosenCostFunction, maxSearchradius,
+					initialSearchradius, thirdDimension, thirdDimensionSize, missedframes);
+
+			MTtrackerend = new KFsearch(AllendKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,
+					thirdDimension, thirdDimensionSize, missedframes);
+
+			final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
+			final Button SkipframeandTrackEndPoints = new Button(
+					"TrackEndPoint (User specified first and last frame)");
+			final Button CheckResults = new Button("Check Results (then click next)");
+			final Button AcceptResults = new Button("Accept Results");
+			final Button RefuseResults = new Button("Refuse Results");
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 175);
+			panelEighth.add(TrackEndPoints, c);
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 175);
+			panelEighth.add(SkipframeandTrackEndPoints, c);
+			++c.gridy;
+			c.insets = new Insets(10, 175, 0, 175);
+			panelEighth.add(CheckResults, c);
+			
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 200);
+			panelEighth.add(AcceptResults, c);
+			
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 200);
+			panelEighth.add(RefuseResults, c);
+
+			TrackEndPoints.addActionListener(new TrackendsListener());
+			SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
+			CheckResults.addActionListener(new CheckResultsListener());
+			AcceptResults.addActionListener(new AcceptResultsListener());
+			
+			RefuseResults.addActionListener(new RefuseResultsListener());
+			
+			panelEighth.validate();
+			panelEighth.repaint();
+			
+		}
+		
+		
+	}
+	
+	
+	}
+
+
+	protected class CheckResultsListener implements ActionListener {
+		
+		@Override
+		public void actionPerformed(final ActionEvent arg0) {
+			
+			
+			if (redo){
+				final GridBagLayout layout = new GridBagLayout();
+				final GridBagConstraints c = new GridBagConstraints();
+				panelEighth.removeAll();
+				
+				panelEighth.setLayout(layout);
+				c.fill = GridBagConstraints.HORIZONTAL;
+				c.gridx = 0;
+				c.gridy = 0;
+				c.weightx = 4;
+				c.weighty = 1.5;
+
+				JLabel warning = new JLabel(UIManager.getIcon("OptionPane.warningIcon"));
+				
+				final Label RedotextA = new Label("MTtracker redo = ", Label.CENTER);
+				RedotextA.setText("MTtracker noticed that your intensity ration setting in the optimizer step caused the tracker to identify the end point of the line wrongly in some frame, this"
+						+ "leads to a wrong number being added over the next frames causing an upward or downward shift in the Kymograph"
+						+ "If your R value was > 0.8 choose a lower value, if it was < 0.5 choose a greater value"
+						+ "If However the mistake was in Kymograph, then ignore this step and go next to compute rates."
+						);
+					
+				
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 200);
+				panelEighth.add(warning, c);
+				
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 200);
+				panelEighth.add(RedotextA, c);
+				
+				final Button AcceptResults = new Button("Accept Results");
+				final Button RefuseResults = new Button("Refuse Results, do over");
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 20);
+				panelEighth.add(AcceptResults, c);
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 20);
+				panelEighth.add(RefuseResults, c);
+				
+				AcceptResults.addActionListener(new AcceptResultsListener());
+				RefuseResults.addActionListener(new RefuseResultsListener());
+				
+				
+				
+				
+				RedotextA.setBackground(new Color(1, 0, 1));
+				RedotextA.setForeground(new Color(255, 255, 255));
+				panelEighth.validate();
+				panelEighth.repaint();
+				
+			}
+			
+			else{
+				final GridBagLayout layout = new GridBagLayout();
+				final GridBagConstraints c = new GridBagConstraints();
+				panelEighth.removeAll();
+				
+				
+				panelEighth.setLayout(layout);
+				c.fill = GridBagConstraints.HORIZONTAL;
+				c.gridx = 0;
+				c.gridy = 0;
+				c.weightx = 4;
+				c.weighty = 1.5;
+				
+				final Label SuccessA = new Label(" Congratulations: that is quite close to the Kymograph, + ", Label.CENTER);
+				final Label SuccessB = new Label(" now you can compute rates, choose start and end frame: ", Label.CENTER);
+				
+				final Label Done = new Label("The results have been compiled and stored, you can now exit", Label.CENTER);
+
+				final Button Analyze = new Button("Do Rough Analysis");
+
+				final Scrollbar startS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 10, 0,
+						10 + scrollbarSize);
+				final Scrollbar endS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 10, 0, 10 + scrollbarSize);
+				starttime = (int) computeValueFromScrollbarPosition(thirdDimensionsliderInit, 0, thirdDimensionSize,
+						scrollbarSize);
+				endtime = (int) computeValueFromScrollbarPosition(thirdDimensionsliderInit, 0, thirdDimensionSize,
+						scrollbarSize);
+				final Label startText = new Label("startFrame = ", Label.CENTER);
+				final Label endText = new Label("endFrame = ", Label.CENTER);
+				
+				
+			
+				
+				SuccessA.setBackground(new Color(1, 0, 1));
+				SuccessA.setForeground(new Color(255, 255, 255));
+				
+				SuccessB.setBackground(new Color(1, 0, 1));
+				SuccessB.setForeground(new Color(255, 255, 255));
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelEighth.add(SuccessA, c);
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelEighth.add(SuccessB, c);
+				
+				
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelEighth.add(startText, c);
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelEighth.add(startS, c);
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelEighth.add(endText, c);
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelEighth.add(endS, c);
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelEighth.add(Analyze, c);
+				
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelEighth.add(Done, c);
+			
+			startS.addAdjustmentListener(
+					new starttimeListener(startText, thirdDimensionsliderInit, thirdDimensionSize, scrollbarSize, startS));
+			endS.addAdjustmentListener(
+					new endtimeListener(endText, thirdDimensionsliderInit, thirdDimensionSize, scrollbarSize, endS));
+			Analyze.addActionListener(new AnalyzeListener());
+			
+			panelEighth.validate();
+			panelEighth.repaint();
+			
+				
+			}
+			
+			
+			
+		}
+		
+		
+		
+		
+	}
+	
+	
 	protected class SkipFramesandTrackendsListener implements ActionListener {
 
 		@Override
@@ -3572,9 +3947,7 @@ public class InteractiveMT implements PlugIn {
 
 				}
 				rtAll.show("Start and End of MT, respectively");
-				ArrayList<float[]> deltadstart = new ArrayList<>();
-				ArrayList<float[]> deltadend = new ArrayList<>();
-				ArrayList<float[]> deltad = new ArrayList<>();
+				
 				if (analyzekymo){
 					double lengthcheckstart = 0;
 					double lengthcheckend = 0;
@@ -3619,7 +3992,6 @@ public class InteractiveMT implements PlugIn {
 				}
 				
 				deltad =  (lengthcheckstart >= lengthcheckend)? deltadstart:deltadend;
-				double netdeltad = 0;
 				for (int index = 0; index < deltad.size(); ++index){
 					
 					for (int secindex = 0; secindex < Accountedframes.size(); ++secindex){
@@ -3639,234 +4011,9 @@ public class InteractiveMT implements PlugIn {
 					
 					redo = true;
 					
-					Allstart.clear();
-					Allend.clear();
-					AllstartKalman.clear();
-					AllendKalman.clear();
-					lengthtimestart.clear();
-					lengthtimeend.clear();
-					deltad.clear();
-					deltadstart.clear();
-					deltadend.clear();
-					Accountedframes.clear();
 				}
-				final GridBagLayout layout = new GridBagLayout();
-				final GridBagConstraints c = new GridBagConstraints();
-
-				panelEighth.setLayout(layout);
-				
-				if (redo){
-					
-					
-					panelEighth.removeAll();
-					panelEighth.repaint();
-					
-					final Label RedotextA = new Label("MTtracker noticed that your intensity ratio R setting in the optimizer step  = +", Label.CENTER);
-					final Label RedotextB = new Label("caused the tracker to identify the end point of the line wrongly in some frame = +", Label.CENTER);
-					final Label RedotextC = new Label("this leads to a wrong number being added over the next frames causing an upward shift in the Kymograph = + ", Label.CENTER);
-					final Label RedotextD = new Label("If your R value was > 0.8 choose a lower value, if it was < 0.5 choose a greater value  = +", Label.CENTER);
-							
-					panelNinth.removeAll();
-					panelNinth.repaint();
-					
-					final Label Goback = new Label("Go back to redo tracker", Label.CENTER);
-
-					++c.gridy;
-					c.insets = new Insets(10, 10, 0, 200);
-					panelNinth.add(Goback, c);
-					
-					++c.gridy;
-					c.insets = new Insets(10, 10, 0, 200);
-					panelEighth.add(RedotextA, c);
-					
-					++c.gridy;
-					c.insets = new Insets(10, 10, 0, 200);
-					panelEighth.add(RedotextB, c);
-					
-					++c.gridy;
-					c.insets = new Insets(10, 10, 0, 200);
-					panelEighth.add(RedotextC, c);
-					
-					++c.gridy;
-					c.insets = new Insets(10, 10, 0, 200);
-					panelEighth.add(RedotextD, c);
-					
-					RedotextA.setBackground(new Color(1, 0, 1));
-					RedotextA.setForeground(new Color(255, 255, 255));
-					
-					RedotextB.setBackground(new Color(1, 0, 1));
-					RedotextB.setForeground(new Color(255, 255, 255));
-					
-					RedotextC.setBackground(new Color(1, 0, 1));
-					RedotextC.setForeground(new Color(255, 255, 255));
-					
-					RedotextD.setBackground(new Color(1, 0, 1));
-					RedotextD.setForeground(new Color(255, 255, 255));
-					
-					
-					if (showDeterministic) {
-						final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
-						final Button SkipframeandTrackEndPoints = new Button(
-								"TrackEndPoint (User specified first and last frame)");
-
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 200);
-						panelEighth.add(TrackEndPoints, c);
-
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 200);
-						panelEighth.add(SkipframeandTrackEndPoints, c);
-
-						TrackEndPoints.addActionListener(new TrackendsListener());
-						SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
-					}
-
-					if (showKalman) {
-
-						final Scrollbar rad = new Scrollbar(Scrollbar.HORIZONTAL, initialSearchradiusInit, 10, 0,
-								10 + scrollbarSize);
-						initialSearchradius = computeValueFromScrollbarPosition(initialSearchradiusInit, initialSearchradiusMin,
-								initialSearchradiusMax, scrollbarSize);
-
-						final Label SearchText = new Label("Initial Search Radius: " + initialSearchradius, Label.CENTER);
-
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 50);
-						panelEighth.add(SearchText, c);
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 50);
-						panelEighth.add(rad, c);
-
-						final Scrollbar Maxrad = new Scrollbar(Scrollbar.HORIZONTAL, maxSearchradiusInit, 10, 0,
-								10 + scrollbarSize);
-						maxSearchradius = computeValueFromScrollbarPosition(maxSearchradiusInit, maxSearchradiusMin,
-								maxSearchradiusMax, scrollbarSize);
-						final Label MaxMovText = new Label("Max Movment of Objects per frame: " + maxSearchradius,
-								Label.CENTER);
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 50);
-						panelEighth.add(MaxMovText, c);
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 50);
-						panelEighth.add(Maxrad, c);
-
-						final Scrollbar Miss = new Scrollbar(Scrollbar.HORIZONTAL, missedframesInit, 10, 0, 10 + scrollbarSize);
-						Miss.setBlockIncrement(1);
-						missedframes = (int) computeValueFromScrollbarPosition(missedframesInit, missedframesMin,
-								missedframesMax, scrollbarSize);
-						final Label LostText = new Label("Objects allowed to be lost for #frames" + missedframes, Label.CENTER);
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 50);
-						panelEighth.add(LostText, c);
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 50);
-						panelEighth.add(Miss, c);
-
-						final Checkbox Costfunc = new Checkbox("Squared Distance Cost Function");
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 50);
-						panelEighth.add(Costfunc, c);
-
-						rad.addAdjustmentListener(
-								new SearchradiusListener(SearchText, initialSearchradiusMin, initialSearchradiusMax));
-						Maxrad.addAdjustmentListener(
-								new maxSearchradiusListener(MaxMovText, maxSearchradiusMin, maxSearchradiusMax));
-						Miss.addAdjustmentListener(new missedFrameListener(LostText, missedframesMin, missedframesMax));
-
-						Costfunc.addItemListener(new CostfunctionListener());
-
-						MTtrackerstart = new KFsearch(AllstartKalman, UserchosenCostFunction, maxSearchradius,
-								initialSearchradius, thirdDimension, thirdDimensionSize, missedframes);
-
-						MTtrackerend = new KFsearch(AllendKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,
-								thirdDimension, thirdDimensionSize, missedframes);
-
-						final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
-						final Button SkipframeandTrackEndPoints = new Button(
-								"TrackEndPoint (User specified first and last frame)");
-
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 200);
-						panelEighth.add(TrackEndPoints, c);
-
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 200);
-						panelEighth.add(SkipframeandTrackEndPoints, c);
-
-						TrackEndPoints.addActionListener(new TrackendsListener());
-						SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
-
-					}
-
-					
-					
-				}
-				
-				else{
-				
-					panelEighth.removeAll();
-					panelEighth.repaint();
-					
-					panelNinth.removeAll();
-					panelNinth.repaint();
-					final Label Done = new Label("The results have been compiled and stored, you can now exit", Label.CENTER);
-
-					++c.gridy;
-					c.insets = new Insets(10, 10, 0, 200);
-					panelNinth.add(Done, c);
-					final Button Analyze = new Button("Do Rough Analysis");
-
-					final Scrollbar startS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 10, 0,
-							10 + scrollbarSize);
-					final Scrollbar endS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 10, 0, 10 + scrollbarSize);
-					starttime = (int) computeValueFromScrollbarPosition(thirdDimensionsliderInit, 0, thirdDimensionSize,
-							scrollbarSize);
-					endtime = (int) computeValueFromScrollbarPosition(thirdDimensionsliderInit, 0, thirdDimensionSize,
-							scrollbarSize);
-					final Label startText = new Label("startFrame = ", Label.CENTER);
-					final Label endText = new Label("endFrame = ", Label.CENTER);
-					final Label SuccessA = new Label(" Congratulations: The results are quite close to the Kymograph, + ", Label.CENTER);
-					final Label SuccessB = new Label(" now you can compute rates from a given start to an end frame: ", Label.CENTER);
-					
-					SuccessA.setBackground(new Color(1, 0, 1));
-					SuccessA.setForeground(new Color(255, 255, 255));
-					
-					SuccessB.setBackground(new Color(1, 0, 1));
-					SuccessB.setForeground(new Color(255, 255, 255));
-					++c.gridy;
-					c.insets = new Insets(10, 10, 0, 50);
-					panelEighth.add(SuccessA, c);
-					++c.gridy;
-					c.insets = new Insets(10, 10, 0, 50);
-					panelEighth.add(SuccessB, c);
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 50);
-				panelEighth.add(startText, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 50);
-				panelEighth.add(startS, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 50);
-				panelEighth.add(endText, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 50);
-				panelEighth.add(endS, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 50);
-				panelEighth.add(Analyze, c);
-
-				startS.addAdjustmentListener(
-						new starttimeListener(startText, thirdDimensionsliderInit, thirdDimensionSize, scrollbarSize, startS));
-				endS.addAdjustmentListener(
-						new endtimeListener(endText, thirdDimensionsliderInit, thirdDimensionSize, scrollbarSize, endS));
-				Analyze.addActionListener(new AnalyzeListener());
-				}
-				
-				
+				else
+					redo = false;
 				
 				
 				
@@ -4733,9 +4880,7 @@ public class InteractiveMT implements PlugIn {
 				}
 				rtAll.show("Start and End of MT");
 				
-				ArrayList<float[]> deltadstart = new ArrayList<>();
-				ArrayList<float[]> deltadend = new ArrayList<>();
-				ArrayList<float[]> deltad = new ArrayList<>();
+				
 				if (analyzekymo){
 					double lengthcheckstart = 0;
 					double lengthcheckend = 0;
@@ -4780,7 +4925,7 @@ public class InteractiveMT implements PlugIn {
 				}
 				
 				deltad =  (lengthcheckstart >= lengthcheckend)? deltadstart:deltadend;
-				double netdeltad = 0;
+				
 				for (int index = 0; index < deltad.size(); ++index){
 					
 					for (int secindex = 0; secindex < Accountedframes.size(); ++secindex){
@@ -4795,249 +4940,16 @@ public class InteractiveMT implements PlugIn {
 				netdeltad/=deltad.size();
 				
 				System.out.println(netdeltad);
+			
 				if (netdeltad > deltadcutoff){
 					
 				redo = true;
 				
-				Allstart.clear();
-				Allend.clear();
-				AllstartKalman.clear();
-				AllendKalman.clear();
-				lengthtimestart.clear();
-				lengthtimeend.clear();
-				deltad.clear();
-				deltadstart.clear();
-				deltadend.clear();
-				Accountedframes.clear();
 				
 				
 				}
-				final GridBagLayout layout = new GridBagLayout();
-				final GridBagConstraints c = new GridBagConstraints();
-
-				panelEighth.setLayout(layout);
-				
-				if (redo){
-					
-					panelEighth.removeAll();
-					panelEighth.repaint();
-					
-					panelNinth.removeAll();
-					panelNinth.repaint();
-					
-					final Label Goback = new Label("Go back to redo tracker", Label.CENTER);
-
-					++c.gridy;
-					c.insets = new Insets(10, 10, 0, 200);
-					panelNinth.add(Goback, c);
-					
-					final Label RedotextA = new Label("MTtracker noticed that your intensity ratio R setting in the optimizer step + = ", Label.CENTER);
-					final Label RedotextB = new Label("caused the tracker to identify the end point of the line wrongly in some frame += ", Label.CENTER);
-					final Label RedotextC = new Label("this leads to a wrong number being added over the next frames causing an upward shift in the Kymograph += ", Label.CENTER);
-					final Label RedotextD = new Label("If your R value was > 0.8 choose a lower value, if it was < 0.5 choose a greater value  += ", Label.CENTER);
-							
-					
-					
-					
-					++c.gridy;
-					c.insets = new Insets(10, 10, 0, 200);
-					panelEighth.add(RedotextA, c);
-					
-					++c.gridy;
-					c.insets = new Insets(10, 10, 0, 200);
-					panelEighth.add(RedotextB, c);
-					
-					++c.gridy;
-					c.insets = new Insets(10, 10, 0, 200);
-					panelEighth.add(RedotextC, c);
-					
-					++c.gridy;
-					c.insets = new Insets(10, 10, 0, 200);
-					panelEighth.add(RedotextD, c);
-					
-					
-					
-					RedotextA.setBackground(new Color(1, 0, 1));
-					RedotextA.setForeground(new Color(255, 255, 255));
-					
-					RedotextB.setBackground(new Color(1, 0, 1));
-					RedotextB.setForeground(new Color(255, 255, 255));
-					
-					RedotextC.setBackground(new Color(1, 0, 1));
-					RedotextC.setForeground(new Color(255, 255, 255));
-					
-					RedotextD.setBackground(new Color(1, 0, 1));
-					RedotextD.setForeground(new Color(255, 255, 255));
-					
-					
-					if (showDeterministic) {
-						final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
-						final Button SkipframeandTrackEndPoints = new Button(
-								"TrackEndPoint (User specified first and last frame)");
-
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 200);
-						panelEighth.add(TrackEndPoints, c);
-
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 200);
-						panelEighth.add(SkipframeandTrackEndPoints, c);
-
-						TrackEndPoints.addActionListener(new TrackendsListener());
-						SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
-					}
-
-					if (showKalman) {
-
-						final Scrollbar rad = new Scrollbar(Scrollbar.HORIZONTAL, initialSearchradiusInit, 10, 0,
-								10 + scrollbarSize);
-						initialSearchradius = computeValueFromScrollbarPosition(initialSearchradiusInit, initialSearchradiusMin,
-								initialSearchradiusMax, scrollbarSize);
-
-						final Label SearchText = new Label("Initial Search Radius: " + initialSearchradius, Label.CENTER);
-
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 50);
-						panelEighth.add(SearchText, c);
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 50);
-						panelEighth.add(rad, c);
-
-						final Scrollbar Maxrad = new Scrollbar(Scrollbar.HORIZONTAL, maxSearchradiusInit, 10, 0,
-								10 + scrollbarSize);
-						maxSearchradius = computeValueFromScrollbarPosition(maxSearchradiusInit, maxSearchradiusMin,
-								maxSearchradiusMax, scrollbarSize);
-						final Label MaxMovText = new Label("Max Movment of Objects per frame: " + maxSearchradius,
-								Label.CENTER);
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 50);
-						panelEighth.add(MaxMovText, c);
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 50);
-						panelEighth.add(Maxrad, c);
-
-						final Scrollbar Miss = new Scrollbar(Scrollbar.HORIZONTAL, missedframesInit, 10, 0, 10 + scrollbarSize);
-						Miss.setBlockIncrement(1);
-						missedframes = (int) computeValueFromScrollbarPosition(missedframesInit, missedframesMin,
-								missedframesMax, scrollbarSize);
-						final Label LostText = new Label("Objects allowed to be lost for #frames" + missedframes, Label.CENTER);
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 50);
-						panelEighth.add(LostText, c);
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 50);
-						panelEighth.add(Miss, c);
-
-						final Checkbox Costfunc = new Checkbox("Squared Distance Cost Function");
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 50);
-						panelEighth.add(Costfunc, c);
-
-						rad.addAdjustmentListener(
-								new SearchradiusListener(SearchText, initialSearchradiusMin, initialSearchradiusMax));
-						Maxrad.addAdjustmentListener(
-								new maxSearchradiusListener(MaxMovText, maxSearchradiusMin, maxSearchradiusMax));
-						Miss.addAdjustmentListener(new missedFrameListener(LostText, missedframesMin, missedframesMax));
-
-						Costfunc.addItemListener(new CostfunctionListener());
-
-						MTtrackerstart = new KFsearch(AllstartKalman, UserchosenCostFunction, maxSearchradius,
-								initialSearchradius, thirdDimension, thirdDimensionSize, missedframes);
-
-						MTtrackerend = new KFsearch(AllendKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,
-								thirdDimension, thirdDimensionSize, missedframes);
-
-						final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
-						final Button SkipframeandTrackEndPoints = new Button(
-								"TrackEndPoint (User specified first and last frame)");
-
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 200);
-						panelEighth.add(TrackEndPoints, c);
-
-						++c.gridy;
-						c.insets = new Insets(10, 10, 0, 200);
-						panelEighth.add(SkipframeandTrackEndPoints, c);
-
-						TrackEndPoints.addActionListener(new TrackendsListener());
-						SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
-						
-						
-
-					}
-
-					
-					
-				}
-				
-				else{
-				
-					
-					panelEighth.removeAll();
-					panelEighth.repaint();
-
-					panelNinth.removeAll();
-					panelNinth.repaint();
-					final Label Done = new Label("The results have been compiled and stored, you can now exit", Label.CENTER);
-
-					++c.gridy;
-					c.insets = new Insets(10, 10, 0, 200);
-					panelNinth.add(Done, c);
-					final Button Analyze = new Button("Do Rough Analysis");
-
-					final Scrollbar startS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 10, 0,
-							10 + scrollbarSize);
-					final Scrollbar endS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 10, 0, 10 + scrollbarSize);
-					starttime = (int) computeValueFromScrollbarPosition(thirdDimensionsliderInit, 0, thirdDimensionSize,
-							scrollbarSize);
-					endtime = (int) computeValueFromScrollbarPosition(thirdDimensionsliderInit, 0, thirdDimensionSize,
-							scrollbarSize);
-					final Label startText = new Label("startFrame = ", Label.CENTER);
-					final Label endText = new Label("endFrame = ", Label.CENTER);
-					final Label SuccessA = new Label(" Congratulations: The results are quite close to the Kymograph, + ", Label.CENTER);
-					final Label SuccessB = new Label(" now you can compute rates from a given start to an end frame: ", Label.CENTER);
-					
-					SuccessA.setBackground(new Color(1, 0, 1));
-					SuccessA.setForeground(new Color(255, 255, 255));
-					
-					SuccessB.setBackground(new Color(1, 0, 1));
-					SuccessB.setForeground(new Color(255, 255, 255));
-					++c.gridy;
-					c.insets = new Insets(10, 10, 0, 50);
-					panelEighth.add(SuccessA, c);
-					++c.gridy;
-					c.insets = new Insets(10, 10, 0, 50);
-					panelEighth.add(SuccessB, c);
-					
-					
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 50);
-				panelEighth.add(startText, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 50);
-				panelEighth.add(startS, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 50);
-				panelEighth.add(endText, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 50);
-				panelEighth.add(endS, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 50);
-				panelEighth.add(Analyze, c);
-
-				startS.addAdjustmentListener(
-						new starttimeListener(startText, thirdDimensionsliderInit, thirdDimensionSize, scrollbarSize, startS));
-				endS.addAdjustmentListener(
-						new endtimeListener(endText, thirdDimensionsliderInit, thirdDimensionSize, scrollbarSize, endS));
-				Analyze.addActionListener(new AnalyzeListener());
-				}
-				
-				
+				else
+					redo = false;
 				}
 			}
 
@@ -5131,7 +5043,8 @@ public class InteractiveMT implements PlugIn {
 				final GridBagLayout layout = new GridBagLayout();
 				final GridBagConstraints c = new GridBagConstraints();
 				panelFifth.removeAll();
-				panelFifth.repaint();
+				
+				
 				panelFifth.setLayout(layout);
 
 				final Label exthresholdText = new Label("threshold = threshold to create Bitimg for watershedding.",
@@ -5230,6 +5143,8 @@ public class InteractiveMT implements PlugIn {
 				displayBit.addItemListener(new ShowBitimgListener());
 				displayWatershed.addItemListener(new ShowwatershedimgListener());
 				Dowatershed.addActionListener(new DowatershedListener());
+				panelFifth.repaint();
+				panelFifth.validate();
 
 			}
 
@@ -5252,7 +5167,8 @@ public class InteractiveMT implements PlugIn {
 				final GridBagLayout layout = new GridBagLayout();
 				final GridBagConstraints c = new GridBagConstraints();
 				panelFifth.removeAll();
-				panelFifth.repaint();
+				
+				
 				panelFifth.setLayout(layout);
 				final Scrollbar deltaS = new Scrollbar(Scrollbar.HORIZONTAL, deltaInit, 10, 0, 10 + scrollbarSize);
 				final Scrollbar maxVarS = new Scrollbar(Scrollbar.HORIZONTAL, maxVarInit, 10, 0, 10 + scrollbarSize);
@@ -5346,6 +5262,8 @@ public class InteractiveMT implements PlugIn {
 
 				min.addItemListener(new DarktobrightListener());
 				ComputeTree.addActionListener(new ComputeTreeListener());
+				panelFifth.validate();
+				panelFifth.repaint();
 
 			}
 
@@ -5368,7 +5286,8 @@ public class InteractiveMT implements PlugIn {
 				final GridBagLayout layout = new GridBagLayout();
 				final GridBagConstraints c = new GridBagConstraints();
 				panelFifth.removeAll();
-				panelFifth.repaint();
+				
+				
 				panelFifth.setLayout(layout);
 				final Scrollbar deltaS = new Scrollbar(Scrollbar.HORIZONTAL, deltaInit, 10, 0, 10 + scrollbarSize);
 				final Scrollbar maxVarS = new Scrollbar(Scrollbar.HORIZONTAL, maxVarInit, 10, 0, 10 + scrollbarSize);
@@ -5464,6 +5383,8 @@ public class InteractiveMT implements PlugIn {
 
 				min.addItemListener(new DarktobrightListener());
 				ComputeTree.addActionListener(new ComputeTreeListener());
+				panelFifth.validate();
+				panelFifth.repaint();
 
 			}
 
@@ -5485,7 +5406,8 @@ public class InteractiveMT implements PlugIn {
 				FindLinesViaMSERwHOUGH = false;
 
 				panelSecond.removeAll();
-				panelSecond.repaint();
+				
+				
 				final GridBagLayout layout = new GridBagLayout();
 				final GridBagConstraints c = new GridBagConstraints();
 
@@ -5594,6 +5516,8 @@ public class InteractiveMT implements PlugIn {
 				min.addItemListener(new DarktobrightListener());
 				ComputeTree.addActionListener(new ComputeTreeListener());
 				FindLinesListener.addActionListener(new FindLinesListener());
+				panelSecond.validate();
+				panelSecond.repaint();
 
 			}
 
@@ -5623,7 +5547,8 @@ public class InteractiveMT implements PlugIn {
 				final GridBagConstraints c = new GridBagConstraints();
 
 				panelSecond.removeAll();
-				panelSecond.repaint();
+				
+				
 				panelSecond.setLayout(layout);
 				final Label exthresholdText = new Label("threshold = threshold to create Bitimg for watershedding.",
 						Label.CENTER);
@@ -5727,6 +5652,8 @@ public class InteractiveMT implements PlugIn {
 				displayWatershed.addItemListener(new ShowwatershedimgListener());
 				Dowatershed.addActionListener(new DowatershedListener());
 				FindLinesListener.addActionListener(new FindLinesListener());
+				panelSecond.validate();
+				panelSecond.repaint();
 
 			}
 
@@ -5746,7 +5673,8 @@ public class InteractiveMT implements PlugIn {
 			if (arg0.getStateChange() == ItemEvent.SELECTED) {
 				analyzekymo = true;
 				panelSixth.removeAll();
-				panelSixth.repaint();
+				
+				
 				final GridBagLayout layout = new GridBagLayout();
 				final GridBagConstraints c = new GridBagConstraints();
 				panelSixth.setLayout(layout);
@@ -5787,6 +5715,8 @@ public class InteractiveMT implements PlugIn {
 				KalmanTracker.addItemListener(new KalmanchoiceListener());
 				DeterTracker.addItemListener(new DeterchoiceListener());
 				KymoExtract.addItemListener(new KymoExtractListener());
+				panelSixth.validate();
+				panelSixth.repaint();
 
 			}
 			if (arg0.getStateChange() == ItemEvent.DESELECTED) {
@@ -5815,7 +5745,8 @@ public class InteractiveMT implements PlugIn {
 				final GridBagLayout layout = new GridBagLayout();
 				final GridBagConstraints c = new GridBagConstraints();
 				panelSecond.removeAll();
-				panelSecond.repaint();
+				
+				
 				panelSecond.setLayout(layout);
 				final Label exthetaText = new Label("thetaPerPixel = Pixel Size in theta direction for Hough space.",
 						Label.CENTER);
@@ -5971,7 +5902,8 @@ public class InteractiveMT implements PlugIn {
 						new rhoSizeHoughListener(rhoText, rhoPerPixelMin, rhoPerPixelMax, scrollbarSize, rhoSize));
 
 				ComputeTree.addActionListener(new ComputeTreeListener());
-
+				panelSecond.validate();
+				panelSecond.repaint();
 			}
 
 			if (FindLinesViaMSERwHOUGH != oldState) {
@@ -6511,7 +6443,7 @@ public class InteractiveMT implements PlugIn {
 		gd.addStringField("Advanced Options for the optimizer"," Options ");
 		gd.addNumericField("Min Intensity = R * Max Intensity along MT, R (enter 0.2 to 0.9) = ", Intensityratio, 2);
 		gd.addNumericField("Spacing between Gaussians = G * Min(Psf), G (enter 0.3 to 1.0) = ", Inispacing/ Math.min(psf[0], psf[1]), 2);
-		gd.addNumericField("If doing Kymograph analysis choose max distance between Kymograph and MTtracker result = ", deltadcutoff, 2);
+		gd.addNumericField("Choose max distance between Kymograph and MTtracker result (if applicable) = ", deltadcutoff, 2);
 		
 		gd.showDialog();
 		indexmodel = gd.getNextChoiceIndex();
