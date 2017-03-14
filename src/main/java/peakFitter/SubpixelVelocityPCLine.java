@@ -48,6 +48,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 	private ArrayList<Indexedlength> final_paramlistend;
 	private ArrayList<Trackproperties> startinframe;
 	private ArrayList<Trackproperties> endinframe;
+	public int Accountedframes;
 	private final double[] psf;
 	private final boolean DoMask;
 	private boolean Maskfail = false;
@@ -275,6 +276,12 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 		return endinframe;
 	}
 
+	public int getAccountedframes() {
+		
+		return Accountedframes;
+	}
+
+	
 	private final double[] MakerepeatedLineguess(Indexedlength iniparam, int label) {
 		long[] newposition = new long[ndims];
 		double[] minVal = { Double.MAX_VALUE, Double.MAX_VALUE };
@@ -687,6 +694,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 				index++;
 			}
 
+			Accountedframes = framenumber;
 			System.out.println("Label: " + label + " " + "Initial guess: " + " StartX: " + LMparam[0] + " StartY: "
 					+ LMparam[1] + " EndX: " + LMparam[2] + " EndY: " + LMparam[3]);
 

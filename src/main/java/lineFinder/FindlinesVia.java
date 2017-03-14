@@ -2,6 +2,8 @@ package lineFinder;
 
 import java.util.ArrayList;
 
+import javax.security.auth.login.AccountExpiredException;
+
 import com.sun.tools.javac.util.Pair;
 
 import LineModels.UseLineModel.UserChoiceModel;
@@ -28,6 +30,8 @@ public  class FindlinesVia {
 
 	}
 	
+	public static int Accountedframes ;
+	
       protected LinefindingMethod MSER, Hough, MSERwHough;
 
 	public static Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> LinefindingMethod(final RandomAccessibleInterval<FloatType> source,
@@ -46,6 +50,7 @@ public  class FindlinesVia {
 			MTline.checkInput();
 			MTline.process();
 			PrevFrameparam = MTline.getResult();
+			
 		
 		return PrevFrameparam;
 
@@ -88,7 +93,7 @@ public  class FindlinesVia {
 			growthtracker.setInispacing(Inispacing);
 			growthtracker.checkInput();
 			growthtracker.process();
-			
+			Accountedframes  = growthtracker.getAccountedframes();
 			
 			Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> NewFrameparam = growthtracker.getResult();
 			ArrayList<Trackproperties> startStateVectors = growthtracker.getstartStateVectors();
@@ -126,7 +131,7 @@ public  class FindlinesVia {
 			growthtracker.setInispacing(Inispacing);
 			growthtracker.checkInput();
 			growthtracker.process();
-			
+			Accountedframes  = growthtracker.getAccountedframes();
 			
 			Pair<ArrayList<KalmanIndexedlength>,ArrayList<KalmanIndexedlength>> NewFrameparam = growthtracker.getResult();
 			ArrayList<KalmanTrackproperties> startStateVectors = growthtracker.getcurrstartStateVectors();
@@ -146,6 +151,11 @@ public  class FindlinesVia {
 		
 		return returnVector;
 
+	}
+	
+	public static int getAccountedframes(){
+		
+		return Accountedframes;
 	}
 	
 	

@@ -179,7 +179,7 @@ public class InteractiveMT implements PlugIn {
 	float thetaPerPixelMax = 2;
 	float rhoPerPixelMax = 2;
 
-	
+	float deltadcutoff = 5;
 	boolean analyzekymo = false;
 	boolean darktobright = false;
 	boolean displayBitimg = false;
@@ -231,6 +231,7 @@ public class InteractiveMT implements PlugIn {
 	boolean numberTracker = true;
 	boolean isComputing = false;
 	boolean isStarted = false;
+	boolean redo = false;
 	boolean FindLinesViaMSER = false;
 	boolean FindLinesViaHOUGH = false;
 	boolean FindLinesViaMSERwHOUGH = false;
@@ -311,6 +312,8 @@ public class InteractiveMT implements PlugIn {
 	private int ndims;
 	Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> PrevFrameparam;
 	Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>> NewFrameparam;
+	ArrayList<Integer> Accountedframes = new ArrayList<Integer>();
+	ArrayList<Integer> Missedframes = new ArrayList<Integer>();
 	Pair<Pair<ArrayList<Trackproperties>, ArrayList<Trackproperties>>, Pair<ArrayList<Indexedlength>, ArrayList<Indexedlength>>> returnVector;
 
 	Pair<ArrayList<KalmanIndexedlength>, ArrayList<KalmanIndexedlength>> PrevFrameparamKalman;
@@ -519,6 +522,7 @@ public class InteractiveMT implements PlugIn {
 		originalimg = ImageJFunctions.convertFloat(imp.duplicate());
 		originalPreprocessedimg = ImageJFunctions.convertFloat(preprocessedimp.duplicate());
 		calibration = new double[] { imp.getCalibration().pixelWidth, imp.getCalibration().pixelHeight };
+		Inispacing = 0.5 * Math.min(psf[0], psf[1]);
 
 	}
 
@@ -854,6 +858,7 @@ public class InteractiveMT implements PlugIn {
 	JPanel panelSixth = new JPanel();
 	JPanel panelSeventh = new JPanel();
 	JPanel panelEighth = new JPanel();
+	JPanel panelNinth = new JPanel();
 
 	public void Card() {
 
@@ -869,6 +874,7 @@ public class InteractiveMT implements PlugIn {
 		panelCont.add(panelSixth, "6");
 		panelCont.add(panelSeventh, "7");
 		panelCont.add(panelEighth, "8");
+		panelCont.add(panelNinth, "9");
 		// First Panel
 		panelFirst.setName("Preprocess and Determine Seeds");
 
@@ -1072,44 +1078,10 @@ public class InteractiveMT implements PlugIn {
 			KalmanTracker.addItemListener(new KalmanchoiceListener());
 			DeterTracker.addItemListener(new DeterchoiceListener());
 		}
-		final Button Analyze = new Button("Do Rough Analysis");
+		
 
-		final Scrollbar startS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 10, 0,
-				10 + scrollbarSize);
-		final Scrollbar endS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 10, 0, 10 + scrollbarSize);
-		starttime = (int) computeValueFromScrollbarPosition(thirdDimensionsliderInit, 0, thirdDimensionSize,
-				scrollbarSize);
-		endtime = (int) computeValueFromScrollbarPosition(thirdDimensionsliderInit, 0, thirdDimensionSize,
-				scrollbarSize);
-		final Label startText = new Label("startFrame = ", Label.CENTER);
-		final Label endText = new Label("endFrame = ", Label.CENTER);
-
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 50);
-		panelEighth.add(startText, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 50);
-		panelEighth.add(startS, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 50);
-		panelEighth.add(endText, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 50);
-		panelEighth.add(endS, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 50);
-		panelEighth.add(Analyze, c);
-
-		startS.addAdjustmentListener(
-				new starttimeListener(startText, thirdDimensionsliderInit, thirdDimensionSize, scrollbarSize, startS));
-		endS.addAdjustmentListener(
-				new endtimeListener(endText, thirdDimensionsliderInit, thirdDimensionSize, scrollbarSize, endS));
-		Analyze.addActionListener(new AnalyzeListener());
-
+		
+		
 		Cardframe.add(panelCont, BorderLayout.CENTER);
 		Cardframe.add(control, BorderLayout.SOUTH);
 		Cardframe.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -2412,9 +2384,9 @@ public class InteractiveMT implements PlugIn {
 
 			ArrayList<float[]> deltadeltaLstart = new ArrayList<>();
 			ArrayList<float[]> deltadeltaLend = new ArrayList<>();
+			
 			ArrayList<float[]> deltadstart = new ArrayList<>();
 			ArrayList<float[]> deltadend = new ArrayList<>();
-
 			ArrayList<float[]> deltad = new ArrayList<>();
 			ArrayList<float[]> deltadeltaL = new ArrayList<>();
 
@@ -2793,13 +2765,17 @@ public class InteractiveMT implements PlugIn {
 					LinefinderInteractiveHFMSER newlineMser = new LinefinderInteractiveHFMSER(groundframe,
 							groundframepre, newtree, minlength, thirdDimension);
 
-					if (showDeterministic)
+					if (showDeterministic){
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
 								minlength, thirdDimension, psf, newlineMser, userChoiceModel, Domask, Intensityratio, Inispacing);
+					
+						Accountedframes.add(FindlinesVia.getAccountedframes());
+					}
 					if (showKalman) {
 						returnVectorKalman = FindlinesVia.LinefindingMethodHFKalman(groundframe, groundframepre,
 								PrevFrameparamKalman, minlength, thirdDimension, psf, newlineMser, userChoiceModel,
 								Domask, Kalmancount,Intensityratio, Inispacing);
+						Accountedframes.add(FindlinesVia.getAccountedframes());
 					}
 
 				}
@@ -2814,14 +2790,18 @@ public class InteractiveMT implements PlugIn {
 					updatePreview(ValueChange.SHOWHOUGH);
 					LinefinderInteractiveHFHough newlineHough = new LinefinderInteractiveHFHough(groundframe,
 							groundframepre, intimg, Maxlabel, thetaPerPixel, rhoPerPixel, thirdDimension);
-					if (showDeterministic)
+					if (showDeterministic){
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
 								minlength, thirdDimension, psf, newlineHough, userChoiceModel, Domask, Intensityratio, Inispacing);
-
+						Accountedframes.add(FindlinesVia.getAccountedframes());
+						
+					}
 					if (showKalman) {
 						returnVectorKalman = FindlinesVia.LinefindingMethodHFKalman(groundframe, groundframepre,
 								PrevFrameparamKalman, minlength, thirdDimension, psf, newlineHough, userChoiceModel,
 								Domask, Kalmancount,Intensityratio, Inispacing);
+						
+						Accountedframes.add(FindlinesVia.getAccountedframes());
 					}
 				}
 
@@ -2836,14 +2816,19 @@ public class InteractiveMT implements PlugIn {
 							groundframe, groundframepre, newtree, minlength, thirdDimension, thetaPerPixel,
 							rhoPerPixel);
 
-					if (showDeterministic)
+					if (showDeterministic){
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
 								minlength, thirdDimension, psf, newlineMserwHough, userChoiceModel, Domask, Intensityratio, Inispacing);
+						Accountedframes.add(FindlinesVia.getAccountedframes());
+						
+					}
 
 					if (showKalman) {
 						returnVectorKalman = FindlinesVia.LinefindingMethodHFKalman(groundframe, groundframepre,
 								PrevFrameparamKalman, minlength, thirdDimension, psf, newlineMserwHough,
 								userChoiceModel, Domask, Kalmancount,Intensityratio, Inispacing);
+						
+						Accountedframes.add(FindlinesVia.getAccountedframes());
 
 					}
 
@@ -3198,9 +3183,9 @@ public class InteractiveMT implements PlugIn {
 							overlayB.add(newline);
 
 							KymoimpB.setOverlay(overlayB);
-						//	RoiManager roimanager = RoiManager.getInstance();
+							RoiManager roimanager = RoiManager.getInstance();
 
-							//roimanager.addRoi(newline);
+							roimanager.addRoi(newline);
 
 						}
 
@@ -3587,6 +3572,305 @@ public class InteractiveMT implements PlugIn {
 
 				}
 				rtAll.show("Start and End of MT, respectively");
+				ArrayList<float[]> deltadstart = new ArrayList<>();
+				ArrayList<float[]> deltadend = new ArrayList<>();
+				ArrayList<float[]> deltad = new ArrayList<>();
+				if (analyzekymo){
+					double lengthcheckstart = 0;
+					double lengthcheckend = 0;
+				for (int index = 0; index < lengthtimestart.size(); ++index) {
+
+					int time = (int) lengthtimestart.get(index)[1];
+
+					lengthcheckstart+= lengthtimestart.get(index)[0];
+					
+					for (int secindex = 0; secindex < Length.size(); ++secindex) {
+
+						if ((int) Length.get(secindex)[1] == time) {
+
+							float delta = (float) (lengthtimestart.get(index)[0] - Length.get(secindex)[0]);
+							float[] cudeltadeltaLstart = { delta, time };
+							deltadstart.add(cudeltadeltaLstart);
+
+						}
+
+					}
+
+				}
+
+				for (int index = 0; index < lengthtimeend.size(); ++index) {
+
+					int time = (int) lengthtimeend.get(index)[1];
+					
+					lengthcheckend+= lengthtimeend.get(index)[0];
+					
+					for (int secindex = 0; secindex < Length.size(); ++secindex) {
+
+						if ((int) Length.get(secindex)[1] == time) {
+
+							float delta = (float) (lengthtimeend.get(index)[0] - Length.get(secindex)[0]);
+							float[] cudeltadeltaLend = { delta, time };
+							deltadend.add(cudeltadeltaLend);
+
+						}
+
+					}
+
+				}
+				
+				deltad =  (lengthcheckstart >= lengthcheckend)? deltadstart:deltadend;
+				double netdeltad = 0;
+				for (int index = 0; index < deltad.size(); ++index){
+					
+					for (int secindex = 0; secindex < Accountedframes.size(); ++secindex){
+						
+						if ((int)deltad.get(index)[1] == Accountedframes.get(secindex)){
+							
+							netdeltad+=Math.abs(deltad.get(index)[0]);
+							
+						}
+						
+					}
+					
+				}
+				netdeltad/=deltad.size();
+				
+				if (netdeltad > deltadcutoff){
+					
+					redo = true;
+					
+					Allstart.clear();
+					Allend.clear();
+					AllstartKalman.clear();
+					AllendKalman.clear();
+					lengthtimestart.clear();
+					lengthtimeend.clear();
+					deltad.clear();
+					deltadstart.clear();
+					deltadend.clear();
+					Accountedframes.clear();
+				}
+				final GridBagLayout layout = new GridBagLayout();
+				final GridBagConstraints c = new GridBagConstraints();
+
+				panelEighth.setLayout(layout);
+				
+				if (redo){
+					
+					
+					panelEighth.removeAll();
+					panelEighth.repaint();
+					
+					final Label RedotextA = new Label("MTtracker noticed that your intensity ratio R setting in the optimizer step  = +", Label.CENTER);
+					final Label RedotextB = new Label("caused the tracker to identify the end point of the line wrongly in some frame = +", Label.CENTER);
+					final Label RedotextC = new Label("this leads to a wrong number being added over the next frames causing an upward shift in the Kymograph = + ", Label.CENTER);
+					final Label RedotextD = new Label("If your R value was > 0.8 choose a lower value, if it was < 0.5 choose a greater value  = +", Label.CENTER);
+							
+					panelNinth.removeAll();
+					panelNinth.repaint();
+					
+					final Label Goback = new Label("Go back to redo tracker", Label.CENTER);
+
+					++c.gridy;
+					c.insets = new Insets(10, 10, 0, 200);
+					panelNinth.add(Goback, c);
+					
+					++c.gridy;
+					c.insets = new Insets(10, 10, 0, 200);
+					panelEighth.add(RedotextA, c);
+					
+					++c.gridy;
+					c.insets = new Insets(10, 10, 0, 200);
+					panelEighth.add(RedotextB, c);
+					
+					++c.gridy;
+					c.insets = new Insets(10, 10, 0, 200);
+					panelEighth.add(RedotextC, c);
+					
+					++c.gridy;
+					c.insets = new Insets(10, 10, 0, 200);
+					panelEighth.add(RedotextD, c);
+					
+					RedotextA.setBackground(new Color(1, 0, 1));
+					RedotextA.setForeground(new Color(255, 255, 255));
+					
+					RedotextB.setBackground(new Color(1, 0, 1));
+					RedotextB.setForeground(new Color(255, 255, 255));
+					
+					RedotextC.setBackground(new Color(1, 0, 1));
+					RedotextC.setForeground(new Color(255, 255, 255));
+					
+					RedotextD.setBackground(new Color(1, 0, 1));
+					RedotextD.setForeground(new Color(255, 255, 255));
+					
+					
+					if (showDeterministic) {
+						final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
+						final Button SkipframeandTrackEndPoints = new Button(
+								"TrackEndPoint (User specified first and last frame)");
+
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 200);
+						panelEighth.add(TrackEndPoints, c);
+
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 200);
+						panelEighth.add(SkipframeandTrackEndPoints, c);
+
+						TrackEndPoints.addActionListener(new TrackendsListener());
+						SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
+					}
+
+					if (showKalman) {
+
+						final Scrollbar rad = new Scrollbar(Scrollbar.HORIZONTAL, initialSearchradiusInit, 10, 0,
+								10 + scrollbarSize);
+						initialSearchradius = computeValueFromScrollbarPosition(initialSearchradiusInit, initialSearchradiusMin,
+								initialSearchradiusMax, scrollbarSize);
+
+						final Label SearchText = new Label("Initial Search Radius: " + initialSearchradius, Label.CENTER);
+
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 50);
+						panelEighth.add(SearchText, c);
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 50);
+						panelEighth.add(rad, c);
+
+						final Scrollbar Maxrad = new Scrollbar(Scrollbar.HORIZONTAL, maxSearchradiusInit, 10, 0,
+								10 + scrollbarSize);
+						maxSearchradius = computeValueFromScrollbarPosition(maxSearchradiusInit, maxSearchradiusMin,
+								maxSearchradiusMax, scrollbarSize);
+						final Label MaxMovText = new Label("Max Movment of Objects per frame: " + maxSearchradius,
+								Label.CENTER);
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 50);
+						panelEighth.add(MaxMovText, c);
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 50);
+						panelEighth.add(Maxrad, c);
+
+						final Scrollbar Miss = new Scrollbar(Scrollbar.HORIZONTAL, missedframesInit, 10, 0, 10 + scrollbarSize);
+						Miss.setBlockIncrement(1);
+						missedframes = (int) computeValueFromScrollbarPosition(missedframesInit, missedframesMin,
+								missedframesMax, scrollbarSize);
+						final Label LostText = new Label("Objects allowed to be lost for #frames" + missedframes, Label.CENTER);
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 50);
+						panelEighth.add(LostText, c);
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 50);
+						panelEighth.add(Miss, c);
+
+						final Checkbox Costfunc = new Checkbox("Squared Distance Cost Function");
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 50);
+						panelEighth.add(Costfunc, c);
+
+						rad.addAdjustmentListener(
+								new SearchradiusListener(SearchText, initialSearchradiusMin, initialSearchradiusMax));
+						Maxrad.addAdjustmentListener(
+								new maxSearchradiusListener(MaxMovText, maxSearchradiusMin, maxSearchradiusMax));
+						Miss.addAdjustmentListener(new missedFrameListener(LostText, missedframesMin, missedframesMax));
+
+						Costfunc.addItemListener(new CostfunctionListener());
+
+						MTtrackerstart = new KFsearch(AllstartKalman, UserchosenCostFunction, maxSearchradius,
+								initialSearchradius, thirdDimension, thirdDimensionSize, missedframes);
+
+						MTtrackerend = new KFsearch(AllendKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,
+								thirdDimension, thirdDimensionSize, missedframes);
+
+						final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
+						final Button SkipframeandTrackEndPoints = new Button(
+								"TrackEndPoint (User specified first and last frame)");
+
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 200);
+						panelEighth.add(TrackEndPoints, c);
+
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 200);
+						panelEighth.add(SkipframeandTrackEndPoints, c);
+
+						TrackEndPoints.addActionListener(new TrackendsListener());
+						SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
+
+					}
+
+					
+					
+				}
+				
+				else{
+				
+					panelEighth.removeAll();
+					panelEighth.repaint();
+					
+					panelNinth.removeAll();
+					panelNinth.repaint();
+					final Label Done = new Label("The results have been compiled and stored, you can now exit", Label.CENTER);
+
+					++c.gridy;
+					c.insets = new Insets(10, 10, 0, 200);
+					panelNinth.add(Done, c);
+					final Button Analyze = new Button("Do Rough Analysis");
+
+					final Scrollbar startS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 10, 0,
+							10 + scrollbarSize);
+					final Scrollbar endS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 10, 0, 10 + scrollbarSize);
+					starttime = (int) computeValueFromScrollbarPosition(thirdDimensionsliderInit, 0, thirdDimensionSize,
+							scrollbarSize);
+					endtime = (int) computeValueFromScrollbarPosition(thirdDimensionsliderInit, 0, thirdDimensionSize,
+							scrollbarSize);
+					final Label startText = new Label("startFrame = ", Label.CENTER);
+					final Label endText = new Label("endFrame = ", Label.CENTER);
+					final Label SuccessA = new Label(" Congratulations: The results are quite close to the Kymograph, + ", Label.CENTER);
+					final Label SuccessB = new Label(" now you can compute rates from a given start to an end frame: ", Label.CENTER);
+					
+					SuccessA.setBackground(new Color(1, 0, 1));
+					SuccessA.setForeground(new Color(255, 255, 255));
+					
+					SuccessB.setBackground(new Color(1, 0, 1));
+					SuccessB.setForeground(new Color(255, 255, 255));
+					++c.gridy;
+					c.insets = new Insets(10, 10, 0, 50);
+					panelEighth.add(SuccessA, c);
+					++c.gridy;
+					c.insets = new Insets(10, 10, 0, 50);
+					panelEighth.add(SuccessB, c);
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelEighth.add(startText, c);
+
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelEighth.add(startS, c);
+
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelEighth.add(endText, c);
+
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelEighth.add(endS, c);
+
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelEighth.add(Analyze, c);
+
+				startS.addAdjustmentListener(
+						new starttimeListener(startText, thirdDimensionsliderInit, thirdDimensionSize, scrollbarSize, startS));
+				endS.addAdjustmentListener(
+						new endtimeListener(endText, thirdDimensionsliderInit, thirdDimensionSize, scrollbarSize, endS));
+				Analyze.addActionListener(new AnalyzeListener());
+				}
+				
+				
+				
+				
+				
+				}
 			}
 
 			final long endTime = System.currentTimeMillis();
@@ -3631,14 +3915,18 @@ public class InteractiveMT implements PlugIn {
 
 					LinefinderInteractiveHFMSER newlineMser = new LinefinderInteractiveHFMSER(groundframe,
 							groundframepre, newtree, minlength, thirdDimension);
-					if (showDeterministic)
+					if (showDeterministic){
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
 								minlength, thirdDimension, psf, newlineMser, userChoiceModel, Domask, Intensityratio, Inispacing);
+						Accountedframes.add(FindlinesVia.getAccountedframes());
+					}
 
 					if (showKalman) {
 						returnVectorKalman = FindlinesVia.LinefindingMethodHFKalman(groundframe, groundframepre,
 								PrevFrameparamKalman, minlength, thirdDimension, psf, newlineMser, userChoiceModel,
 								Domask, Kalmancount,Intensityratio, Inispacing);
+						
+						Accountedframes.add(FindlinesVia.getAccountedframes());
 					}
 
 				}
@@ -3654,14 +3942,19 @@ public class InteractiveMT implements PlugIn {
 					updatePreview(ValueChange.SHOWHOUGH);
 					LinefinderInteractiveHFHough newlineHough = new LinefinderInteractiveHFHough(groundframe,
 							groundframepre, intimg, Maxlabel, thetaPerPixel, rhoPerPixel, thirdDimension);
-					if (showDeterministic)
+					if (showDeterministic){
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
 								minlength, thirdDimension, psf, newlineHough, userChoiceModel, Domask, Intensityratio, Inispacing);
+					
+						
+						Accountedframes.add(FindlinesVia.getAccountedframes());
+					}
 
 					if (showKalman) {
 						returnVectorKalman = FindlinesVia.LinefindingMethodHFKalman(groundframe, groundframepre,
 								PrevFrameparamKalman, minlength, thirdDimension, psf, newlineHough, userChoiceModel,
 								Domask, Kalmancount,Intensityratio, Inispacing);
+						Accountedframes.add(FindlinesVia.getAccountedframes());
 					}
 
 				}
@@ -3676,13 +3969,19 @@ public class InteractiveMT implements PlugIn {
 					LinefinderInteractiveHFMSERwHough newlineMserwHough = new LinefinderInteractiveHFMSERwHough(
 							groundframe, groundframepre, newtree, minlength, thirdDimension, thetaPerPixel,
 							rhoPerPixel);
-					if (showDeterministic)
+					if (showDeterministic){
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
 								minlength, thirdDimension, psf, newlineMserwHough, userChoiceModel, Domask, Intensityratio, Inispacing);
+					
+						
+						Accountedframes.add(FindlinesVia.getAccountedframes());
+					}
 					if (showKalman) {
 						returnVectorKalman = FindlinesVia.LinefindingMethodHFKalman(groundframe, groundframepre,
 								PrevFrameparamKalman, minlength, thirdDimension, psf, newlineMserwHough,
 								userChoiceModel, Domask, Kalmancount,Intensityratio, Inispacing);
+						
+						Accountedframes.add(FindlinesVia.getAccountedframes());
 					}
 
 				}
@@ -4433,6 +4732,313 @@ public class InteractiveMT implements PlugIn {
 
 				}
 				rtAll.show("Start and End of MT");
+				
+				ArrayList<float[]> deltadstart = new ArrayList<>();
+				ArrayList<float[]> deltadend = new ArrayList<>();
+				ArrayList<float[]> deltad = new ArrayList<>();
+				if (analyzekymo){
+					double lengthcheckstart = 0;
+					double lengthcheckend = 0;
+				for (int index = 0; index < lengthtimestart.size(); ++index) {
+
+					int time = (int) lengthtimestart.get(index)[1];
+
+					lengthcheckstart+= lengthtimestart.get(index)[0];
+					
+					for (int secindex = 0; secindex < Length.size(); ++secindex) {
+
+						if ((int) Length.get(secindex)[1] == time) {
+
+							float delta = (float) (lengthtimestart.get(index)[0] - Length.get(secindex)[0]);
+							float[] cudeltadeltaLstart = { delta, time };
+							deltadstart.add(cudeltadeltaLstart);
+
+						}
+
+					}
+
+				}
+
+				for (int index = 0; index < lengthtimeend.size(); ++index) {
+
+					int time = (int) lengthtimeend.get(index)[1];
+					
+					lengthcheckend+= lengthtimeend.get(index)[0];
+					
+					for (int secindex = 0; secindex < Length.size(); ++secindex) {
+
+						if ((int) Length.get(secindex)[1] == time) {
+
+							float delta = (float) (lengthtimeend.get(index)[0] - Length.get(secindex)[0]);
+							float[] cudeltadeltaLend = { delta, time };
+							deltadend.add(cudeltadeltaLend);
+
+						}
+
+					}
+
+				}
+				
+				deltad =  (lengthcheckstart >= lengthcheckend)? deltadstart:deltadend;
+				double netdeltad = 0;
+				for (int index = 0; index < deltad.size(); ++index){
+					
+					for (int secindex = 0; secindex < Accountedframes.size(); ++secindex){
+						if ((int)deltad.get(index)[1] == Accountedframes.get(secindex)){
+							
+							netdeltad+=Math.abs(deltad.get(index)[0]);
+						}
+						
+					}
+					
+				}
+				netdeltad/=deltad.size();
+				
+				System.out.println(netdeltad);
+				if (netdeltad > deltadcutoff){
+					
+				redo = true;
+				
+				Allstart.clear();
+				Allend.clear();
+				AllstartKalman.clear();
+				AllendKalman.clear();
+				lengthtimestart.clear();
+				lengthtimeend.clear();
+				deltad.clear();
+				deltadstart.clear();
+				deltadend.clear();
+				Accountedframes.clear();
+				
+				
+				}
+				final GridBagLayout layout = new GridBagLayout();
+				final GridBagConstraints c = new GridBagConstraints();
+
+				panelEighth.setLayout(layout);
+				
+				if (redo){
+					
+					panelEighth.removeAll();
+					panelEighth.repaint();
+					
+					panelNinth.removeAll();
+					panelNinth.repaint();
+					
+					final Label Goback = new Label("Go back to redo tracker", Label.CENTER);
+
+					++c.gridy;
+					c.insets = new Insets(10, 10, 0, 200);
+					panelNinth.add(Goback, c);
+					
+					final Label RedotextA = new Label("MTtracker noticed that your intensity ratio R setting in the optimizer step + = ", Label.CENTER);
+					final Label RedotextB = new Label("caused the tracker to identify the end point of the line wrongly in some frame += ", Label.CENTER);
+					final Label RedotextC = new Label("this leads to a wrong number being added over the next frames causing an upward shift in the Kymograph += ", Label.CENTER);
+					final Label RedotextD = new Label("If your R value was > 0.8 choose a lower value, if it was < 0.5 choose a greater value  += ", Label.CENTER);
+							
+					
+					
+					
+					++c.gridy;
+					c.insets = new Insets(10, 10, 0, 200);
+					panelEighth.add(RedotextA, c);
+					
+					++c.gridy;
+					c.insets = new Insets(10, 10, 0, 200);
+					panelEighth.add(RedotextB, c);
+					
+					++c.gridy;
+					c.insets = new Insets(10, 10, 0, 200);
+					panelEighth.add(RedotextC, c);
+					
+					++c.gridy;
+					c.insets = new Insets(10, 10, 0, 200);
+					panelEighth.add(RedotextD, c);
+					
+					
+					
+					RedotextA.setBackground(new Color(1, 0, 1));
+					RedotextA.setForeground(new Color(255, 255, 255));
+					
+					RedotextB.setBackground(new Color(1, 0, 1));
+					RedotextB.setForeground(new Color(255, 255, 255));
+					
+					RedotextC.setBackground(new Color(1, 0, 1));
+					RedotextC.setForeground(new Color(255, 255, 255));
+					
+					RedotextD.setBackground(new Color(1, 0, 1));
+					RedotextD.setForeground(new Color(255, 255, 255));
+					
+					
+					if (showDeterministic) {
+						final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
+						final Button SkipframeandTrackEndPoints = new Button(
+								"TrackEndPoint (User specified first and last frame)");
+
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 200);
+						panelEighth.add(TrackEndPoints, c);
+
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 200);
+						panelEighth.add(SkipframeandTrackEndPoints, c);
+
+						TrackEndPoints.addActionListener(new TrackendsListener());
+						SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
+					}
+
+					if (showKalman) {
+
+						final Scrollbar rad = new Scrollbar(Scrollbar.HORIZONTAL, initialSearchradiusInit, 10, 0,
+								10 + scrollbarSize);
+						initialSearchradius = computeValueFromScrollbarPosition(initialSearchradiusInit, initialSearchradiusMin,
+								initialSearchradiusMax, scrollbarSize);
+
+						final Label SearchText = new Label("Initial Search Radius: " + initialSearchradius, Label.CENTER);
+
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 50);
+						panelEighth.add(SearchText, c);
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 50);
+						panelEighth.add(rad, c);
+
+						final Scrollbar Maxrad = new Scrollbar(Scrollbar.HORIZONTAL, maxSearchradiusInit, 10, 0,
+								10 + scrollbarSize);
+						maxSearchradius = computeValueFromScrollbarPosition(maxSearchradiusInit, maxSearchradiusMin,
+								maxSearchradiusMax, scrollbarSize);
+						final Label MaxMovText = new Label("Max Movment of Objects per frame: " + maxSearchradius,
+								Label.CENTER);
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 50);
+						panelEighth.add(MaxMovText, c);
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 50);
+						panelEighth.add(Maxrad, c);
+
+						final Scrollbar Miss = new Scrollbar(Scrollbar.HORIZONTAL, missedframesInit, 10, 0, 10 + scrollbarSize);
+						Miss.setBlockIncrement(1);
+						missedframes = (int) computeValueFromScrollbarPosition(missedframesInit, missedframesMin,
+								missedframesMax, scrollbarSize);
+						final Label LostText = new Label("Objects allowed to be lost for #frames" + missedframes, Label.CENTER);
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 50);
+						panelEighth.add(LostText, c);
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 50);
+						panelEighth.add(Miss, c);
+
+						final Checkbox Costfunc = new Checkbox("Squared Distance Cost Function");
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 50);
+						panelEighth.add(Costfunc, c);
+
+						rad.addAdjustmentListener(
+								new SearchradiusListener(SearchText, initialSearchradiusMin, initialSearchradiusMax));
+						Maxrad.addAdjustmentListener(
+								new maxSearchradiusListener(MaxMovText, maxSearchradiusMin, maxSearchradiusMax));
+						Miss.addAdjustmentListener(new missedFrameListener(LostText, missedframesMin, missedframesMax));
+
+						Costfunc.addItemListener(new CostfunctionListener());
+
+						MTtrackerstart = new KFsearch(AllstartKalman, UserchosenCostFunction, maxSearchradius,
+								initialSearchradius, thirdDimension, thirdDimensionSize, missedframes);
+
+						MTtrackerend = new KFsearch(AllendKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,
+								thirdDimension, thirdDimensionSize, missedframes);
+
+						final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
+						final Button SkipframeandTrackEndPoints = new Button(
+								"TrackEndPoint (User specified first and last frame)");
+
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 200);
+						panelEighth.add(TrackEndPoints, c);
+
+						++c.gridy;
+						c.insets = new Insets(10, 10, 0, 200);
+						panelEighth.add(SkipframeandTrackEndPoints, c);
+
+						TrackEndPoints.addActionListener(new TrackendsListener());
+						SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
+						
+						
+
+					}
+
+					
+					
+				}
+				
+				else{
+				
+					
+					panelEighth.removeAll();
+					panelEighth.repaint();
+
+					panelNinth.removeAll();
+					panelNinth.repaint();
+					final Label Done = new Label("The results have been compiled and stored, you can now exit", Label.CENTER);
+
+					++c.gridy;
+					c.insets = new Insets(10, 10, 0, 200);
+					panelNinth.add(Done, c);
+					final Button Analyze = new Button("Do Rough Analysis");
+
+					final Scrollbar startS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 10, 0,
+							10 + scrollbarSize);
+					final Scrollbar endS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 10, 0, 10 + scrollbarSize);
+					starttime = (int) computeValueFromScrollbarPosition(thirdDimensionsliderInit, 0, thirdDimensionSize,
+							scrollbarSize);
+					endtime = (int) computeValueFromScrollbarPosition(thirdDimensionsliderInit, 0, thirdDimensionSize,
+							scrollbarSize);
+					final Label startText = new Label("startFrame = ", Label.CENTER);
+					final Label endText = new Label("endFrame = ", Label.CENTER);
+					final Label SuccessA = new Label(" Congratulations: The results are quite close to the Kymograph, + ", Label.CENTER);
+					final Label SuccessB = new Label(" now you can compute rates from a given start to an end frame: ", Label.CENTER);
+					
+					SuccessA.setBackground(new Color(1, 0, 1));
+					SuccessA.setForeground(new Color(255, 255, 255));
+					
+					SuccessB.setBackground(new Color(1, 0, 1));
+					SuccessB.setForeground(new Color(255, 255, 255));
+					++c.gridy;
+					c.insets = new Insets(10, 10, 0, 50);
+					panelEighth.add(SuccessA, c);
+					++c.gridy;
+					c.insets = new Insets(10, 10, 0, 50);
+					panelEighth.add(SuccessB, c);
+					
+					
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelEighth.add(startText, c);
+
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelEighth.add(startS, c);
+
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelEighth.add(endText, c);
+
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelEighth.add(endS, c);
+
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelEighth.add(Analyze, c);
+
+				startS.addAdjustmentListener(
+						new starttimeListener(startText, thirdDimensionsliderInit, thirdDimensionSize, scrollbarSize, startS));
+				endS.addAdjustmentListener(
+						new endtimeListener(endText, thirdDimensionsliderInit, thirdDimensionSize, scrollbarSize, endS));
+				Analyze.addActionListener(new AnalyzeListener());
+				}
+				
+				
+				}
 			}
 
 		}
@@ -5903,9 +6509,9 @@ public class InteractiveMT implements PlugIn {
 		gd.addChoice("Choose your model: ", LineModel, LineModel[indexmodel]);
 		gd.addCheckbox("Do Gaussian Mask Fits", Domask);
 		gd.addStringField("Advanced Options for the optimizer"," Options ");
-		gd.addNumericField("Min Intensity = R * Max Intensity along MT, R (enter 0.2 to 0.9) = ", Intensityratio, 3);
-		gd.addNumericField("Spacing between Gaussians = G * Min(Psf), G (enter 0.3 to 1.0) = ", Inispacing/ Math.min(psf[0], psf[1]), 3);
-		
+		gd.addNumericField("Min Intensity = R * Max Intensity along MT, R (enter 0.2 to 0.9) = ", Intensityratio, 2);
+		gd.addNumericField("Spacing between Gaussians = G * Min(Psf), G (enter 0.3 to 1.0) = ", Inispacing/ Math.min(psf[0], psf[1]), 2);
+		gd.addNumericField("If doing Kymograph analysis choose max distance between Kymograph and MTtracker result = ", deltadcutoff, 2);
 		
 		gd.showDialog();
 		indexmodel = gd.getNextChoiceIndex();
@@ -5919,6 +6525,7 @@ public class InteractiveMT implements PlugIn {
 			userChoiceModel = UserChoiceModel.Splineorderthird;
         Intensityratio = gd.getNextNumber();
         Inispacing = gd.getNextNumber() * Math.min(psf[0], psf[1]);
+        deltadcutoff = (float) gd.getNextNumber();
 		
         
         

@@ -51,7 +51,7 @@ import preProcessing.GetLocalmaxmin;
 		private final int framenumber;
 		private ArrayList<KalmanIndexedlength> final_paramliststart;
 		private ArrayList<KalmanIndexedlength> final_paramlistend;
-		
+		public  int Accountedframes;
 		
 		private ArrayList<KalmanTrackproperties> startincurrframe;
 		private ArrayList<KalmanTrackproperties> endincurrframe;
@@ -175,7 +175,8 @@ import preProcessing.GetLocalmaxmin;
 			
 			startincurrframe = new ArrayList<KalmanTrackproperties>();
 			endincurrframe = new ArrayList<KalmanTrackproperties>();
-
+           
+			
 			double size = Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1]);
 			final int oldframenumber = PrevFrameparamstart.get(PrevFrameparamstart.size() - 1).framenumber;
 			final int framediff = framenumber - oldframenumber;
@@ -322,6 +323,10 @@ import preProcessing.GetLocalmaxmin;
 			return endincurrframe;
 		}
 
+		public int getAccountedframes() {
+			
+			return Accountedframes;
+		}
 
 		private final double[] MakerepeatedLineguess(KalmanIndexedlength iniparam, int label) {
 			long[] newposition = new long[ndims];
@@ -748,6 +753,8 @@ import preProcessing.GetLocalmaxmin;
 				System.out.println("Label: " + label + " " + "Initial guess: " + " StartX: " + LMparam[0] + " StartY: "
 						+ LMparam[1] + " EndX: " + LMparam[2] + " EndY: " + LMparam[3]);
 
+				Accountedframes = (framenumber);
+				
 				final double[] safeparam = LMparam.clone();
 				MTFitFunction UserChoiceFunction = null;
 				if (model == UserChoiceModel.Line) {
