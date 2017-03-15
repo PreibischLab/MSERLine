@@ -51,6 +51,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 	public int Accountedframes;
 	private final double[] psf;
 	private final boolean DoMask;
+	private final boolean Trackstart;
 	private boolean Maskfail = false;
 	// LM solver iteration params
 	public int maxiter = 300;
@@ -122,7 +123,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 	public SubpixelVelocityPCLine(final RandomAccessibleInterval<FloatType> source, final LinefinderHF linefinder,
 			final ArrayList<Indexedlength> PrevFrameparamstart, final ArrayList<Indexedlength> PrevFrameparamend,
-			final double[] psf, final int framenumber, final UserChoiceModel model, final boolean DoMask) {
+			final double[] psf, final int framenumber, final UserChoiceModel model, final boolean DoMask, final boolean Trackstart) {
 
 		linefinder.checkInput();
 		linefinder.process();
@@ -135,6 +136,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 		this.ndims = source.numDimensions();
 		this.model = model;
 		this.DoMask = DoMask;
+		this.Trackstart = Trackstart;
 		assert (PrevFrameparamend.size() == PrevFrameparamstart.size());
 	}
 
@@ -166,6 +168,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 		startinframe = new ArrayList<Trackproperties>();
 		endinframe = new ArrayList<Trackproperties>();
 
+		if (Trackstart){
 		final int oldframenumber = PrevFrameparamstart.get(PrevFrameparamstart.size() - 1).framenumber;
 		final int framediff = framenumber - oldframenumber;
 		for (int index = 0; index < PrevFrameparamstart.size(); ++index) {
@@ -212,6 +215,12 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			startinframe.add(startedge);
 
 		}
+		}
+		
+		if (Trackstart == false){
+			
+			final int oldframenumber = PrevFrameparamend.get(PrevFrameparamend.size() - 1).framenumber;
+			final int framediff = framenumber - oldframenumber;
 		for (int index = 0; index < PrevFrameparamend.size(); ++index) {
 
 			Point secondlinepoint = new Point(ndims);
@@ -255,7 +264,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			endinframe.add(endedge);
 
 		}
-
+		}
 		return true;
 	}
 
@@ -695,6 +704,7 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			}
 
 			Accountedframes = framenumber;
+			
 			System.out.println("Label: " + label + " " + "Initial guess: " + " StartX: " + LMparam[0] + " StartY: "
 					+ LMparam[1] + " EndX: " + LMparam[2] + " EndY: " + LMparam[3]);
 

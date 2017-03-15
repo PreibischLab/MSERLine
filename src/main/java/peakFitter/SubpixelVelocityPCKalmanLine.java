@@ -69,6 +69,7 @@ import preProcessing.GetLocalmaxmin;
 		public int iterations = 300;
 		public double cutoffdistance = 5;
 		public boolean halfgaussian = false;
+		boolean Trackstart;
 		public double Intensityratio;
 		private final UserChoiceModel model;
 		public double Inispacing;
@@ -130,7 +131,7 @@ import preProcessing.GetLocalmaxmin;
 
 		public SubpixelVelocityPCKalmanLine(final RandomAccessibleInterval<FloatType> source, final LinefinderHF linefinder,
 				final ArrayList<KalmanIndexedlength> PrevFrameparamstart, final ArrayList<KalmanIndexedlength> PrevFrameparamend,
-				final double[] psf, final int framenumber, final UserChoiceModel model, final boolean DoMask, final int KalmanCount) {
+				final double[] psf, final int framenumber, final UserChoiceModel model, final boolean DoMask, final int KalmanCount, final boolean Trackstart) {
 
 			linefinder.checkInput();
 			linefinder.process();
@@ -144,6 +145,7 @@ import preProcessing.GetLocalmaxmin;
 			this.model = model;
 			this.DoMask = DoMask;
 			this.KalmanCount = KalmanCount;
+			this.Trackstart = Trackstart;
 			assert (PrevFrameparamend.size() == PrevFrameparamstart.size());
 		}
 
@@ -178,6 +180,8 @@ import preProcessing.GetLocalmaxmin;
            
 			
 			double size = Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1]);
+			
+			if (Trackstart){
 			final int oldframenumber = PrevFrameparamstart.get(PrevFrameparamstart.size() - 1).framenumber;
 			final int framediff = framenumber - oldframenumber;
 			for (int index = 0; index < PrevFrameparamstart.size(); ++index) {
@@ -239,7 +243,11 @@ import preProcessing.GetLocalmaxmin;
 				
 
 			}
+			}
 			
+			if (Trackstart == false){
+				final int oldframenumber = PrevFrameparamend.get(PrevFrameparamend.size() - 1).framenumber;
+				final int framediff = framenumber - oldframenumber;
 			for (int index = 0; index < PrevFrameparamend.size(); ++index) {
 
 				Point secondlinepoint = new Point(ndims);
@@ -298,7 +306,7 @@ import preProcessing.GetLocalmaxmin;
 				
 			}
 		
-			
+			}
 			
 
 			return true;
