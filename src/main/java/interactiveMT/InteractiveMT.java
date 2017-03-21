@@ -165,8 +165,8 @@ public class InteractiveMT implements PlugIn {
 
 	String usefolder = "/Users/varunkapoor/Documents/2017022Video1/";
 	// IJ.getDirectory("imagej");
-	String addToName = "MT3porcineVKR0.65";
-	String addTrackToName = "MT3porcineVKR0.65";
+	String addToName = "MT1porcineVKR0.58";
+	String addTrackToName = "MT1porcineVKR0.58";
 	ArrayList<float[]> deltadstart = new ArrayList<>();
 	ArrayList<float[]> deltadend = new ArrayList<>();
 	ArrayList<float[]> deltad = new ArrayList<>();
@@ -309,7 +309,7 @@ public class InteractiveMT implements PlugIn {
 	int inix = 20;
 	int iniy = 20;
 	double[] calibration;
-	double radiusfactor = 1.5;
+	double radiusfactor = 0.8;
 	MserTree<UnsignedByteType> newtree;
 	// Image 2d at the current slice
 	RandomAccessibleInterval<FloatType> currentimg;
@@ -1275,6 +1275,7 @@ public class InteractiveMT implements PlugIn {
 			c.gridx = 0;
 			c.gridy = 0;
 			c.weightx = 1;
+			panelSeventh.removeAll();
 			panelSeventh.setLayout(layout);
 			RoiManager roimanager = RoiManager.getInstance();
 
@@ -1302,12 +1303,13 @@ public class InteractiveMT implements PlugIn {
 				panelSeventh.add(Select, c);
 
 				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
+				c.insets = new Insets(10, 10, 0, 200);
 				panelSeventh.add(ExtractKymo, c);
 
 			
 
 				ExtractKymo.addActionListener(new GetCords());
+				panelSeventh.repaint();
 				panelSeventh.validate();
 			}
 			if (showDeterministic) {
@@ -1334,6 +1336,7 @@ public class InteractiveMT implements PlugIn {
 				TrackEndPoints.addActionListener(new TrackendsListener());
 				SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
 				CheckResults.addActionListener(new CheckResultsListener());
+				panelSeventh.repaint();
 				panelSeventh.validate();
 			}
 
@@ -1421,6 +1424,7 @@ public class InteractiveMT implements PlugIn {
 				TrackEndPoints.addActionListener(new TrackendsListener());
 				SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
 				CheckResults.addActionListener(new CheckResultsListener());
+				panelSeventh.repaint();
 				panelSeventh.validate();
 
 			}
@@ -1473,13 +1477,16 @@ public class InteractiveMT implements PlugIn {
 
 					overlaysec.add(newlineKymo);
 					Kymoimp.setOverlay(overlaysec);
+					float[] cordsLine = new float[n];
+					
+					for (int y = (int) cords[1]; y < nextcords[1]; ++y) {
+						cordsLine[1] =  y;
+						cordsLine[0] = (y - intercept) / (slope);
+						if (slope!=0)
+							Length.add(new float[] { cordsLine[0], cordsLine[1] });
+						
 
-						
-							
-							Length.add(new float[] { cords[0], cords[1] });
-						
-
-						
+					}
 
 				
 		}
@@ -1506,7 +1513,7 @@ public class InteractiveMT implements PlugIn {
 
 					if (Length.get(index)[1] == Length.get(j)[1]) {
 
-						Length.remove(j);
+						Length.remove(index);
 					}
 
 					else {
@@ -1525,8 +1532,8 @@ public class InteractiveMT implements PlugIn {
 				BufferedWriter bw = new BufferedWriter(fw);
 				bw.write("\tFramenumber\tLength\n");
 		for (int index = 0; index < Length.size(); ++index){
-			System.out.println(Length.get(index)[0] + " " + Length.get(index)[1]);
-		bw.write("\t" + (Length.get(index)[0]) + "\t" + (Length.get(index)[1] + "\n"));
+			System.out.println(Length.get(index)[1] + " " + Length.get(index)[0]);
+		bw.write("\t" + (Length.get(index)[1]) + "\t" + (Length.get(index)[0] + "\n"));
 			}
 
 			
@@ -1934,8 +1941,10 @@ public class InteractiveMT implements PlugIn {
 							newellipse.setStrokeColor(inactiveColor);
 							newellipse.setStrokeWidth(1);
 							newellipse.setName("SeedID: " + PrevFrameparam.fst.get(index).seedLabel);
+							
 							o.add(newellipse);
 							o.drawLabels(true);
+							
 							o.drawNames(true);
 
 						}
@@ -2397,45 +2406,41 @@ public class InteractiveMT implements PlugIn {
 
 			}
 
-			ArrayList<float[]> deltAL = new ArrayList<>();
 			
 
 			
 			
 
 			ArrayList<float[]> deltadeltaL = new ArrayList<>();
-
+			ArrayList<float[]> deltaLMT = new ArrayList<>();
 			for (int index = 1; index < lengthtime.size(); ++index) {
 
 				float delta = (float) (lengthtime.get(index)[0] - lengthtime.get(index - 1)[0]);
 
-				for (int accountindex = 0; accountindex < Accountedframes.size(); ++accountindex){
 				
 					
-					if (Accountedframes.get(accountindex) == (int) lengthtimestart.get(index)[1]){
+					
 					float[] deltalt = { delta, (int) lengthtime.get(index)[1] };
 				
-					deltaL.add(deltalt);
+					deltaLMT.add(deltalt);
 					
-					}
 					
-				}
-
+					
 				
 			}
 
 		
 
 			if (numberKymo) {
-				for (int index = 0; index < deltaL.size(); ++index) {
+				for (int index = 0; index < deltaLMT.size(); ++index) {
 
-					int time = (int) deltaL.get(index)[1];
+					int time = (int) deltaLMT.get(index)[1];
 
 					for (int secindex = 0; secindex < deltaL.size(); ++secindex) {
 
 						if ((int) deltaL.get(secindex)[1] == time) {
 
-							float delta = deltaL.get(index)[0] - deltaL.get(secindex)[0];
+							float delta = deltaLMT.get(index)[0] - deltaL.get(secindex)[0];
 							float[] cudeltadeltaLstart = { delta, time };
 							deltadeltaL.add(cudeltadeltaLstart);
 
@@ -2453,10 +2458,10 @@ public class InteractiveMT implements PlugIn {
 			// Choosing the faster end
 
 			double velocity = 0;
-			for (int index = 0; index < deltaL.size(); ++index) {
+			for (int index = 0; index < deltaLMT.size(); ++index) {
 
-				if (deltaL.get(index)[1] >= starttime && deltaL.get(index)[1] <= endtime) {
-					velocity += deltaL.get(index)[0];
+				if (deltaLMT.get(index)[1] >= starttime && deltaLMT.get(index)[1] <= endtime) {
+					velocity += deltaLMT.get(index)[0];
 
 				}
 			}
@@ -2918,10 +2923,10 @@ public class InteractiveMT implements PlugIn {
 
 				final Label RedotextA = new Label("MTtracker redo = ", Label.CENTER);
 				JTextArea textArea = new JTextArea(
-		                "On average the result was " + netdeltad +  "(pixels) away from the Kymo(your curoff was " + deltadcutoff +  " )"
-						+ " with small R, when MT is very small the optimizer identifies the nearest bright spot as part of the line, adding a wrong length for that frame"
-						+ "this causes the wrong number to be added over all frames causing a deviation from Kymo (which does not affects the rates)"
-						+ "If your R value was > 0.8 choose a lower value, if it was < 0.5 choose a greater value. If However the mistake was in Kymograph, then ignore this step and go next to compute rates.", 
+		                "On average the result was " + (float)netdeltad +  "(pixels) away from the Kymo (your cutoff was " + deltadcutoff +  "(pixels) ) "
+						+ " When MT is very small the optimizer identifies the nearest bright spot as part of the line, adding a wrong length for that frame "
+						+ " this causes the wrong number to be added over all frames causing a deviation from Kymo (which does not affects the rates) "
+						+ " If However the mistake was in Kymograph, then ignore this step and go next to compute rates.", 
 		                6, 
 		                20);
 				textArea.setFont(new Font("Serif", Font.PLAIN, 16));
@@ -3108,7 +3113,7 @@ public class InteractiveMT implements PlugIn {
 				RandomAccessibleInterval<FloatType> groundframepre = currentPreprocessedimg;
 				if (FindLinesViaMSER) {
 					if (index == next)
-						dialog = DialogueModelChoice();
+						dialog = DialogueModelChoiceHF();
 
 					else
 						dialog = false;
@@ -3137,7 +3142,7 @@ public class InteractiveMT implements PlugIn {
 				if (FindLinesViaHOUGH) {
 
 					if (index == next)
-						dialog = DialogueModelChoice();
+						dialog = DialogueModelChoiceHF();
 					else
 						dialog = false;
 
@@ -3162,7 +3167,7 @@ public class InteractiveMT implements PlugIn {
 
 				if (FindLinesViaMSERwHOUGH) {
 					if (index == next)
-						dialog = DialogueModelChoice();
+						dialog = DialogueModelChoiceHF();
 					else
 						dialog = false;
 
@@ -3858,10 +3863,10 @@ public class InteractiveMT implements PlugIn {
 						lengthcheckstart += lengthtimestart.get(index)[0];
 
 						for (int secindex = 0; secindex < Length.size(); ++secindex) {
-							
+							if ((int) Length.get(secindex)[1] == time){
 							for (int accountindex = 0; accountindex < Accountedframes.size(); ++accountindex){
 
-							if ((int) Length.get(secindex)[1] == time && Accountedframes.get(accountindex) == time) {
+							 if (Accountedframes.get(accountindex) == time) {
 
 								float delta = (float) (lengthtimestart.get(index)[0] - Length.get(secindex)[0]);
 								float[] cudeltadeltaLstart = { delta, time };
@@ -3869,9 +3874,45 @@ public class InteractiveMT implements PlugIn {
 
 							}
 							}
+							}
 
 						}
 					}
+					
+					
+
+			          /********
+			  		 * The part below removes the duplicate entries in the array
+			  		 * dor the time co-ordinate
+			  		 ********/
+			  		
+			  			int j = 0;
+
+			  			for (int index = 0; index < deltadstart.size() - 1; ++index) {
+			  				
+			  				
+			  				j = index + 1;
+			  				
+			  				
+			  					
+			  					
+			  				while (j < deltadstart.size()) {
+
+			  					if (deltadstart.get(index)[1] == deltadstart.get(j)[1]) {
+
+			  						deltadstart.remove(index);
+			  					}
+
+			  					else {
+			  						++j;
+			  						
+			  					}
+			  					
+			  					
+
+			  				}
+			  			}
+					
 					for (int index = 0; index < deltadstart.size(); ++index) {
 
 						for (int secindex = 0; secindex < Accountedframes.size(); ++secindex) {
@@ -3896,26 +3937,55 @@ public class InteractiveMT implements PlugIn {
 						lengthcheckend += lengthtimeend.get(index)[0];
 
 						for (int secindex = 0; secindex < Length.size(); ++secindex) {
-
+							if ((int) Length.get(secindex)[1] == time){
 							for (int accountindex = 0; accountindex < Accountedframes.size(); ++accountindex){
 
-								if ((int) Length.get(secindex)[1] == time && Accountedframes.get(accountindex) == time) {
 							
-							if ((int) Length.get(secindex)[1] == time && Accountedframes.get(accountindex) == time) {
+							 if(Accountedframes.get(accountindex) == time) {
 
 								float delta = (float) (lengthtimeend.get(index)[0] - Length.get(secindex)[0]);
 								float[] cudeltadeltaLend = { delta, time };
 								deltadend.add(cudeltadeltaLend);
 							}
-								}
+								
 
 							}
 
 						}
 
 					}
+					}
+					  /********
+			  		 * The part below removes the duplicate entries in the array
+			  		 * dor the time co-ordinate
+			  		 ********/
+			  		
+			  			int j = 0;
 
-					
+			  			for (int index = 0; index < deltadend.size() - 1; ++index) {
+			  				
+			  				
+			  				j = index + 1;
+			  				
+			  				
+			  					
+			  					
+			  				while (j < deltadend.size()) {
+
+			  					if (deltadend.get(index)[1] == deltadend.get(j)[1]) {
+
+			  						deltadend.remove(index);
+			  					}
+
+			  					else {
+			  						++j;
+			  						
+			  					}
+			  					
+			  					
+
+			  				}
+			  			}
 
 					for (int index = 0; index < deltadend.size(); ++index) {
 
@@ -4048,7 +4118,7 @@ public class InteractiveMT implements PlugIn {
 				RandomAccessibleInterval<FloatType> groundframepre = currentPreprocessedimg;
 				if (FindLinesViaMSER) {
 					if (index == next)
-						dialog = DialogueModelChoice();
+						dialog = DialogueModelChoiceHF();
 
 					else
 						dialog = false;
@@ -4077,7 +4147,7 @@ public class InteractiveMT implements PlugIn {
 				if (FindLinesViaHOUGH) {
 
 					if (index == next)
-						dialog = DialogueModelChoice();
+						dialog = DialogueModelChoiceHF();
 
 					else
 						dialog = false;
@@ -4828,6 +4898,39 @@ public class InteractiveMT implements PlugIn {
 						}
 					}
 					
+					  /********
+			  		 * The part below removes the duplicate entries in the array
+			  		 * dor the time co-ordinate
+			  		 ********/
+			  		
+			  			int j = 0;
+
+			  			for (int index = 0; index < deltadstart.size() - 1; ++index) {
+			  				
+			  				
+			  				j = index + 1;
+			  				
+			  				
+			  					
+			  					
+			  				while (j < deltadstart.size()) {
+
+			  					if (deltadstart.get(index)[1] == deltadstart.get(j)[1]) {
+
+			  						deltadstart.remove(index);
+			  					}
+
+			  					else {
+			  						++j;
+			  						
+			  					}
+			  					
+			  					
+
+			  				}
+			  			}
+					
+					
 					for (int index = 0; index < deltadstart.size(); ++index) {
 
 						for (int secindex = 0; secindex < Accountedframes.size(); ++secindex) {
@@ -4871,6 +4974,37 @@ public class InteractiveMT implements PlugIn {
 
 						}
 					}
+					/********
+			  		 * The part below removes the duplicate entries in the array
+			  		 * dor the time co-ordinate
+			  		 ********/
+			  		
+			  			int j = 0;
+
+			  			for (int index = 0; index < deltadend.size() - 1; ++index) {
+			  				
+			  				
+			  				j = index + 1;
+			  				
+			  				
+			  					
+			  					
+			  				while (j < deltadend.size()) {
+
+			  					if (deltadend.get(index)[1] == deltadend.get(j)[1]) {
+
+			  						deltadend.remove(index);
+			  					}
+
+			  					else {
+			  						++j;
+			  						
+			  					}
+			  					
+			  					
+
+			  				}
+			  			}
 					
 					for (int index = 0; index < deltadend.size(); ++index) {
 
@@ -6408,6 +6542,8 @@ public class InteractiveMT implements PlugIn {
 		final HashSet<Mser<UnsignedByteType>> rootset = newtree.roots();
 
 		ArrayList<EllipseRoi> Allrois = new ArrayList<EllipseRoi>();
+
+		ArrayList<EllipseRoi> Allroiscopy = new ArrayList<EllipseRoi>();
 		final Iterator<Mser<UnsignedByteType>> rootsetiterator = rootset.iterator();
 
 		AllmeanCovar = new ArrayList<double[]>();
@@ -6421,6 +6557,8 @@ public class InteractiveMT implements PlugIn {
 				final double[] meanandcov = { rootmser.mean()[0], rootmser.mean()[1], rootmser.cov()[0],
 						rootmser.cov()[1], rootmser.cov()[2] };
 				AllmeanCovar.add(meanandcov);
+				
+				
 
 			}
 		}
@@ -6429,16 +6567,22 @@ public class InteractiveMT implements PlugIn {
 		// changed if the program is run again
 		SortListbyproperty.sortpointList(AllmeanCovar);
 		for (int index = 0; index < AllmeanCovar.size(); ++index) {
-
+			
 			final double[] mean = { AllmeanCovar.get(index)[0], AllmeanCovar.get(index)[1] };
 			final double[] covar = { AllmeanCovar.get(index)[2], AllmeanCovar.get(index)[3],
 					AllmeanCovar.get(index)[4] };
 
 			EllipseRoi roi = createEllipse(mean, covar, 3);
+		
+			
 			Allrois.add(roi);
+			
 
 		}
 
+	
+		
+		
 		return Allrois;
 
 	}
@@ -6475,6 +6619,40 @@ public class InteractiveMT implements PlugIn {
 
 		return !gd.wasCanceled();
 	}
+	
+	
+	public boolean DialogueModelChoiceHF() {
+
+		GenericDialog gd = new GenericDialog("Model Choice for sub-pixel Localization");
+		String[] LineModel = { "GaussianLines", "SecondOrderPolynomial", "ThridOrderPolynomial" };
+
+		int indexmodel = 0;
+
+		gd.addChoice("Choose your model: ", LineModel, LineModel[indexmodel]);
+		gd.addStringField("Advanced Options for the optimizer", " Options ");
+		gd.addNumericField("Min Intensity = R * Max Intensity along MT, R (enter 0.2 to 0.9) = ", Intensityratio, 2);
+		gd.addNumericField("Spacing between Gaussians = G * Min(Psf), G (enter 0.3 to 1.0) = ",
+				Inispacing / Math.min(psf[0], psf[1]), 2);
+		gd.addNumericField("Average max difference between Kymo and tracker = ",
+				deltadcutoff, 2);
+
+		gd.showDialog();
+		indexmodel = gd.getNextChoiceIndex();
+		Domask = false;
+
+		if (indexmodel == 0)
+			userChoiceModel = UserChoiceModel.Line;
+		if (indexmodel == 1)
+			userChoiceModel = UserChoiceModel.Splineordersec;
+		if (indexmodel == 2)
+			userChoiceModel = UserChoiceModel.Splineorderthird;
+		Intensityratio = gd.getNextNumber();
+		Inispacing = gd.getNextNumber() * Math.min(psf[0], psf[1]);
+		deltadcutoff = (float) gd.getNextNumber();
+
+		return !gd.wasCanceled();
+	}
+	
 
 	public boolean DialogueMedian() {
 		// Create dialog
@@ -6491,10 +6669,11 @@ public class InteractiveMT implements PlugIn {
 		final FloatType type = intervalView.randomAccess().get().createVariable();
 		final ImgFactory<FloatType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(intervalView, type);
 		RandomAccessibleInterval<FloatType> totalimg = factory.create(intervalView, type);
-
 		final RandomAccessibleInterval<FloatType> img = Views.interval(intervalView, interval);
-
+		
 		totalimg = Views.interval(Views.extendZero(img), intervalView);
+		
+		
 
 		return totalimg;
 	}
@@ -6661,12 +6840,18 @@ public class InteractiveMT implements PlugIn {
 			// move both cursors forward by one pixel
 			cursorOutput.fwd();
 
+			int x = cursorOutput.getIntPosition(0);
+			int y = cursorOutput.getIntPosition(1);
+			
+			if (standardRectangle.contains(x, y)){
+			
 			ranac.setPosition(cursorOutput);
 
 			// set the value of this pixel of the output image to the same as
 			// the input,
 			// every Type supports T.set( T type )
 			cursorOutput.get().set((int) ranac.get().get());
+			}
 		}
 
 		// return the copy
@@ -6696,6 +6881,7 @@ public class InteractiveMT implements PlugIn {
 		final double dx = scale1 * Math.cos(theta);
 		final double dy = scale1 * Math.sin(theta);
 		final EllipseRoi ellipse = new EllipseRoi(x - dx, y - dy, x + dx, y + dy, scale2 / scale1);
+		
 		return ellipse;
 	}
 
@@ -6705,8 +6891,8 @@ public class InteractiveMT implements PlugIn {
 		ImagePlus imp = new Opener().openImage(
 				"/Users/varunkapoor/Documents/2017022Video1/2017-02-01_porcine_cy5seeds_cy3_12uM002_concatenated.tif");
 		ImagePlus Preprocessedimp = new Opener().openImage(
-				"/Users/varunkapoor/Documents/2017022Video1/BG2017-02-01_porcine_cy5seeds_cy3_12uM002_concatenated.tif");
-		ImagePlus Kymoimp = new Opener().openImage("/Users/varunkapoor/Documents/2017022Video1/Kymograph3-1.tif");
+				"/Users/varunkapoor/Documents/2017022Video1/BGMF2017-02-01_porcine_cy5seeds_cy3_12uM002_concatenated.tif");
+		ImagePlus Kymoimp = new Opener().openImage("/Users/varunkapoor/Documents/2017022Video1/Kymograph1-1.tif");
 
 		RandomAccessibleInterval<FloatType> originalimg = ImageJFunctions.convertFloat(imp);
 		RandomAccessibleInterval<FloatType> originalPreprocessedimg = ImageJFunctions.convertFloat(Preprocessedimp);
