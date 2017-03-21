@@ -74,10 +74,10 @@ public class Polyfit {
         return y;
     }
     public static void main(String[] args) {
-        double[] x = { 10, 20, 40, 60, 80, 100, 160, 200 };
-        double[] y = { 100, 350, 1500, 5000, 6700, 5000, 20160, 40000 };
+        double[] x = { 10, 20, 40, 80, 160, 200 };
+        double[] y = { 100, 350, 1500, 6700, 20160, 40000 };
         Polyfit regression = new Polyfit(x, y, 3);
-        System.out.println(regression.GetCoefficients(0) + " + " + " " + regression.GetCoefficients(1) + " *x " + " " + regression.GetCoefficients(2) + " *x*x " + " " + regression.GetCoefficients(3) + " *x*x*x");
+        System.out.println(regression.GetCoefficients(0) + " +  " + regression.GetCoefficients(1) + " *x " + " " + regression.GetCoefficients(2) + " *x*x " + " " + regression.GetCoefficients(3) + " *x*x*x");
     }
 	
 }
