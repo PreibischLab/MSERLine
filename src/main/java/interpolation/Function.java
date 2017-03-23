@@ -45,13 +45,8 @@ public interface Function< P extends Point >
 	public void fitFunction( final Collection<P> points ) throws NotEnoughDataPointsException;
 	
 	
-	/**
-	 * Fits this polynomial Function to the set of {@link Point}s.
-	 * @param points - {@link Collection} of {@link Point}s
-	 * @throws NotEnoughDataPointsException - thrown if not enough {@link Point}s are in the {@link Collection}
-	 */
+
 	
-	public void fitFunction( final Collection<P> points, final int degree ) throws NotEnoughDataPointsException;
 	
 	/**
 	 * Computes the minimal distance of a {@link Point} to this function

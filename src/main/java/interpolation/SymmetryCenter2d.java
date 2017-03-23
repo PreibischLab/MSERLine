@@ -211,9 +211,5 @@ public class SymmetryCenter2d extends AbstractFunction<SymmetryCenter2d> impleme
 			yc = center;
 	}
 
-	@Override
-	public void fitFunction(Collection<Point> points, int degree) throws NotEnoughDataPointsException {
-		// TODO Auto-generated method stub
-		
-	}
+	
 }

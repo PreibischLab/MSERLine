@@ -21,6 +21,12 @@ public class Polynomial extends AbstractFunction<Line> {
 	double n, m;
 	private double SSE;
 	private double SST;
+	
+	public Polynomial (final int degree){
+		
+		this.degree = degree;
+	}
+	
 
 	/**
 	 * @return - the center of the circle in x
@@ -53,9 +59,8 @@ public class Polynomial extends AbstractFunction<Line> {
 	 * This is a fit function for the polynomial of user chosen degree
 	 * 
 	 */
-	public void fitFunction(final Collection<Point> points, int degree) throws NotEnoughDataPointsException {
+	public void fitFunction(final Collection<Point> points) throws NotEnoughDataPointsException {
 
-		this.degree = degree;
 		final int Npoints = points.size();
 		if (Npoints < minNumPoints)
 			throw new NotEnoughDataPointsException("Not enough points, at least " + minNumPoints + " are necessary.");
@@ -103,39 +108,7 @@ public class Polynomial extends AbstractFunction<Line> {
 
 	}
 
-	public void fitFunction(final Collection<Point> points) throws NotEnoughDataPointsException {
-
-		final int numPoints = points.size();
-
-		if (numPoints < minNumPoints)
-			throw new NotEnoughDataPointsException("Not enough points, at least " + minNumPoints + " are necessary.");
-
-		// compute matrices
-		final double[] delta = new double[4];
-		final double[] tetha = new double[2];
-
-		for (final Point p : points) {
-			final double x = p.getW()[0];
-			final double y = p.getW()[1];
-
-			final double xx = x * x;
-			final double xy = x * y;
-
-			delta[0] += xx;
-			delta[1] += x;
-			delta[2] += x;
-			delta[3] += 1;
-
-			tetha[0] += xy;
-			tetha[1] += y;
-		}
-
-		// invert matrix
-		MatrixFunctions.invert2x2(delta);
-
-		this.m = delta[0] * tetha[0] + delta[1] * tetha[1];
-		this.n = delta[2] * tetha[0] + delta[3] * tetha[1];
-	}
+	
 
 	@Override
 	public double distanceTo(final Point point) {
@@ -202,17 +175,17 @@ public class Polynomial extends AbstractFunction<Line> {
 		for (final Point p : points)
 			candidates.add(new PointFunctionMatch(p));
 
+		final int degree = 3;
 		// Using the polynomial model to do the fitting
-		final Polynomial regression = new Polynomial();
+		final Polynomial regression = new Polynomial(degree);
 		regression.ransac(candidates, inliersPoly, 100, 0.1, 0.5);
 
 		System.out.println(inliersPoly.size());
 
-		regression.fit(inliersPoly, 3);
+		regression.fit(inliersPoly);
 		System.out.println(" y = " + regression.GetCoefficients(3) + " x*x*x + " + "  " + regression.GetCoefficients(2)
 				+ " x*x " + " " + regression.GetCoefficients(1) + " x " + " +  " + +regression.GetCoefficients(0));
-		// + regression.GetCoefficients(2) + " x*x " + " " +
-		// regression.GetCoefficients(3) + " x*x*x");
+		
 
 		for (final PointFunctionMatch p : inliersPoly)
 			System.out.println(regression.distanceTo(p.getP1()));
@@ -228,8 +201,7 @@ public class Polynomial extends AbstractFunction<Line> {
 		for (final PointFunctionMatch p : inliersLine)
 			System.out.println(l.distanceTo(p.getP1()));
 
-		// System.out.println( l.distanceTo( new Point( new float[]{ 1f, 0f } )
-		// ) );
+		
 	}
 
 }

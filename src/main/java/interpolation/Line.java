@@ -147,12 +147,7 @@ public class Line extends AbstractFunction<Line>
 		//System.out.println( l.distanceTo( new Point( new float[]{ 1f, 0f } ) ) );
 	}
 
-	@Override
-	public void fitFunction(Collection<Point> points, int degree) throws NotEnoughDataPointsException {
-		
-               fitFunction (points);
-		
-	}
+	
 
 	
 

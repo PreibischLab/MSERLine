@@ -46,16 +46,7 @@ public abstract class AbstractFunction< M extends AbstractFunction< M > > extend
 		fitFunction( list );
 	}
 	
-	public <P extends PointMatch> void fit( final Collection<P> matches, int degree ) throws NotEnoughDataPointsException, IllDefinedDataPointsException
-	{
-		final ArrayList<Point> list = new ArrayList<Point>();
-		
-		for ( final P pm : matches )
-			list.add( pm.getP1() );
-		
-		fitFunction( list, degree );
-	}
-	
+
 
 	
 
