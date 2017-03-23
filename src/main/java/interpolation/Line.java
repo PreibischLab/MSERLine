@@ -149,9 +149,12 @@ public class Line extends AbstractFunction<Line>
 
 	@Override
 	public void fitFunction(Collection<Point> points, int degree) throws NotEnoughDataPointsException {
-		// TODO Auto-generated method stub
+		
+               fitFunction (points);
 		
 	}
+
+	
 
 	
 }
