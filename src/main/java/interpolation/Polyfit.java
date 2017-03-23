@@ -76,7 +76,7 @@ public class Polyfit {
     public static void main(String[] args) {
         double[] x = { 10, 20, 40, 80, 160, 200 };
         double[] y = { 100, 350, 1500, 6700, 20160, 40000 };
-        Polyfit regression = new Polyfit(x, y, 3);
+        Polyfit regression = new Polyfit(x, y, 4);
         System.out.println(regression.GetCoefficients(0) + " +  " + regression.GetCoefficients(1) + " *x " + " " + regression.GetCoefficients(2) + " *x*x " + " " + regression.GetCoefficients(3) + " *x*x*x");
     }
 	
