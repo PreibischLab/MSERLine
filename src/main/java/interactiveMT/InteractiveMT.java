@@ -354,7 +354,9 @@ public class InteractiveMT implements PlugIn {
 	int endStack, thirdDimension;
 
 	public static enum ValueChange {
-		ROI, ALL, DELTA, FindLinesVia, MAXVAR, MINDIVERSITY, DARKTOBRIGHT, MINSIZE, MAXSIZE, SHOWMSER, FRAME, SHOWHOUGH, thresholdHough, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, rhoPerPixel, thetaPerPixel, THIRDDIM, iniSearch, maxSearch, missedframes, THIRDDIMTrack, MEDIAN, kymo;
+		ROI, ALL, DELTA, FindLinesVia, MAXVAR, MINDIVERSITY, DARKTOBRIGHT, MINSIZE, 
+		MAXSIZE, SHOWMSER, FRAME, SHOWHOUGH, thresholdHough, DISPLAYBITIMG, DISPLAYWATERSHEDIMG,
+		rhoPerPixel, thetaPerPixel, THIRDDIM, iniSearch, maxSearch, missedframes, THIRDDIMTrack, MEDIAN, kymo;
 	}
 
 	boolean isFinished = false;
@@ -533,20 +535,7 @@ public class InteractiveMT implements PlugIn {
 
 	}
 
-	public InteractiveMT(final ImagePlus imp, final ImagePlus preprocessedimp, final double[] psf, final int minlength,
-			final float frametosec) {
-		this.imp = imp;
-		this.preprocessedimp = preprocessedimp;
-		this.psf = psf;
-		this.minlength = minlength;
-		ndims = imp.getNDimensions();
-		this.frametosec = frametosec;
-		standardRectangle = new Rectangle(inix, iniy, imp.getWidth() - 2 * inix, imp.getHeight() - 2 * iniy);
-		originalimg = ImageJFunctions.convertFloat(imp.duplicate());
-		originalPreprocessedimg = ImageJFunctions.convertFloat(preprocessedimp.duplicate());
-		calibration = new double[] { imp.getCalibration().pixelWidth, imp.getCalibration().pixelHeight };
-
-	}
+	
 
 	public InteractiveMT(final RandomAccessibleInterval<FloatType> originalimg,
 			final RandomAccessibleInterval<FloatType> originalPreprocessedimg, final double[] psf,
@@ -591,7 +580,7 @@ public class InteractiveMT implements PlugIn {
 
 	@Override
 	public void run(String arg) {
-
+		jpb = new JProgressBar();
 		UserchosenCostFunction = new SquareDistCostFunction();
 		Inispacing = 0.5 * Math.min(psf[0], psf[1]);
 		if (originalimg.numDimensions() < 3) {
@@ -962,12 +951,13 @@ public class InteractiveMT implements PlugIn {
 		c.insets = new Insets(10, 10, 0, 0);
 		panelFirst.add(mserwhough, c);
 		++c.gridy;
+		if (Kymoimg!=null){
 		c.insets = new Insets(10, 10, 0, 0);
 		panelFirst.add(Kymo, c);
 		++c.gridy;
 		c.insets = new Insets(10, 10, 0, 0);
 		panelFirst.add(Analyzekymo, c);
-
+		}
 		if (thirdDimensionSize > 1) {
 			++c.gridy;
 			panelFirst.add(thirdDimensionslider, c);
@@ -1090,7 +1080,7 @@ public class InteractiveMT implements PlugIn {
 		Kymo.setForeground(new Color(255, 255, 255));
 		MTTextHF.setFont(MTTextHF.getFont().deriveFont(Font.BOLD));
 
-		if (analyzekymo == false) {
+		if (analyzekymo == false && Kymoimg==null) {
 			panelSixth.setLayout(layout);
 			c.fill = GridBagConstraints.HORIZONTAL;
 			c.gridx = 0;
@@ -1280,8 +1270,7 @@ public class InteractiveMT implements PlugIn {
 			c.gridx = 0;
 			c.gridy = 0;
 			c.weightx = 1;
-			panelSeventh.removeAll();
-			panelSeventh.setLayout(layout);
+			
 			RoiManager roimanager = RoiManager.getInstance();
 
 			if (roimanager != null) {
@@ -1291,6 +1280,9 @@ public class InteractiveMT implements PlugIn {
 
 			}
 
+			panelSeventh.removeAll();
+			panelSeventh.setLayout(layout);
+			if (Kymoimg!=null)
 			Kymoimp = ImageJFunctions.show(Kymoimg);
 			final Label Select = new Label(
 					"Make Segmented Line selection (Generates a file containing time (row 1) and length (row 2))");
@@ -1302,7 +1294,8 @@ public class InteractiveMT implements PlugIn {
 			Checkres.setBackground(new Color(1, 0, 1));
 			Checkres.setForeground(new Color(255, 255, 255));
 
-			if (analyzekymo) {
+			if (analyzekymo ) {
+				
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 0);
 				panelSeventh.add(Select, c);
@@ -1312,8 +1305,7 @@ public class InteractiveMT implements PlugIn {
 				panelSeventh.add(ExtractKymo, c);
 
 				ExtractKymo.addActionListener(new GetCords());
-				panelSeventh.repaint();
-				panelSeventh.validate();
+				
 			}
 			if (showDeterministic) {
 				final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
@@ -1328,6 +1320,7 @@ public class InteractiveMT implements PlugIn {
 				c.insets = new Insets(10, 10, 0, 175);
 				panelSeventh.add(SkipframeandTrackEndPoints, c);
 
+				if (analyzekymo && Kymoimg!=null){
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 0);
 				panelSeventh.add(Checkres, c);
@@ -1335,16 +1328,14 @@ public class InteractiveMT implements PlugIn {
 				++c.gridy;
 				c.insets = new Insets(10, 175, 0, 175);
 				panelSeventh.add(CheckResults, c);
-
+				}
 				TrackEndPoints.addActionListener(new TrackendsListener());
 				SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
 				CheckResults.addActionListener(new CheckResultsListener());
-				panelSeventh.repaint();
-				panelSeventh.validate();
+				
 			}
 
 			if (showKalman) {
-
 				final Scrollbar rad = new Scrollbar(Scrollbar.HORIZONTAL, initialSearchradiusInit, 10, 0,
 						10 + scrollbarSize);
 				initialSearchradius = computeValueFromScrollbarPosition(initialSearchradiusInit, initialSearchradiusMin,
@@ -1427,10 +1418,11 @@ public class InteractiveMT implements PlugIn {
 				TrackEndPoints.addActionListener(new TrackendsListener());
 				SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
 				CheckResults.addActionListener(new CheckResultsListener());
-				panelSeventh.repaint();
-				panelSeventh.validate();
+				
 
 			}
+			panelSeventh.repaint();
+			panelSeventh.validate();
 
 		}
 
@@ -1559,6 +1551,51 @@ public class InteractiveMT implements PlugIn {
 			else if (arg0.getStateChange() == ItemEvent.SELECTED) {
 
 				showDeterministic = true;
+				final GridBagLayout layout = new GridBagLayout();
+				final GridBagConstraints c = new GridBagConstraints();
+				c.fill = GridBagConstraints.HORIZONTAL;
+				c.gridx = 0;
+				c.gridy = 0;
+				c.weightx = 1;
+				
+				RoiManager roimanager = RoiManager.getInstance();
+
+				if (roimanager != null) {
+
+					roimanager.close();
+					roimanager = new RoiManager();
+
+				}
+				panelSeventh.removeAll();
+				panelSeventh.setLayout(layout);
+				final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
+				final Button SkipframeandTrackEndPoints = new Button(
+						"TrackEndPoint (User specified first and last frame)");
+				final Button CheckResults = new Button("Check Results (then click next)");
+				final Label Checkres = new Label("The tracker now performs an internal check on the results");
+				Checkres.setBackground(new Color(1, 0, 1));
+				Checkres.setForeground(new Color(255, 255, 255));
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 175);
+				panelSeventh.add(TrackEndPoints, c);
+
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 175);
+				panelSeventh.add(SkipframeandTrackEndPoints, c);
+
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 0);
+				panelSeventh.add(Checkres, c);
+
+				++c.gridy;
+				c.insets = new Insets(10, 175, 0, 175);
+				panelSeventh.add(CheckResults, c);
+
+				TrackEndPoints.addActionListener(new TrackendsListener());
+				SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
+				CheckResults.addActionListener(new CheckResultsListener());
+				panelSeventh.repaint();
+				panelSeventh.validate();
 
 			}
 
@@ -1575,7 +1612,113 @@ public class InteractiveMT implements PlugIn {
 			} else if (arg0.getStateChange() == ItemEvent.SELECTED) {
 
 				showKalman = true;
+				final GridBagLayout layout = new GridBagLayout();
+				final GridBagConstraints c = new GridBagConstraints();
+				c.fill = GridBagConstraints.HORIZONTAL;
+				c.gridx = 0;
+				c.gridy = 0;
+				c.weightx = 1;
+				
+				RoiManager roimanager = RoiManager.getInstance();
 
+				if (roimanager != null) {
+
+					roimanager.close();
+					roimanager = new RoiManager();
+
+				}
+
+				panelSeventh.removeAll();
+				panelSeventh.setLayout(layout);
+				
+				final Scrollbar rad = new Scrollbar(Scrollbar.HORIZONTAL, initialSearchradiusInit, 10, 0,
+						10 + scrollbarSize);
+				initialSearchradius = computeValueFromScrollbarPosition(initialSearchradiusInit, initialSearchradiusMin,
+						initialSearchradiusMax, scrollbarSize);
+
+				final Label SearchText = new Label("Initial Search Radius: " + initialSearchradius, Label.CENTER);
+
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelSeventh.add(SearchText, c);
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelSeventh.add(rad, c);
+
+				final Scrollbar Maxrad = new Scrollbar(Scrollbar.HORIZONTAL, maxSearchradiusInit, 10, 0,
+						10 + scrollbarSize);
+				maxSearchradius = computeValueFromScrollbarPosition(maxSearchradiusInit, maxSearchradiusMin,
+						maxSearchradiusMax, scrollbarSize);
+				final Label MaxMovText = new Label("Max Movment of Objects per frame: " + maxSearchradius,
+						Label.CENTER);
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelSeventh.add(MaxMovText, c);
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelSeventh.add(Maxrad, c);
+
+				final Scrollbar Miss = new Scrollbar(Scrollbar.HORIZONTAL, missedframesInit, 10, 0, 10 + scrollbarSize);
+				Miss.setBlockIncrement(1);
+				missedframes = (int) computeValueFromScrollbarPosition(missedframesInit, missedframesMin,
+						missedframesMax, scrollbarSize);
+				final Label LostText = new Label("Objects allowed to be lost for #frames" + missedframes, Label.CENTER);
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelSeventh.add(LostText, c);
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelSeventh.add(Miss, c);
+
+				final Checkbox Costfunc = new Checkbox("Squared Distance Cost Function");
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 50);
+				panelSeventh.add(Costfunc, c);
+
+				rad.addAdjustmentListener(
+						new SearchradiusListener(SearchText, initialSearchradiusMin, initialSearchradiusMax));
+				Maxrad.addAdjustmentListener(
+						new maxSearchradiusListener(MaxMovText, maxSearchradiusMin, maxSearchradiusMax));
+				Miss.addAdjustmentListener(new missedFrameListener(LostText, missedframesMin, missedframesMax));
+
+				Costfunc.addItemListener(new CostfunctionListener());
+
+				MTtrackerstart = new KFsearch(AllstartKalman, UserchosenCostFunction, maxSearchradius,
+						initialSearchradius, thirdDimension, thirdDimensionSize, missedframes);
+
+				MTtrackerend = new KFsearch(AllendKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,
+						thirdDimension, thirdDimensionSize, missedframes);
+
+				final Button TrackEndPoints = new Button("Track EndPoints (From first to a chosen last frame)");
+				final Button SkipframeandTrackEndPoints = new Button(
+						"TrackEndPoint (User specified first and last frame)");
+				final Button CheckResults = new Button("Check Results (then click next)");
+
+				final Label Checkres = new Label("The tracker now performs an internal check on the results");
+				Checkres.setBackground(new Color(1, 0, 1));
+				Checkres.setForeground(new Color(255, 255, 255));
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 175);
+				panelSeventh.add(TrackEndPoints, c);
+
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 175);
+				panelSeventh.add(SkipframeandTrackEndPoints, c);
+
+				++c.gridy;
+				c.insets = new Insets(10, 10, 0, 0);
+				panelSeventh.add(Checkres, c);
+
+				++c.gridy;
+				c.insets = new Insets(10, 175, 0, 175);
+				panelSeventh.add(CheckResults, c);
+
+				TrackEndPoints.addActionListener(new TrackendsListener());
+				SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
+				CheckResults.addActionListener(new CheckResultsListener());
+				panelSeventh.repaint();
+				panelSeventh.validate();
+				
 			}
 
 		}
@@ -2846,9 +2989,10 @@ public class InteractiveMT implements PlugIn {
 				c.weightx = 4;
 				c.weighty = 1.5;
 
+				
 				final Label SuccessA = new Label(" Congratulations: that is quite close to the Kymograph, + ",
 						Label.CENTER);
-				final Label SuccessB = new Label(" now you can compute rates, choose start and end frame: ",
+				final Label SuccessB = new Label(" Now you can compute rates, choose start and end frame: ",
 						Label.CENTER);
 
 				final Label Done = new Label("The results have been compiled and stored, you can now exit",
@@ -2872,13 +3016,16 @@ public class InteractiveMT implements PlugIn {
 
 				SuccessB.setBackground(new Color(1, 0, 1));
 				SuccessB.setForeground(new Color(255, 255, 255));
+				if(analyzekymo && Kymoimg!=null){
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 50);
 				panelEighth.add(SuccessA, c);
+				}
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 50);
 				panelEighth.add(SuccessB, c);
-
+				
+				
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 50);
 				panelEighth.add(startText, c);
@@ -2996,7 +3143,7 @@ public class InteractiveMT implements PlugIn {
 
 				boolean dialog;
 				boolean dialogupdate;
-
+				ArrayList<Pair<Integer, double[]>> ID = new ArrayList<Pair<Integer, double[]>>();
 				RandomAccessibleInterval<FloatType> groundframe = currentimg;
 				RandomAccessibleInterval<FloatType> groundframepre = currentPreprocessedimg;
 				if (FindLinesViaMSER) {
@@ -3014,14 +3161,14 @@ public class InteractiveMT implements PlugIn {
 					if (showDeterministic) {
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
 								minlength, thirdDimension, psf, newlineMser, userChoiceModel, Domask, Intensityratio,
-								Inispacing, Trackstart);
+								Inispacing, Trackstart,jpb, thirdDimensionSize);
 
 						Accountedframes.add(FindlinesVia.getAccountedframes());
 					}
 					if (showKalman) {
 						returnVectorKalman = FindlinesVia.LinefindingMethodHFKalman(groundframe, groundframepre,
 								PrevFrameparamKalman, minlength, thirdDimension, psf, newlineMser, userChoiceModel,
-								Domask, Kalmancount, Intensityratio, Inispacing, Trackstart);
+								Domask, Kalmancount, Intensityratio, Inispacing, Trackstart,jpb, thirdDimensionSize);
 						Accountedframes.add(FindlinesVia.getAccountedframes());
 					}
 
@@ -3040,14 +3187,14 @@ public class InteractiveMT implements PlugIn {
 					if (showDeterministic) {
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
 								minlength, thirdDimension, psf, newlineHough, userChoiceModel, Domask, Intensityratio,
-								Inispacing, Trackstart);
+								Inispacing, Trackstart,jpb, thirdDimensionSize);
 						Accountedframes.add(FindlinesVia.getAccountedframes());
 
 					}
 					if (showKalman) {
 						returnVectorKalman = FindlinesVia.LinefindingMethodHFKalman(groundframe, groundframepre,
 								PrevFrameparamKalman, minlength, thirdDimension, psf, newlineHough, userChoiceModel,
-								Domask, Kalmancount, Intensityratio, Inispacing, Trackstart);
+								Domask, Kalmancount, Intensityratio, Inispacing, Trackstart,jpb, thirdDimensionSize);
 
 						Accountedframes.add(FindlinesVia.getAccountedframes());
 					}
@@ -3067,7 +3214,7 @@ public class InteractiveMT implements PlugIn {
 					if (showDeterministic) {
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
 								minlength, thirdDimension, psf, newlineMserwHough, userChoiceModel, Domask,
-								Intensityratio, Inispacing, Trackstart);
+								Intensityratio, Inispacing, Trackstart,jpb, thirdDimensionSize);
 						Accountedframes.add(FindlinesVia.getAccountedframes());
 
 					}
@@ -3075,7 +3222,7 @@ public class InteractiveMT implements PlugIn {
 					if (showKalman) {
 						returnVectorKalman = FindlinesVia.LinefindingMethodHFKalman(groundframe, groundframepre,
 								PrevFrameparamKalman, minlength, thirdDimension, psf, newlineMserwHough,
-								userChoiceModel, Domask, Kalmancount, Intensityratio, Inispacing, Trackstart);
+								userChoiceModel, Domask, Kalmancount, Intensityratio, Inispacing, Trackstart,jpb, thirdDimensionSize);
 
 						Accountedframes.add(FindlinesVia.getAccountedframes());
 
@@ -3724,11 +3871,15 @@ public class InteractiveMT implements PlugIn {
 					}
 				}
 				rtAll.show("Start and End of MT, respectively");
-
+				if (Trackstart) 
+					lengthtime = lengthtimestart;
+				else
+					lengthtime = lengthtimeend;
 				if (analyzekymo) {
 					double lengthcheckstart = 0;
 					double lengthcheckend = 0;
 					if (Trackstart) {
+						lengthtime = lengthtimestart;
 						for (int index = 0; index < lengthtimestart.size(); ++index) {
 
 							int time = (int) lengthtimestart.get(index)[1];
@@ -3793,7 +3944,7 @@ public class InteractiveMT implements PlugIn {
 
 						}
 						deltad = deltadstart;
-						lengthtime = lengthtimestart;
+						
 					}
 					if (Trackstart == false) {
 						for (int index = 0; index < lengthtimeend.size(); ++index) {
@@ -4035,14 +4186,14 @@ public class InteractiveMT implements PlugIn {
 					if (showDeterministic) {
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
 								minlength, thirdDimension, psf, newlineMser, userChoiceModel, Domask, Intensityratio,
-								Inispacing, Trackstart);
+								Inispacing, Trackstart, jpb, thirdDimensionSize);
 						Accountedframes.add(FindlinesVia.getAccountedframes());
 					}
 
 					if (showKalman) {
 						returnVectorKalman = FindlinesVia.LinefindingMethodHFKalman(groundframe, groundframepre,
 								PrevFrameparamKalman, minlength, thirdDimension, psf, newlineMser, userChoiceModel,
-								Domask, Kalmancount, Intensityratio, Inispacing, Trackstart);
+								Domask, Kalmancount, Intensityratio, Inispacing, Trackstart, jpb, thirdDimensionSize);
 
 						Accountedframes.add(FindlinesVia.getAccountedframes());
 					}
@@ -4063,7 +4214,7 @@ public class InteractiveMT implements PlugIn {
 					if (showDeterministic) {
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
 								minlength, thirdDimension, psf, newlineHough, userChoiceModel, Domask, Intensityratio,
-								Inispacing, Trackstart);
+								Inispacing, Trackstart, jpb, thirdDimensionSize);
 
 						Accountedframes.add(FindlinesVia.getAccountedframes());
 					}
@@ -4071,7 +4222,7 @@ public class InteractiveMT implements PlugIn {
 					if (showKalman) {
 						returnVectorKalman = FindlinesVia.LinefindingMethodHFKalman(groundframe, groundframepre,
 								PrevFrameparamKalman, minlength, thirdDimension, psf, newlineHough, userChoiceModel,
-								Domask, Kalmancount, Intensityratio, Inispacing, Trackstart);
+								Domask, Kalmancount, Intensityratio, Inispacing, Trackstart, jpb, thirdDimensionSize);
 						Accountedframes.add(FindlinesVia.getAccountedframes());
 					}
 
@@ -4090,14 +4241,14 @@ public class InteractiveMT implements PlugIn {
 					if (showDeterministic) {
 						returnVector = FindlinesVia.LinefindingMethodHF(groundframe, groundframepre, PrevFrameparam,
 								minlength, thirdDimension, psf, newlineMserwHough, userChoiceModel, Domask,
-								Intensityratio, Inispacing, Trackstart);
+								Intensityratio, Inispacing, Trackstart, jpb, thirdDimensionSize);
 
 						Accountedframes.add(FindlinesVia.getAccountedframes());
 					}
 					if (showKalman) {
 						returnVectorKalman = FindlinesVia.LinefindingMethodHFKalman(groundframe, groundframepre,
 								PrevFrameparamKalman, minlength, thirdDimension, psf, newlineMserwHough,
-								userChoiceModel, Domask, Kalmancount, Intensityratio, Inispacing, Trackstart);
+								userChoiceModel, Domask, Kalmancount, Intensityratio, Inispacing, Trackstart, jpb, thirdDimensionSize);
 
 						Accountedframes.add(FindlinesVia.getAccountedframes());
 					}
@@ -4159,7 +4310,6 @@ public class InteractiveMT implements PlugIn {
 
 				if (Trackstart) {
 					ArrayList<Subgraphs> subgraphstart = trackerstart.getFramedgraph();
-					ArrayList<Pair<Integer, double[]>> ID = trackerstart.getSeedID();
 					DisplaysubGraphstart displaytrackstart = new DisplaysubGraphstart(impstart, subgraphstart,
 							next - 1);
 					displaytrackstart.getImp();
@@ -4169,7 +4319,6 @@ public class InteractiveMT implements PlugIn {
 				if (Trackstart == false) {
 
 					ArrayList<Subgraphs> subgraphend = trackerend.getFramedgraph();
-					ArrayList<Pair<Integer, double[]>> ID = trackerend.getSeedID();
 					DisplaysubGraphend displaytrackend = new DisplaysubGraphend(impend, subgraphend, next - 1);
 					displaytrackend.getImp();
 					impend.draw();
@@ -4776,7 +4925,10 @@ public class InteractiveMT implements PlugIn {
 					}
 				}
 				rtAll.show("Start and End of MT");
-
+				if (Trackstart)
+					lengthtime = lengthtimestart;
+				else
+					lengthtime = lengthtimeend;
 				if (analyzekymo) {
 					double lengthcheckstart = 0;
 					double lengthcheckend = 0;
@@ -5786,6 +5938,7 @@ public class InteractiveMT implements PlugIn {
 				KalmanTracker.addItemListener(new KalmanchoiceListener());
 				DeterTracker.addItemListener(new DeterchoiceListener());
 				KymoExtract.addItemListener(new KymoExtractListener());
+				
 				panelSixth.validate();
 				panelSixth.repaint();
 

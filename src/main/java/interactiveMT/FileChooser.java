@@ -301,7 +301,9 @@ public class FileChooser extends JPanel {
 
 			ImagePlus impA = new Opener().openImage(chooserA.getSelectedFile().getPath());
 			ImagePlus impB = new Opener().openImage(chooserB.getSelectedFile().getPath());
-			ImagePlus impC = new Opener().openImage(chooserC.getSelectedFile().getPath());
+			ImagePlus impC = null;
+			if(chooserC!=null)
+			impC = new Opener().openImage(chooserC.getSelectedFile().getPath());
 			// Tracking is done with imageA measurment is performed on both the
 			// images
 			calibration[0] = impA.getCalibration().pixelWidth;
@@ -309,7 +311,9 @@ public class FileChooser extends JPanel {
 
 			RandomAccessibleInterval<FloatType> originalPreprocessedimg = ImageJFunctions.convertFloat(impA);
 			RandomAccessibleInterval<FloatType> originalimg = ImageJFunctions.convertFloat(impB);
-			RandomAccessibleInterval<FloatType> kymoimg = ImageJFunctions.convertFloat(impC);
+			RandomAccessibleInterval<FloatType> kymoimg = null;
+			if (impC!=null)
+			kymoimg = ImageJFunctions.convertFloat(impC);
 
 			new Normalize();
 
@@ -321,7 +325,10 @@ public class FileChooser extends JPanel {
 			psf[1] = Float.parseFloat(inputFieldY.getText());
 			frametosec = Float.parseFloat(inputFieldT.getText());
 
+			if (kymoimg!=null)
 			new InteractiveMT(originalimg, originalPreprocessedimg, kymoimg, psf, calibration, 2, frametosec).run(null);
+			else
+			new InteractiveMT(originalimg, originalPreprocessedimg, psf, calibration, 2, frametosec).run(null);	
 			close(parent);
 		}
 	}

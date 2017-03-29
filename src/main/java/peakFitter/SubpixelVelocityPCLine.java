@@ -5,6 +5,9 @@ import java.awt.geom.RoundRectangle2D;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+
+import javax.swing.JProgressBar;
+
 import com.sun.tools.javac.util.Pair;
 
 import LineModels.GaussianLineds;
@@ -62,10 +65,11 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 	public double cutoffdistance = 5;
 	public boolean halfgaussian = false;
 	public double Intensityratio;
-	
+	final JProgressBar jpb;
+	final int thirdDimsize;
 	private final UserChoiceModel model;
 	public double Inispacing;
-	
+	 double percent = 0;
 	public void setInispacing (double Inispacing){
 		
 		this.Inispacing = Inispacing;
@@ -123,7 +127,8 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 
 	public SubpixelVelocityPCLine(final RandomAccessibleInterval<FloatType> source, final LinefinderHF linefinder,
 			final ArrayList<Indexedlength> PrevFrameparamstart, final ArrayList<Indexedlength> PrevFrameparamend,
-			final double[] psf, final int framenumber, final UserChoiceModel model, final boolean DoMask, final boolean Trackstart) {
+			final double[] psf, final int framenumber, final UserChoiceModel model, final boolean DoMask, final boolean Trackstart, final JProgressBar jpb,
+			final int thirdDimsize) {
 
 		linefinder.checkInput();
 		linefinder.process();
@@ -136,6 +141,8 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 		this.ndims = source.numDimensions();
 		this.model = model;
 		this.DoMask = DoMask;
+		this.jpb = jpb;
+		this.thirdDimsize = thirdDimsize;
 		this.Trackstart = Trackstart;
 		assert (PrevFrameparamend.size() == PrevFrameparamstart.size());
 	}
@@ -172,6 +179,11 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 		final int oldframenumber = PrevFrameparamstart.get(PrevFrameparamstart.size() - 1).framenumber;
 		final int framediff = framenumber - oldframenumber;
 		for (int index = 0; index < PrevFrameparamstart.size(); ++index) {
+			
+			
+			
+			percent = (Math.round(100 * (index + 1) / (PrevFrameparamstart.size())));
+			
 			final double originalslope = PrevFrameparamstart.get(index).originalslope;
 
 			final double originalintercept = PrevFrameparamstart.get(index).originalintercept;
@@ -222,6 +234,9 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 			final int oldframenumber = PrevFrameparamend.get(PrevFrameparamend.size() - 1).framenumber;
 			final int framediff = framenumber - oldframenumber;
 		for (int index = 0; index < PrevFrameparamend.size(); ++index) {
+			
+			
+			percent = (Math.round(100 * (index + 1) / (PrevFrameparamend.size())));
 
 			Point secondlinepoint = new Point(ndims);
 			secondlinepoint.setPosition(new long[] { (long) PrevFrameparamend.get(index).currentpos[0],
@@ -877,7 +892,13 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					System.out.println("Number of Gaussians used: " + numgaussians+ " ds: " + ds);
 					
 						
-					return PointofInterest;
+					jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
+						
+						return PointofInterest;
 				} else {
 					double ds = LMparam[2 * ndims];
 					double Intensity = LMparam[2 * ndims + 1];
@@ -964,7 +985,13 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 							System.out.println("New XMask: " + endfit[0] + " New YMask: " + endfit[1]);	
 					System.out.println("Number of Gaussians used: " + numgaussians + "ds: " + ds);
 					
-					return PointofInterest;
+					jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
+						
+						return PointofInterest;
 
 				}
 			}
@@ -1051,7 +1078,13 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					System.out.println("Number of Gaussians used: " + numgaussians);
 					
 						
-					return PointofInterest;
+					jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
+						
+						return PointofInterest;
 				} else {
 					double ds =fixed_param[ndims + 2];
 					final double Intensity = LMparam[2 * ndims];
@@ -1134,7 +1167,13 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 							System.out.println("New XMask: " + endfit[0] + " New YMask: " + endfit[1]);	
 					System.out.println("Number of Gaussians used: " + numgaussians);
 					
-					return PointofInterest;
+					jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
+						
+						return PointofInterest;
 
 				}
 			}
@@ -1220,7 +1259,13 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						else 
 							System.out.println("New XMask: " + startfit[0] + " New YMask: " + startfit[1]);	
 					System.out.println("Number of Gaussians used: " + numgaussians);
-					return PointofInterest;
+					jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
+						
+						return PointofInterest;
 				} else {
 
 					final double ds = LMparam[2 * ndims];
@@ -1306,7 +1351,13 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 						else 
 							System.out.println("New XMask: " + endfit[0] + " New YMask: " + endfit[1]);	
 					System.out.println("Number of Gaussians used: " + numgaussians);
-					return PointofInterest;
+					jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
+						
+						return PointofInterest;
 
 				}
 			}
@@ -1412,7 +1463,13 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					
 					
 						
-					return PointofInterest;
+					jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
+						
+						return PointofInterest;
 				} else {
 
 					final double Curvature = LMparam[2 * ndims];
@@ -1514,7 +1571,13 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					System.out.println("Number of Gaussians used: " + (numgaussians ) + " " + ds);
 				
 					
-					return PointofInterest;
+					jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
+						
+						return PointofInterest;
 
 				}
 			}
@@ -1622,7 +1685,13 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 				
 					
 						
-					return PointofInterest;
+					jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
+						
+						return PointofInterest;
 				} else {
 
 					final double Curvature = LMparam[2 * ndims + 1];
@@ -1733,7 +1802,13 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					
 					
 					
-					return PointofInterest;
+					jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
+						
+						return PointofInterest;
 
 				}
 			}
@@ -1841,7 +1916,13 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 				
 					
 						
-					return PointofInterest;
+					jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
+						
+						return PointofInterest;
 				} else {
 
 					final double Curvature = LMparam[2 * ndims + 1];
@@ -1954,7 +2035,13 @@ public class SubpixelVelocityPCLine extends BenchmarkAlgorithm
 					
 					
 					
-					return PointofInterest;
+					jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
+						
+						return PointofInterest;
 
 				}
 			}

@@ -3,6 +3,7 @@ package lineFinder;
 import java.util.ArrayList;
 
 import javax.security.auth.login.AccountExpiredException;
+import javax.swing.JProgressBar;
 
 import com.sun.tools.javac.util.Pair;
 
@@ -81,14 +82,15 @@ public  class FindlinesVia {
 	LinefindingMethodHF(final RandomAccessibleInterval<FloatType> source,
 			final RandomAccessibleInterval<FloatType> Preprocessedsource,Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>> PrevFrameparam,
 			final int minlength, final int framenumber, final double[] psf,  final LinefinderHF linefinder, final UserChoiceModel model,
-			final boolean DoMask, final double intensityratio, final double Inispacing, final boolean Trackstart) {
+			final boolean DoMask, final double intensityratio, final double Inispacing, final boolean Trackstart, final JProgressBar jpb,
+			final int thirdDimsize) {
 
 		Pair<Pair<ArrayList<Trackproperties>, ArrayList<Trackproperties>>,Pair<ArrayList<Indexedlength>,ArrayList<Indexedlength>>> returnVector = null;
 		
 		
 
 			final SubpixelVelocityPCLine growthtracker = new SubpixelVelocityPCLine(source, linefinder,
-					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber, model, DoMask, Trackstart);
+					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber, model, DoMask, Trackstart,jpb, thirdDimsize);
 			growthtracker.setIntensityratio(intensityratio);
 			growthtracker.setInispacing(Inispacing);
 			growthtracker.checkInput();
@@ -119,14 +121,15 @@ public  class FindlinesVia {
 	LinefindingMethodHFKalman(final RandomAccessibleInterval<FloatType> source,
 			final RandomAccessibleInterval<FloatType> Preprocessedsource,Pair<ArrayList<KalmanIndexedlength>,ArrayList<KalmanIndexedlength>> PrevFrameparam,
 			final int minlength, final int framenumber, final double[] psf,  final LinefinderHF linefinder, final UserChoiceModel model,
-			final boolean DoMask, final int KalmanCount, final double Intensityratio, final double Inispacing, final boolean Trackstart) {
+			final boolean DoMask, final int KalmanCount, final double Intensityratio, final double Inispacing, final boolean Trackstart, final JProgressBar jpb,
+			final int thirdDimsize) {
 
 		Pair<Pair<ArrayList<KalmanTrackproperties>, ArrayList<KalmanTrackproperties>>,Pair<ArrayList<KalmanIndexedlength>,ArrayList<KalmanIndexedlength>>> returnVector = null;
 		
 		
 
 			final SubpixelVelocityPCKalmanLine growthtracker = new SubpixelVelocityPCKalmanLine(source, linefinder,
-					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber, model, DoMask, KalmanCount, Trackstart);
+					PrevFrameparam.fst, PrevFrameparam.snd, psf, framenumber, model, DoMask, KalmanCount, Trackstart,jpb, thirdDimsize);
 			growthtracker.setIntensityratio(Intensityratio);
 			growthtracker.setInispacing(Inispacing);
 			growthtracker.checkInput();

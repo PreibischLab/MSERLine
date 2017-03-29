@@ -7,7 +7,10 @@ package peakFitter;
 	import java.io.FileWriter;
 	import java.io.IOException;
 	import java.util.ArrayList;
-	import com.sun.tools.javac.util.Pair;
+
+import javax.swing.JProgressBar;
+
+import com.sun.tools.javac.util.Pair;
 
 	import LineModels.GaussianLineds;
 	import LineModels.GaussianLinedsHF;
@@ -73,7 +76,9 @@ import preProcessing.GetLocalmaxmin;
 		public double Intensityratio;
 		private final UserChoiceModel model;
 		public double Inispacing;
-		
+		final JProgressBar jpb;
+		final int thirdDimsize;
+		 double percent = 0;
 		public void setInispacing (double Inispacing){
 			
 			this.Inispacing = Inispacing;
@@ -131,7 +136,9 @@ import preProcessing.GetLocalmaxmin;
 
 		public SubpixelVelocityPCKalmanLine(final RandomAccessibleInterval<FloatType> source, final LinefinderHF linefinder,
 				final ArrayList<KalmanIndexedlength> PrevFrameparamstart, final ArrayList<KalmanIndexedlength> PrevFrameparamend,
-				final double[] psf, final int framenumber, final UserChoiceModel model, final boolean DoMask, final int KalmanCount, final boolean Trackstart) {
+				final double[] psf, final int framenumber, final UserChoiceModel model, final boolean DoMask, final int KalmanCount, 
+				final boolean Trackstart, final JProgressBar jpb,
+				final int thirdDimsize) {
 
 			linefinder.checkInput();
 			linefinder.process();
@@ -146,6 +153,8 @@ import preProcessing.GetLocalmaxmin;
 			this.DoMask = DoMask;
 			this.KalmanCount = KalmanCount;
 			this.Trackstart = Trackstart;
+			this.jpb = jpb;
+			this.thirdDimsize = thirdDimsize;
 			assert (PrevFrameparamend.size() == PrevFrameparamstart.size());
 		}
 
@@ -185,7 +194,7 @@ import preProcessing.GetLocalmaxmin;
 			final int oldframenumber = PrevFrameparamstart.get(PrevFrameparamstart.size() - 1).framenumber;
 			final int framediff = framenumber - oldframenumber;
 			for (int index = 0; index < PrevFrameparamstart.size(); ++index) {
-
+				percent = (Math.round(100 * (index + 1) / (PrevFrameparamstart.size())));
 				final double originalslope = PrevFrameparamstart.get(index).originalslope;
 
 				final double originalintercept = PrevFrameparamstart.get(index).originalintercept;
@@ -250,6 +259,7 @@ import preProcessing.GetLocalmaxmin;
 				final int framediff = framenumber - oldframenumber;
 			for (int index = 0; index < PrevFrameparamend.size(); ++index) {
 
+				percent = (Math.round(100 * (index + 1) / (PrevFrameparamend.size())));
 				Point secondlinepoint = new Point(ndims);
 				secondlinepoint.setPosition(new long[] { (long) PrevFrameparamend.get(index).currentpos[0],
 						(long) PrevFrameparamend.get(index).currentpos[1] });
@@ -932,6 +942,12 @@ import preProcessing.GetLocalmaxmin;
 						System.out.println("Number of Gaussians used: " + numgaussians+ " ds: " + ds);
 						
 							
+						jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
+						
 						return PointofInterest;
 					} else {
 						double ds = LMparam[2 * ndims];
@@ -1012,6 +1028,12 @@ import preProcessing.GetLocalmaxmin;
 							else 
 								System.out.println("New XMask: " + endfit[0] + " New YMask: " + endfit[1]);	
 						System.out.println("Number of Gaussians used: " + numgaussians + "ds: " + ds);
+						
+						jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
 						
 						return PointofInterest;
 
@@ -1097,6 +1119,12 @@ import preProcessing.GetLocalmaxmin;
 						System.out.println("Number of Gaussians used: " + numgaussians);
 						
 							
+						jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
+						
 						return PointofInterest;
 					} else {
 						double ds =fixed_param[ndims + 2];
@@ -1174,6 +1202,12 @@ import preProcessing.GetLocalmaxmin;
 							else 
 								System.out.println("New XMask: " + endfit[0] + " New YMask: " + endfit[1]);	
 						System.out.println("Number of Gaussians used: " + numgaussians);
+						
+						jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
 						
 						return PointofInterest;
 
@@ -1257,6 +1291,12 @@ import preProcessing.GetLocalmaxmin;
 							else 
 								System.out.println("New XMask: " + startfit[0] + " New YMask: " + startfit[1]);	
 						System.out.println("Number of Gaussians used: " + numgaussians);
+						jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
+						
 						return PointofInterest;
 					} else {
 
@@ -1335,6 +1375,12 @@ import preProcessing.GetLocalmaxmin;
 							else 
 								System.out.println("New XMask: " + endfit[0] + " New YMask: " + endfit[1]);	
 						System.out.println("Number of Gaussians used: " + numgaussians);
+						jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
+						
 						return PointofInterest;
 
 					}
@@ -1438,6 +1484,12 @@ import preProcessing.GetLocalmaxmin;
 						
 						
 							
+						jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
+						
 						return PointofInterest;
 					} else {
 
@@ -1531,6 +1583,12 @@ import preProcessing.GetLocalmaxmin;
 								System.out.println("New XMask: " + endfit[0] + " New YMask: " + endfit[1]);	
 						System.out.println("Number of Gaussians used: " + (numgaussians ) + " " + ds);
 					
+						
+						jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
 						
 						return PointofInterest;
 
@@ -1632,6 +1690,12 @@ import preProcessing.GetLocalmaxmin;
 					
 						
 							
+						jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
+						
 						return PointofInterest;
 					} else {
 
@@ -1730,6 +1794,12 @@ import preProcessing.GetLocalmaxmin;
 						System.out.println("Number of Gaussians used: " + (numgaussians ) + " " + ds);
 						
 						
+						
+						jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
 						
 						return PointofInterest;
 
@@ -1838,6 +1908,12 @@ import preProcessing.GetLocalmaxmin;
 					
 						
 							
+						jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
+						
 						return PointofInterest;
 					} else {
 
@@ -1945,9 +2021,17 @@ import preProcessing.GetLocalmaxmin;
 						
 						
 						
+						jpb.setValue((int) percent);
+						jpb.setOpaque(true);
+						jpb.setStringPainted(true);
+					//	jpb.setForeground(Color.YELLOW);
+						jpb.setString("3D point = " + framenumber + "/" + thirdDimsize);
+						
 						return PointofInterest;
 
 					}
+					
+					
 				}
 				
 			
