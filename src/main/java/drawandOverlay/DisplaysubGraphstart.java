@@ -6,6 +6,8 @@ import java.util.ArrayList;
 
 import org.jgrapht.graph.DefaultWeightedEdge;
 
+import com.sun.tools.javac.util.Pair;
+
 import fiji.tool.SliceListener;
 import fiji.tool.SliceObserver;
 import graphconstructs.Staticproperties;
@@ -23,7 +25,7 @@ public class DisplaysubGraphstart {
     private final int ndims;
     private final int frame;
 	
-	public DisplaysubGraphstart(final ImagePlus imp, final ArrayList<Subgraphs> subgraph){
+	public DisplaysubGraphstart(final ImagePlus imp, final ArrayList<Subgraphs> subgraph, ArrayList<Pair<Integer, double[]>> ID ){
 		
 		this.imp = imp;
 		this.subgraph = subgraph;

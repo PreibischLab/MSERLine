@@ -1,8 +1,13 @@
 package drawandOverlay;
 
 import java.awt.Color;
+import java.util.ArrayList;
+
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
+
+import com.sun.tools.javac.util.Pair;
+
 import fiji.tool.SliceListener;
 import fiji.tool.SliceObserver;
 import graphconstructs.KalmanTrackproperties;
@@ -15,12 +20,12 @@ public class DisplayGraph {
 	// add listener to the imageplus slice slider
 	private ImagePlus imp;
 	private final SimpleWeightedGraph<double[], DefaultWeightedEdge> graph;
-	
-	public DisplayGraph(final ImagePlus imp, SimpleWeightedGraph<double[], DefaultWeightedEdge> graph){
+	private final ArrayList<Pair<Integer, double[]>> ID;
+	public DisplayGraph(final ImagePlus imp, SimpleWeightedGraph<double[], DefaultWeightedEdge> graph, ArrayList<Pair<Integer, double[]>> ID){
 		
 		this.imp = imp;
 		this.graph = graph;
-		
+		this.ID = ID;
 		// add listener to the imageplus slice slider
 				SliceObserver sliceObserver = new SliceObserver( imp, new ImagePlusListener() );
 	}
@@ -56,11 +61,31 @@ public class DisplayGraph {
 				newline.setStrokeColor(Color.RED);
 				newline.setStrokeWidth(0.8);
 				o.add(newline);
-					
+
+				
 				imp.updateAndDraw();
 				//System.out.println( arg0.getCurrentSlice() );
 				
 			}
+			
+			
+			for (int index = 0; index < ID.size(); ++index){
+				
+				 Line newellipse = new Line(ID.get(index).snd[0], ID.get(index).snd[1], ID.get(index).snd[0], ID.get(index).snd[1]);
+					
+
+					newellipse.setStrokeColor(Color.WHITE);
+					newellipse.setStrokeWidth(1);
+					newellipse.setName("TrackID: " + ID.get(index).fst);
+					
+					o.add(newellipse);
+					o.drawLabels(true);
+					
+					o.drawNames(true);
+				
+				
+			}
+			
 			
 		}		
 	}

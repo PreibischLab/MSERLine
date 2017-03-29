@@ -92,6 +92,19 @@ public class DisplayGraph {
 
 				o.add(newline);
 				
+				 Line newellipse = new Line(Spotbase.originalpoint[0], Spotbase.originalpoint[1], Spotbase.originalpoint[0], Spotbase.originalpoint[1]);
+					
+
+					newellipse.setStrokeColor(Color.WHITE);
+					newellipse.setStrokeWidth(1);
+					newellipse.setName("TrackID: " + Spotbase.seedlabel);
+					
+					o.add(newellipse);
+					o.drawLabels(true);
+					
+					o.drawNames(true);
+				
+				
 			}
 			imp.updateAndDraw();
 			System.out.println( arg0.getCurrentSlice() );

@@ -41,6 +41,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -56,9 +57,11 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JProgressBar;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
@@ -147,7 +150,6 @@ import peakFitter.SortListbyproperty;
 import preProcessing.GetLocalmaxmin;
 import preProcessing.Kernels;
 import preProcessing.MedianFilter2D;
-
 import trackerType.KFsearch;
 import trackerType.MTTracker;
 import trackerType.TrackModel;
@@ -187,7 +189,13 @@ public class InteractiveMT implements PlugIn {
 	float maxVarMax = 1;
 	float thetaPerPixelMax = 2;
 	float rhoPerPixelMax = 2;
-
+	JProgressBar jpb;
+	JLabel label = new JLabel("Progress..");
+	JFrame frame = new JFrame();
+	JPanel panel = new JPanel();
+	int Progressmin = 0;
+	int Progressmax = 100;
+	int max = Progressmax;
 	float deltadcutoff = 5;
 	boolean analyzekymo = false;
 	boolean darktobright = false;
@@ -220,7 +228,7 @@ public class InteractiveMT implements PlugIn {
 	float rhoPerPixelInit = new Float(0.5);
 	float thetaPerPixelInit = new Float(0.5);
 
-	final int frametosec;
+	final float frametosec;
 	public int minDiversityInit = 1;
 	public int radius = 1;
 	public long Size = 1;
@@ -281,7 +289,7 @@ public class InteractiveMT implements PlugIn {
 	public int initialSearchradiusInit = (int) initialSearchradius;
 	public float initialSearchradiusMin = 0;
 	public float initialSearchradiusMax = 100;
-    
+
 	public int maxSearchradiusInit = (int) maxSearchradius;
 	public float maxSearchradiusMin = 10;
 	public float maxSearchradiusMax = 500;
@@ -322,7 +330,6 @@ public class InteractiveMT implements PlugIn {
 	ImagePlus preprocessedimp;
 	final double[] psf;
 	final int minlength;
-	boolean displaySeedLabels = true;
 	int Maxlabel;
 	private int ndims;
 	ArrayList<int[]> ClickedPoints = new ArrayList<int[]>();
@@ -527,7 +534,7 @@ public class InteractiveMT implements PlugIn {
 	}
 
 	public InteractiveMT(final ImagePlus imp, final ImagePlus preprocessedimp, final double[] psf, final int minlength,
-			final int frametosec) {
+			final float frametosec) {
 		this.imp = imp;
 		this.preprocessedimp = preprocessedimp;
 		this.psf = psf;
@@ -543,7 +550,7 @@ public class InteractiveMT implements PlugIn {
 
 	public InteractiveMT(final RandomAccessibleInterval<FloatType> originalimg,
 			final RandomAccessibleInterval<FloatType> originalPreprocessedimg, final double[] psf,
-			final double[] imgCal, final int minlength, final int frametosec) {
+			final double[] imgCal, final int minlength, final float frametosec) {
 
 		this.originalimg = originalimg;
 		this.originalPreprocessedimg = originalPreprocessedimg;
@@ -564,7 +571,7 @@ public class InteractiveMT implements PlugIn {
 	public InteractiveMT(final RandomAccessibleInterval<FloatType> originalimg,
 			final RandomAccessibleInterval<FloatType> originalPreprocessedimg,
 			final RandomAccessibleInterval<FloatType> kymoimg, final double[] psf, final double[] imgCal,
-			final int minlength, final int frametosec) {
+			final int minlength, final float frametosec) {
 
 		this.originalimg = originalimg;
 		this.originalPreprocessedimg = originalPreprocessedimg;
@@ -607,7 +614,7 @@ public class InteractiveMT implements PlugIn {
 
 		if (Kymoimg != null) {
 			Kymoimp = ImageJFunctions.show(Kymoimg);
-			
+
 		}
 
 		CurrentView = getCurrentView();
@@ -1023,10 +1030,9 @@ public class InteractiveMT implements PlugIn {
 		final Label MTTextHF = new Label("Choose End point finding method for Higher Frames (dynamic channel)",
 				Label.CENTER);
 
-		final Checkbox displaySeedID = new Checkbox("Display Seed IDs", displaySeedLabels);
 		final Checkbox txtfile = new Checkbox("Save tracks as TXT file", SaveTxt);
 		final Checkbox xlsfile = new Checkbox("Save tracks as XLS file", SaveXLS);
-		
+
 		c.fill = GridBagConstraints.HORIZONTAL;
 		c.gridx = 0;
 		c.gridy = 0;
@@ -1049,11 +1055,11 @@ public class InteractiveMT implements PlugIn {
 		++c.gridy;
 		c.insets = new Insets(10, 10, 0, 180);
 		panelThird.add(ClickFast, c);
-		
+
 		++c.gridy;
 		c.insets = new Insets(10, 10, 0, 180);
 		panelThird.add(Finalize, c);
-		
+
 		++c.gridy;
 		c.insets = new Insets(10, 10, 0, 0);
 		panelThird.add(txtfile, c);
@@ -1074,7 +1080,6 @@ public class InteractiveMT implements PlugIn {
 		txtfile.addItemListener(new SaveasTXT());
 		Finalize.addItemListener(new finalpoint());
 		xlsfile.addItemListener(new SaveasXLS());
-		displaySeedID.addItemListener(new DisplaySeedID());
 
 		MTText.setFont(MTText.getFont().deriveFont(Font.BOLD));
 		Pre.setBackground(new Color(1, 0, 1));
@@ -1287,11 +1292,11 @@ public class InteractiveMT implements PlugIn {
 			}
 
 			Kymoimp = ImageJFunctions.show(Kymoimg);
-			final Label Select = new Label("Make Segmented Line selection (Generates a file containing time (row 1) and length (row 2))");
+			final Label Select = new Label(
+					"Make Segmented Line selection (Generates a file containing time (row 1) and length (row 2))");
 			final Button ExtractKymo = new Button("Extract Mask Co-ordinates :");
 			Select.setBackground(new Color(1, 0, 1));
 			Select.setForeground(new Color(255, 255, 255));
-			
 
 			final Label Checkres = new Label("The tracker now performs an internal check on the results");
 			Checkres.setBackground(new Color(1, 0, 1));
@@ -1305,8 +1310,6 @@ public class InteractiveMT implements PlugIn {
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 200);
 				panelSeventh.add(ExtractKymo, c);
-
-			
 
 				ExtractKymo.addActionListener(new GetCords());
 				panelSeventh.repaint();
@@ -1462,81 +1465,70 @@ public class InteractiveMT implements PlugIn {
 			int n = l.getNCoordinates();
 			float[] xCord = l.getFloatPolygon().xpoints;
 			int[] yCord = l.getYCoordinates();
-		
 
-				for (int index = 0; index < n - 1; index++) {
+			for (int index = 0; index < n - 1; index++) {
 
-					float[] cords = { xCord[index], (int) yCord[index] };
-					float[] nextcords = { xCord[index + 1], (int) yCord[index + 1] };
+				float[] cords = { xCord[index], (int) yCord[index] };
+				float[] nextcords = { xCord[index + 1], (int) yCord[index + 1] };
 
-					float slope = (float) ((nextcords[1] - cords[1]) / (nextcords[0] - cords[0]));
-					float intercept = nextcords[1] - slope * nextcords[0];
+				float slope = (float) ((nextcords[1] - cords[1]) / (nextcords[0] - cords[0]));
+				float intercept = nextcords[1] - slope * nextcords[0];
 
-					Line newlineKymo = new Line(cords[0], cords[1], nextcords[0], nextcords[1]);
-					overlaysec.setStrokeColor(Color.RED);
+				Line newlineKymo = new Line(cords[0], cords[1], nextcords[0], nextcords[1]);
+				overlaysec.setStrokeColor(Color.RED);
 
-					overlaysec.add(newlineKymo);
-					Kymoimp.setOverlay(overlaysec);
-					float[] cordsLine = new float[n];
-					
-					for (int y = (int) cords[1]; y < nextcords[1]; ++y) {
-						cordsLine[1] =  y;
-						cordsLine[0] = (y - intercept) / (slope);
-						if (slope!=0)
-							Length.add(new float[] { cordsLine[0], cordsLine[1] });
-						
+				overlaysec.add(newlineKymo);
+				Kymoimp.setOverlay(overlaysec);
+				float[] cordsLine = new float[n];
 
-					}
-
-				
-		}
-				
-		}
-		
-		 
-        /********
-		 * The part below removes the duplicate entries in the array
-		 * dor the time co-ordinate
-		 ********/
-		
-			int j = 0;
-
-			for (int index = 0; index < Length.size() - 1; ++index) {
-				
-				
-				j = index + 1;
-				
-				
-					
-					
-				while (j < Length.size()) {
-
-					if (Length.get(index)[1] == Length.get(j)[1]) {
-
-						Length.remove(index);
-					}
-
-					else {
-						++j;
-						
-					}
-					
-					
+				for (int y = (int) cords[1]; y < nextcords[1]; ++y) {
+					cordsLine[1] = y;
+					cordsLine[0] = (y - intercept) / (slope);
+					if (slope != 0)
+						Length.add(new float[] { cordsLine[0], cordsLine[1] });
 
 				}
-			}
-			try {
-				FileWriter fw;
-				File fichierKy = new File(usefolder + "//" + addToName + "KymoWill-start" + ".txt");
-				fw = new FileWriter(fichierKy);
-				BufferedWriter bw = new BufferedWriter(fw);
-				bw.write("\tFramenumber\tLength\n");
-		for (int index = 0; index < Length.size(); ++index){
-			System.out.println(Length.get(index)[1] + " " + Length.get(index)[0]);
-		bw.write("\t" + (Length.get(index)[1]) + "\t" + (Length.get(index)[0] + "\n"));
+
 			}
 
-			
+		}
+
+		/********
+		 * The part below removes the duplicate entries in the array dor the
+		 * time co-ordinate
+		 ********/
+
+		int j = 0;
+
+		for (int index = 0; index < Length.size() - 1; ++index) {
+
+			j = index + 1;
+
+			while (j < Length.size()) {
+
+				if (Length.get(index)[1] == Length.get(j)[1]) {
+
+					Length.remove(index);
+				}
+
+				else {
+					++j;
+
+				}
+
+			}
+		}
+		try {
+			FileWriter fw;
+			File fichierKy = new File(usefolder + "//" + addToName + "KymoWill-start" + ".txt");
+			fw = new FileWriter(fichierKy);
+			BufferedWriter bw = new BufferedWriter(fw);
+			bw.write("\tFramenumber\tLength\n");
+			for (int index = 0; index < Length.size(); ++index) {
+				System.out.println(Length.get(index)[1] + " " + Length.get(index)[0]);
+				bw.write("\t" + (Length.get(index)[1]) + "\t" + (Length.get(index)[0] + "\n"));
+			}
+
 			bw.close();
 			fw.close();
 
@@ -1545,8 +1537,6 @@ public class InteractiveMT implements PlugIn {
 			e.printStackTrace();
 		}
 
-		
-		
 		Kymoimp.show();
 
 	}
@@ -1770,57 +1760,51 @@ public class InteractiveMT implements PlugIn {
 		}
 	}
 
-	
-	
 	protected class chooseendListener implements ActionListener {
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
-			
-			
-			
-			preprocessedimp.getCanvas().addMouseListener( ml = new MouseListener() {
-				
-				 
-			    @Override
-			    public void mouseClicked(MouseEvent e) {
-			    	int x=e.getX();
-			        int y=e.getY();
-			        System.out.println("You chose: " + x+","+y);//these co-ords are relative to the component
-			        ClickedPoints.add(new int[]{x , y});
-			        
-			    }
+
+			preprocessedimp.getCanvas().addMouseListener(ml = new MouseListener() {
+
+				@Override
+				public void mouseClicked(MouseEvent e) {
+					int x = e.getX();
+					int y = e.getY();
+					System.out.println("You chose: " + x + "," + y);// these
+																	// co-ords
+																	// are
+																	// relative
+																	// to the
+																	// component
+					ClickedPoints.add(new int[] { x, y });
+
+				}
 
 				@Override
 				public void mousePressed(MouseEvent e) {
-				
-					
+
 				}
 
 				@Override
 				public void mouseReleased(MouseEvent e) {
-				
-					
+
 				}
 
 				@Override
 				public void mouseEntered(MouseEvent e) {
-				
-					
+
 				}
 
 				@Override
 				public void mouseExited(MouseEvent e) {
-				
-					
+
 				}
 			});
-			
+
 		}
-		
-		
-		
-		}
-	
+
+	}
+
 	protected class moveToFrameListener implements ActionListener {
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
@@ -1922,34 +1906,6 @@ public class InteractiveMT implements PlugIn {
 					PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength,
 							thirdDimension, psf, newlineMser, UserChoiceModel.Line, Domask, Intensityratio, Inispacing);
 
-					if (displaySeedLabels) {
-
-						Overlay o = imp.getOverlay();
-
-						if (o == null) {
-							o = new Overlay();
-							imp.setOverlay(o);
-						}
-
-						for (int index = 0; index < PrevFrameparam.fst.size(); ++index) {
-							Roi newellipse = new Roi((int) PrevFrameparam.fst.get(index).fixedpos[0],
-									(int) PrevFrameparam.fst.get(index).fixedpos[1], imp);
-							if (originalimg.dimension(0) > 1000)
-								newellipse = new Roi((int) PrevFrameparam.fst.get(index).fixedpos[0] / 2,
-										(int) PrevFrameparam.fst.get(index).fixedpos[1] / 2, imp);
-
-							newellipse.setStrokeColor(inactiveColor);
-							newellipse.setStrokeWidth(1);
-							newellipse.setName("SeedID: " + PrevFrameparam.fst.get(index).seedLabel);
-							
-							o.add(newellipse);
-							o.drawLabels(true);
-							
-							o.drawNames(true);
-
-						}
-					}
-
 					ArrayList<KalmanIndexedlength> start = new ArrayList<KalmanIndexedlength>();
 					ArrayList<KalmanIndexedlength> end = new ArrayList<KalmanIndexedlength>();
 
@@ -2006,31 +1962,6 @@ public class InteractiveMT implements PlugIn {
 							thirdDimension, psf, newlineHough, UserChoiceModel.Line, Domask, Intensityratio,
 							Inispacing);
 
-					if (displaySeedLabels) {
-
-						Overlay o = imp.getOverlay();
-
-						if (imp.getOverlay() == null) {
-							o = new Overlay();
-							imp.setOverlay(o);
-						}
-
-						for (int index = 0; index < PrevFrameparam.fst.size(); ++index) {
-							EllipseRoi newellipse = new EllipseRoi((int) PrevFrameparam.fst.get(index).fixedpos[0],
-									(int) PrevFrameparam.fst.get(index).fixedpos[1], imp);
-							if (originalimg.dimension(0) > 1000)
-								newellipse = new EllipseRoi((int) PrevFrameparam.fst.get(index).fixedpos[0] / 2,
-										(int) PrevFrameparam.fst.get(index).fixedpos[1] / 2, imp);
-							newellipse.setStrokeColor(inactiveColor);
-							newellipse.setStrokeWidth(1);
-							newellipse.setName("SeedID: " + PrevFrameparam.fst.get(index).seedLabel);
-							o.add(newellipse);
-							o.drawLabels(true);
-							o.drawNames(true);
-
-						}
-					}
-
 					ArrayList<KalmanIndexedlength> start = new ArrayList<KalmanIndexedlength>();
 					ArrayList<KalmanIndexedlength> end = new ArrayList<KalmanIndexedlength>();
 
@@ -2084,28 +2015,6 @@ public class InteractiveMT implements PlugIn {
 					PrevFrameparam = FindlinesVia.LinefindingMethod(groundframe, groundframepre, minlength,
 							thirdDimension, psf, newlineMserwHough, UserChoiceModel.Line, Domask, Intensityratio,
 							Inispacing);
-
-					if (displaySeedLabels) {
-
-						Overlay o = imp.getOverlay();
-
-						if (imp.getOverlay() == null) {
-							o = new Overlay();
-							imp.setOverlay(o);
-						}
-
-						for (int index = 0; index < PrevFrameparam.fst.size(); ++index) {
-							EllipseRoi newellipse = new EllipseRoi((int) PrevFrameparam.fst.get(index).fixedpos[0],
-									(int) PrevFrameparam.fst.get(index).fixedpos[1], imp);
-							newellipse.setStrokeColor(inactiveColor);
-							newellipse.setStrokeWidth(1);
-							newellipse.setName("SeedID: " + PrevFrameparam.fst.get(index).seedLabel);
-							o.add(newellipse);
-							o.drawLabels(true);
-							o.drawNames(true);
-
-						}
-					}
 
 					ArrayList<KalmanIndexedlength> start = new ArrayList<KalmanIndexedlength>();
 					ArrayList<KalmanIndexedlength> end = new ArrayList<KalmanIndexedlength>();
@@ -2406,30 +2315,17 @@ public class InteractiveMT implements PlugIn {
 
 			}
 
-			
-
-			
-			
-
 			ArrayList<float[]> deltadeltaL = new ArrayList<>();
 			ArrayList<float[]> deltaLMT = new ArrayList<>();
 			for (int index = 1; index < lengthtime.size(); ++index) {
 
 				float delta = (float) (lengthtime.get(index)[0] - lengthtime.get(index - 1)[0]);
 
-				
-					
-					
-					float[] deltalt = { delta, (int) lengthtime.get(index)[1] };
-				
-					deltaLMT.add(deltalt);
-					
-					
-					
-				
-			}
+				float[] deltalt = { delta, (int) lengthtime.get(index)[1] };
 
-		
+				deltaLMT.add(deltalt);
+
+			}
 
 			if (numberKymo) {
 				for (int index = 0; index < deltaLMT.size(); ++index) {
@@ -2450,9 +2346,6 @@ public class InteractiveMT implements PlugIn {
 
 				}
 
-
-
-		
 			}
 
 			// Choosing the faster end
@@ -2468,11 +2361,7 @@ public class InteractiveMT implements PlugIn {
 
 			velocity /= endtime - starttime;
 
-			
 			if (numberKymo) {
-				
-
-				
 
 				FileWriter deltal;
 				File fichierKylel = new File(usefolder + "//" + addToName + "MTtracker-deltadeltal" + ".txt");
@@ -2574,7 +2463,6 @@ public class InteractiveMT implements PlugIn {
 
 	}
 
-	
 	protected class finalpoint implements ItemListener {
 
 		@Override
@@ -2582,65 +2470,51 @@ public class InteractiveMT implements PlugIn {
 			if (arg0.getStateChange() == ItemEvent.DESELECTED)
 				finalpoint = false;
 
-			else if (arg0.getStateChange() == ItemEvent.SELECTED){
+			else if (arg0.getStateChange() == ItemEvent.SELECTED) {
 				finalpoint = true;
-			
+
 				preprocessedimp.getCanvas().removeMouseListener(ml);
-				
+
 				ArrayList<double[]> filepair = new ArrayList<double[]>();
-				for (int index = 0; index < ClickedPoints.size(); ++index){
+				for (int index = 0; index < ClickedPoints.size(); ++index) {
 					double minDist = Double.MAX_VALUE;
-					double[] closestpoint = {Double.MAX_VALUE, Double.MAX_VALUE};
+					double[] closestpoint = { Double.MAX_VALUE, Double.MAX_VALUE };
 					int fileindex = Double.MAX_EXPONENT;
-					for (int secindex = 0; secindex < PrevFrameparam.fst.size(); ++secindex){
-				double currDist = util.Boundingboxes.Distance(new double[]{ClickedPoints.get(index)[0],  ClickedPoints.get(index)[1]} , PrevFrameparam.fst.get(secindex).currentpos );
-					
-				if (currDist < minDist){
-					
-					minDist = currDist;
-					fileindex = secindex;
-					closestpoint = PrevFrameparam.fst.get(secindex).currentpos;
-					
-				}
-				
+					for (int secindex = 0; secindex < PrevFrameparam.fst.size(); ++secindex) {
+						double currDist = util.Boundingboxes.Distance(
+								new double[] { ClickedPoints.get(index)[0], ClickedPoints.get(index)[1] },
+								PrevFrameparam.fst.get(secindex).currentpos);
+
+						if (currDist < minDist) {
+
+							minDist = currDist;
+							fileindex = secindex;
+							closestpoint = PrevFrameparam.fst.get(secindex).currentpos;
+
+						}
+
 					}
-					
-					filepair.add(new double[]{fileindex, minDist, closestpoint[0], closestpoint[1]});
-					
+
+					filepair.add(new double[] { fileindex, minDist, closestpoint[0], closestpoint[1] });
+
 				}
-				
-				for (int index = 0; index < filepair.size(); ++index){
-					
-					
-					int Frameindex = (int)filepair.get(index)[0];
-					double[] investigatepoint = new double[]{filepair.get(index)[2],filepair.get(index)[3]};
+
+				for (int index = 0; index < filepair.size(); ++index) {
+
+					int Frameindex = (int) filepair.get(index)[0];
+					double[] investigatepoint = new double[] { filepair.get(index)[2], filepair.get(index)[3] };
 					double investigatedist = filepair.get(index)[1];
-					
-					double currDist = util.Boundingboxes.Distance(investigatepoint, PrevFrameparam.snd.get(Frameindex).currentpos );
-					
-					Trackstart = (currDist > investigatedist)?  true: false;
-					
+
+					double currDist = util.Boundingboxes.Distance(investigatepoint,
+							PrevFrameparam.snd.get(Frameindex).currentpos);
+
+					Trackstart = (currDist > investigatedist) ? true : false;
+
 					whichend.put(Frameindex, Trackstart);
-					
-					
+
 				}
-				
-				
-				
+
 			}
-
-		}
-
-	}
-	protected class DisplaySeedID implements ItemListener {
-
-		@Override
-		public void itemStateChanged(ItemEvent arg0) {
-			if (arg0.getStateChange() == ItemEvent.DESELECTED)
-				displaySeedLabels = false;
-
-			else if (arg0.getStateChange() == ItemEvent.SELECTED)
-				displaySeedLabels = true;
 
 		}
 
@@ -2688,9 +2562,8 @@ public class InteractiveMT implements PlugIn {
 			final GridBagLayout layout = new GridBagLayout();
 			final GridBagConstraints c = new GridBagConstraints();
 
-
 			panelEighth.removeAll();
-			
+
 			panelEighth.setLayout(layout);
 			c.fill = GridBagConstraints.HORIZONTAL;
 			c.gridx = 0;
@@ -2741,7 +2614,6 @@ public class InteractiveMT implements PlugIn {
 
 			panelEighth.validate();
 			panelEighth.repaint();
-
 
 		}
 
@@ -2923,18 +2795,17 @@ public class InteractiveMT implements PlugIn {
 
 				final Label RedotextA = new Label("MTtracker redo = ", Label.CENTER);
 				JTextArea textArea = new JTextArea(
-		                "On average the result was " + (float)netdeltad +  "(pixels) away from the Kymo (your cutoff was " + deltadcutoff +  "(pixels) ) "
-						+ " When MT is very small the optimizer identifies the nearest bright spot as part of the line, adding a wrong length for that frame "
-						+ " this causes the wrong number to be added over all frames causing a deviation from Kymo (which does not affects the rates) "
-						+ " If However the mistake was in Kymograph, then ignore this step and go next to compute rates.", 
-		                6, 
-		                20);
+						"On average the result was " + (float) netdeltad
+								+ "(pixels) away from the Kymo (your cutoff was " + deltadcutoff + "(pixels) ) "
+								+ " When MT is very small the optimizer identifies the nearest bright spot as part of the line, adding a wrong length for that frame "
+								+ " this causes the wrong number to be added over all frames causing a deviation from Kymo (which does not affects the rates) "
+								+ " If However the mistake was in Kymograph, then ignore this step and go next to compute rates.",
+						6, 20);
 				textArea.setFont(new Font("Serif", Font.PLAIN, 16));
-		        textArea.setLineWrap(true);
-		        textArea.setWrapStyleWord(true);
-		        textArea.setOpaque(false);
-		        textArea.setEditable(false);
-			
+				textArea.setLineWrap(true);
+				textArea.setWrapStyleWord(true);
+				textArea.setOpaque(false);
+				textArea.setEditable(false);
 
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 200);
@@ -3047,11 +2918,28 @@ public class InteractiveMT implements PlugIn {
 
 	}
 
-	protected class SkipFramesandTrackendsListener implements ActionListener {
+	public void goSkip() {
+
+		jpb.setIndeterminate(false);
+
+		jpb.setMaximum(max);
+		panel.add(label);
+		panel.add(jpb);
+		frame.add(panel);
+		frame.pack();
+		frame.setSize(200, 100);
+		frame.setLocationRelativeTo(panelCont);
+		frame.setVisible(true);
+
+		ProgressSkip trackMT = new ProgressSkip();
+		trackMT.execute();
+
+	}
+
+	class ProgressSkip extends SwingWorker<Void, Void> {
 
 		@Override
-		public void actionPerformed(final ActionEvent arg0) {
-			final long startTime = System.currentTimeMillis();
+		protected Void doInBackground() throws Exception {
 
 			moveDialogue();
 
@@ -3231,784 +3119,755 @@ public class InteractiveMT implements PlugIn {
 				ImagePlus impendsec = ImageJFunctions.show(originalPreprocessedimg);
 				final Trackstart trackerstart = new Trackstart(Allstart, thirdDimensionSize - next);
 				final Trackend trackerend = new Trackend(Allend, thirdDimensionSize - next);
-				if (Trackstart){
-				trackerstart.process();
-				SimpleWeightedGraph<double[], DefaultWeightedEdge> graphstart = trackerstart.getResult();
-				ArrayList<Subgraphs> subgraphstart = trackerstart.getFramedgraph();
-				
+				if (Trackstart) {
+					trackerstart.process();
+					SimpleWeightedGraph<double[], DefaultWeightedEdge> graphstart = trackerstart.getResult();
+					ArrayList<Subgraphs> subgraphstart = trackerstart.getFramedgraph();
+					ArrayList<Pair<Integer, double[]>> ID = trackerstart.getSeedID();
 
-				DisplaysubGraphstart displaytrackstart = new DisplaysubGraphstart(impstart, subgraphstart, next);
-				displaytrackstart.getImp();
-				impstart.draw();
-				
+					DisplaysubGraphstart displaytrackstart = new DisplaysubGraphstart(impstart, subgraphstart, next);
+					displaytrackstart.getImp();
+					impstart.draw();
 
-				DisplayGraph displaygraphtrackstart = new DisplayGraph(impstartsec, graphstart);
-				displaygraphtrackstart.getImp();
-				impstartsec.draw();
+					DisplayGraph displaygraphtrackstart = new DisplayGraph(impstartsec, graphstart, ID);
+					displaygraphtrackstart.getImp();
+					impstartsec.draw();
 				}
-				
-				if (Trackstart == false){
-				trackerend.process();
-				SimpleWeightedGraph<double[], DefaultWeightedEdge> graphend = trackerend.getResult();
-				ArrayList<Subgraphs> subgraphend = trackerend.getFramedgraph();
 
-				DisplaysubGraphend displaytrackend = new DisplaysubGraphend(impend, subgraphend, next);
-				displaytrackend.getImp();
-				impend.draw();
+				if (Trackstart == false) {
+					trackerend.process();
+					SimpleWeightedGraph<double[], DefaultWeightedEdge> graphend = trackerend.getResult();
+					ArrayList<Subgraphs> subgraphend = trackerend.getFramedgraph();
+					ArrayList<Pair<Integer, double[]>> ID = trackerend.getSeedID();
+					DisplaysubGraphend displaytrackend = new DisplaysubGraphend(impend, subgraphend, next);
+					displaytrackend.getImp();
+					impend.draw();
 
-				DisplayGraph displaygraphtrackend = new DisplayGraph(impendsec, graphend);
-				displaygraphtrackend.getImp();
-				impendsec.draw();
+					DisplayGraph displaygraphtrackend = new DisplayGraph(impendsec, graphend, ID);
+					displaygraphtrackend.getImp();
+					impendsec.draw();
 				}
 			}
 
 			if (showKalman) {
 				ResultsTable rtAll = new ResultsTable();
-				if (Trackstart){
-				MTtrackerstart.reset();
-				MTtrackerstart.process();
+				if (Trackstart) {
+					MTtrackerstart.reset();
+					MTtrackerstart.process();
 
-				ImagePlus impstartKalman = ImageJFunctions.show(originalimg);
-				impstartKalman.setTitle("Kalman Start MT");
-				SimpleWeightedGraph<KalmanTrackproperties, DefaultWeightedEdge> graphstartKalman = MTtrackerstart
-						.getResult();
-				DisplayGraphKalman Startdisplaytracks = new DisplayGraphKalman(impstartKalman, graphstartKalman);
-				Startdisplaytracks.getImp();
+					ImagePlus impstartKalman = ImageJFunctions.show(originalimg);
+					impstartKalman.setTitle("Kalman Start MT");
+					SimpleWeightedGraph<KalmanTrackproperties, DefaultWeightedEdge> graphstartKalman = MTtrackerstart
+							.getResult();
+					DisplayGraphKalman Startdisplaytracks = new DisplayGraphKalman(impstartKalman, graphstartKalman);
+					Startdisplaytracks.getImp();
 
-				TrackModel modelstart = new TrackModel(graphstartKalman);
-				modelstart.getDirectedNeighborIndex();
-				IJ.log(" " + graphstartKalman.vertexSet().size());
-				
-				
-			
-				// Get all the track id's
-				for (final Integer id : modelstart.trackIDs(true)) {
+					TrackModel modelstart = new TrackModel(graphstartKalman);
+					modelstart.getDirectedNeighborIndex();
+					IJ.log(" " + graphstartKalman.vertexSet().size());
 
-					ResultsTable rt = new ResultsTable();
-					// Get the corresponding set for each id
-					modelstart.setName(id, "Track" + id);
-					final HashSet<KalmanTrackproperties> Snakeset = modelstart.trackKalmanTrackpropertiess(id);
-					ArrayList<KalmanTrackproperties> list = new ArrayList<KalmanTrackproperties>();
+					// Get all the track id's
+					for (final Integer id : modelstart.trackIDs(true)) {
 
-					Comparator<KalmanTrackproperties> ThirdDimcomparison = new Comparator<KalmanTrackproperties>() {
+						ResultsTable rt = new ResultsTable();
+						// Get the corresponding set for each id
+						modelstart.setName(id, "Track" + id);
+						final HashSet<KalmanTrackproperties> Snakeset = modelstart.trackKalmanTrackpropertiess(id);
+						ArrayList<KalmanTrackproperties> list = new ArrayList<KalmanTrackproperties>();
 
-						@Override
-						public int compare(final KalmanTrackproperties A, final KalmanTrackproperties B) {
+						Comparator<KalmanTrackproperties> ThirdDimcomparison = new Comparator<KalmanTrackproperties>() {
 
-							return A.thirdDimension - B.thirdDimension;
+							@Override
+							public int compare(final KalmanTrackproperties A, final KalmanTrackproperties B) {
+
+								return A.thirdDimension - B.thirdDimension;
+
+							}
+
+						};
+
+						Iterator<KalmanTrackproperties> Snakeiter = Snakeset.iterator();
+
+						while (Snakeiter.hasNext()) {
+
+							KalmanTrackproperties currentsnake = Snakeiter.next();
+
+							list.add(currentsnake);
+
+						}
+						Collections.sort(list, ThirdDimcomparison);
+
+						final double[] originalpoint = list.get(0).currentpoint;
+						double startlength = 0;
+						double startlengthpixel = 0;
+						for (int index = 1; index < list.size(); ++index) {
+
+							final double[] currentpoint = list.get(index).currentpoint;
+							final double[] oldpoint = list.get(index - 1).currentpoint;
+							final double[] currentpointCal = new double[] { currentpoint[0] * calibration[0],
+									currentpoint[1] * calibration[1] };
+							final double[] oldpointCal = new double[] { oldpoint[0] * calibration[0],
+									oldpoint[1] * calibration[1] };
+							final double lengthpixel = util.Boundingboxes.Distance(currentpoint, oldpoint);
+							final double length = util.Boundingboxes.Distance(currentpointCal, oldpointCal);
+							final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, currentpoint);
+							final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
+
+							final boolean shrink = seedtoold > seedtocurrent ? true : false;
+							final boolean growth = seedtoold > seedtocurrent ? false : true;
+							if (shrink) {
+
+								// MT shrank
+
+								startlength -= length;
+								startlengthpixel -= lengthpixel;
+
+							}
+							if (growth) {
+
+								// MT grew
+
+								startlength += length;
+								startlengthpixel += lengthpixel;
+
+							}
+
+							rt.incrementCounter();
+
+							rt.addValue("FrameNumber", list.get(index).thirdDimension);
+							rt.addValue("Track iD", id);
+							rt.addValue("PreviousPosition X (px units)", oldpoint[0]);
+							rt.addValue("PreviousPosition Y (px units)", oldpoint[1]);
+							rt.addValue("CurrentPosition X (px units)", currentpoint[0]);
+							rt.addValue("CurrentPosition Y (px units)", currentpoint[1]);
+							rt.addValue("PreviousPosition X (real units)", oldpointCal[0]);
+							rt.addValue("PreviousPosition Y (real units)", oldpointCal[1]);
+							rt.addValue("CurrentPosition X (real units)", currentpointCal[0]);
+							rt.addValue("CurrentPosition Y (real units)", currentpointCal[1]);
+							rt.addValue("Length in real units", length);
+							rt.addValue("Cummulative Length in real units", startlength);
+							double[] landt = { startlengthpixel, list.get(index).thirdDimension };
+							lengthtimestart.add(landt);
+							rtAll.incrementCounter();
+
+							rtAll.addValue("FrameNumber", list.get(index).thirdDimension);
+							rtAll.addValue("Track iD", id);
+							rtAll.addValue("PreviousPosition X (px units)", oldpoint[0]);
+							rtAll.addValue("PreviousPosition Y (px units)", oldpoint[1]);
+							rtAll.addValue("CurrentPosition X (px units)", currentpoint[0]);
+							rtAll.addValue("CurrentPosition Y (px units)", currentpoint[1]);
+							rtAll.addValue("PreviousPosition X (real units)", oldpointCal[0]);
+							rtAll.addValue("PreviousPosition Y (real units)", oldpointCal[1]);
+							rtAll.addValue("CurrentPosition X (real units)", currentpointCal[0]);
+							rtAll.addValue("CurrentPosition Y (real units)", currentpointCal[1]);
+							rtAll.addValue("Length in real units", length);
+							rtAll.addValue("Cummulative Length in real units", startlength);
 
 						}
 
-					};
-
-					Iterator<KalmanTrackproperties> Snakeiter = Snakeset.iterator();
-
-					while (Snakeiter.hasNext()) {
-
-						KalmanTrackproperties currentsnake = Snakeiter.next();
-
-						list.add(currentsnake);
+						if (SaveXLS && list.size() > 0.5 * thirdDimensionSize)
+							saveResultsToExcel(usefolder + "//" + addTrackToName + "KalmanStart" + id + ".xls", rt, id);
 
 					}
-					Collections.sort(list, ThirdDimcomparison);
-
-					final double[] originalpoint = list.get(0).currentpoint;
-					double startlength = 0;
-					double startlengthpixel = 0;
-					for (int index = 1; index < list.size(); ++index) {
-
-						final double[] currentpoint = list.get(index).currentpoint;
-						final double[] oldpoint = list.get(index - 1).currentpoint;
-						final double[] currentpointCal = new double[] { currentpoint[0] * calibration[0],
-								currentpoint[1] * calibration[1] };
-						final double[] oldpointCal = new double[] { oldpoint[0] * calibration[0],
-								oldpoint[1] * calibration[1] };
-						final double lengthpixel = util.Boundingboxes.Distance(currentpoint, oldpoint);
-						final double length = util.Boundingboxes.Distance(currentpointCal, oldpointCal);
-						final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, currentpoint);
-						final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
-
-						final boolean shrink = seedtoold > seedtocurrent ? true : false;
-						final boolean growth = seedtoold > seedtocurrent ? false : true;
-						if (shrink) {
-
-							// MT shrank
-
-							startlength -= length;
-							startlengthpixel -= lengthpixel;
-
-						}
-						if (growth) {
-
-							// MT grew
-
-							startlength += length;
-							startlengthpixel += lengthpixel;
-
-						}
-
-						rt.incrementCounter();
-
-						rt.addValue("FrameNumber", list.get(index).thirdDimension);
-						rt.addValue("Track iD", id);
-						rt.addValue("PreviousPosition X (px units)", oldpoint[0]);
-						rt.addValue("PreviousPosition Y (px units)", oldpoint[1]);
-						rt.addValue("CurrentPosition X (px units)", currentpoint[0]);
-						rt.addValue("CurrentPosition Y (px units)", currentpoint[1]);
-						rt.addValue("PreviousPosition X (real units)", oldpointCal[0]);
-						rt.addValue("PreviousPosition Y (real units)", oldpointCal[1]);
-						rt.addValue("CurrentPosition X (real units)", currentpointCal[0]);
-						rt.addValue("CurrentPosition Y (real units)", currentpointCal[1]);
-						rt.addValue("Length in real units", length);
-						rt.addValue("Cummulative Length in real units", startlength);
-						double[] landt = { startlengthpixel, list.get(index).thirdDimension };
-						lengthtimestart.add(landt);
-						rtAll.incrementCounter();
-
-						rtAll.addValue("FrameNumber", list.get(index).thirdDimension);
-						rtAll.addValue("Track iD", id);
-						rtAll.addValue("PreviousPosition X (px units)", oldpoint[0]);
-						rtAll.addValue("PreviousPosition Y (px units)", oldpoint[1]);
-						rtAll.addValue("CurrentPosition X (px units)", currentpoint[0]);
-						rtAll.addValue("CurrentPosition Y (px units)", currentpoint[1]);
-						rtAll.addValue("PreviousPosition X (real units)", oldpointCal[0]);
-						rtAll.addValue("PreviousPosition Y (real units)", oldpointCal[1]);
-						rtAll.addValue("CurrentPosition X (real units)", currentpointCal[0]);
-						rtAll.addValue("CurrentPosition Y (real units)", currentpointCal[1]);
-						rtAll.addValue("Length in real units", length);
-						rtAll.addValue("Cummulative Length in real units", startlength);
-
-					}
-
-					
-				
-
-					if (SaveXLS && list.size() > 0.5 * thirdDimensionSize)
-						saveResultsToExcel(usefolder + "//" + addTrackToName + "KalmanStart" + id + ".xls", rt, id);
 
 				}
-				
-				}
 
-				if (Trackstart == false){
-				MTtrackerend.reset();
-				MTtrackerend.process();
-				
-				SimpleWeightedGraph<KalmanTrackproperties, DefaultWeightedEdge> graphendKalman = MTtrackerend
-						.getResult();
-				
+				if (Trackstart == false) {
+					MTtrackerend.reset();
+					MTtrackerend.process();
 
-				
-				
-				
+					SimpleWeightedGraph<KalmanTrackproperties, DefaultWeightedEdge> graphendKalman = MTtrackerend
+							.getResult();
 
-				ImagePlus impendKalman = ImageJFunctions.show(originalPreprocessedimg);
-				impendKalman.setTitle("Kalman End MT");
+					ImagePlus impendKalman = ImageJFunctions.show(originalPreprocessedimg);
+					impendKalman.setTitle("Kalman End MT");
 
-				IJ.log("KalmanTracking Complete " + " " + "Displaying results");
+					IJ.log("KalmanTracking Complete " + " " + "Displaying results");
 
-		
+					DisplayGraphKalman Enddisplaytracks = new DisplayGraphKalman(impendKalman, graphendKalman);
+					Enddisplaytracks.getImp();
 
-				DisplayGraphKalman Enddisplaytracks = new DisplayGraphKalman(impendKalman, graphendKalman);
-				Enddisplaytracks.getImp();
+					TrackModel modelend = new TrackModel(graphendKalman);
+					modelend.getDirectedNeighborIndex();
+					IJ.log(" " + graphendKalman.vertexSet().size());
+					// Get all the track id's
+					for (final Integer id : modelend.trackIDs(true)) {
+						ResultsTable rt = new ResultsTable();
+						// Get the corresponding set for each id
+						modelend.setName(id, "Track" + id);
+						final HashSet<KalmanTrackproperties> Snakeset = modelend.trackKalmanTrackpropertiess(id);
+						ArrayList<KalmanTrackproperties> list = new ArrayList<KalmanTrackproperties>();
 
-				TrackModel modelend = new TrackModel(graphendKalman);
-				modelend.getDirectedNeighborIndex();
-				IJ.log(" " + graphendKalman.vertexSet().size());
-				// Get all the track id's
-				for (final Integer id : modelend.trackIDs(true)) {
-					ResultsTable rt = new ResultsTable();
-					// Get the corresponding set for each id
-					modelend.setName(id, "Track" + id);
-					final HashSet<KalmanTrackproperties> Snakeset = modelend.trackKalmanTrackpropertiess(id);
-					ArrayList<KalmanTrackproperties> list = new ArrayList<KalmanTrackproperties>();
+						Comparator<KalmanTrackproperties> ThirdDimcomparison = new Comparator<KalmanTrackproperties>() {
 
-					Comparator<KalmanTrackproperties> ThirdDimcomparison = new Comparator<KalmanTrackproperties>() {
+							@Override
+							public int compare(final KalmanTrackproperties A, final KalmanTrackproperties B) {
 
-						@Override
-						public int compare(final KalmanTrackproperties A, final KalmanTrackproperties B) {
+								return A.thirdDimension - B.thirdDimension;
 
-							return A.thirdDimension - B.thirdDimension;
+							}
+
+						};
+
+						Iterator<KalmanTrackproperties> Snakeiter = Snakeset.iterator();
+
+						while (Snakeiter.hasNext()) {
+
+							KalmanTrackproperties currentsnake = Snakeiter.next();
+
+							list.add(currentsnake);
+
+						}
+						Collections.sort(list, ThirdDimcomparison);
+
+						final double[] originalpoint = list.get(0).currentpoint;
+						double endlength = 0;
+						double endlengthpixel = 0;
+						for (int index = 1; index < list.size() - 1; ++index) {
+
+							final double[] currentpoint = list.get(index).currentpoint;
+							final double[] oldpoint = list.get(index - 1).currentpoint;
+							final double[] currentpointCal = new double[] { currentpoint[0] * calibration[0],
+									currentpoint[1] * calibration[1] };
+							final double[] oldpointCal = new double[] { oldpoint[0] * calibration[0],
+									oldpoint[1] * calibration[1] };
+							final double lengthpixel = util.Boundingboxes.Distance(currentpoint, oldpoint);
+							final double length = util.Boundingboxes.Distance(currentpointCal, oldpointCal);
+							final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, currentpoint);
+							final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
+							final boolean shrink = seedtoold > seedtocurrent ? true : false;
+							final boolean growth = seedtoold > seedtocurrent ? false : true;
+
+							if (shrink) {
+								// MT shrank
+								endlength -= length;
+
+								endlengthpixel -= lengthpixel;
+
+							}
+							if (growth) {
+
+								// MT grew
+								endlength += length;
+								endlengthpixel += lengthpixel;
+
+							}
+							rt.incrementCounter();
+
+							rt.addValue("FrameNumber", list.get(index).thirdDimension);
+							rt.addValue("Track iD", id);
+							rt.addValue("PreviousPosition X (px units)", oldpoint[0]);
+							rt.addValue("PreviousPosition Y (px units)", oldpoint[1]);
+							rt.addValue("CurrentPosition X (px units)", currentpoint[0]);
+							rt.addValue("CurrentPosition Y (px units)", currentpoint[1]);
+							rt.addValue("PreviousPosition X (real units)", oldpointCal[0]);
+							rt.addValue("PreviousPosition Y (real units)", oldpointCal[1]);
+							rt.addValue("CurrentPosition X (real units)", currentpointCal[0]);
+							rt.addValue("CurrentPosition Y (real units)", currentpointCal[1]);
+							rt.addValue("Length in real units", length);
+							rt.addValue("Cummulative Length in real units", endlength);
+							double[] landt = { endlengthpixel, list.get(index).thirdDimension };
+							lengthtimeend.add(landt);
+							rtAll.incrementCounter();
+
+							rtAll.addValue("FrameNumber", list.get(index).thirdDimension);
+							rtAll.addValue("Track iD", id);
+							rtAll.addValue("PreviousPosition X (px units)", oldpoint[0]);
+							rtAll.addValue("PreviousPosition Y (px units)", oldpoint[1]);
+							rtAll.addValue("CurrentPosition X (px units)", currentpoint[0]);
+							rtAll.addValue("CurrentPosition Y (px units)", currentpoint[1]);
+							rtAll.addValue("PreviousPosition X (real units)", oldpointCal[0]);
+							rtAll.addValue("PreviousPosition Y (real units)", oldpointCal[1]);
+							rtAll.addValue("CurrentPosition X (real units)", currentpointCal[0]);
+							rtAll.addValue("CurrentPosition Y (real units)", currentpointCal[1]);
+							rtAll.addValue("Length in real units", length);
+							rtAll.addValue("Cummulative Length in real units", endlength);
 
 						}
 
-					};
-
-					Iterator<KalmanTrackproperties> Snakeiter = Snakeset.iterator();
-
-					while (Snakeiter.hasNext()) {
-
-						KalmanTrackproperties currentsnake = Snakeiter.next();
-
-						list.add(currentsnake);
-
-					}
-					Collections.sort(list, ThirdDimcomparison);
-
-					final double[] originalpoint = list.get(0).currentpoint;
-					double endlength = 0;
-					double endlengthpixel = 0;
-					for (int index = 1; index < list.size() - 1; ++index) {
-
-						final double[] currentpoint = list.get(index).currentpoint;
-						final double[] oldpoint = list.get(index - 1).currentpoint;
-						final double[] currentpointCal = new double[] { currentpoint[0] * calibration[0],
-								currentpoint[1] * calibration[1] };
-						final double[] oldpointCal = new double[] { oldpoint[0] * calibration[0],
-								oldpoint[1] * calibration[1] };
-						final double lengthpixel = util.Boundingboxes.Distance(currentpoint, oldpoint);
-						final double length = util.Boundingboxes.Distance(currentpointCal, oldpointCal);
-						final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, currentpoint);
-						final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
-						final boolean shrink = seedtoold > seedtocurrent ? true : false;
-						final boolean growth = seedtoold > seedtocurrent ? false : true;
-
-						if (shrink) {
-							// MT shrank
-							endlength -= length;
-
-							endlengthpixel -= lengthpixel;
-
-						}
-						if (growth) {
-
-							// MT grew
-							endlength += length;
-							endlengthpixel += lengthpixel;
-
-						}
-						rt.incrementCounter();
-
-						rt.addValue("FrameNumber", list.get(index).thirdDimension);
-						rt.addValue("Track iD", id);
-						rt.addValue("PreviousPosition X (px units)", oldpoint[0]);
-						rt.addValue("PreviousPosition Y (px units)", oldpoint[1]);
-						rt.addValue("CurrentPosition X (px units)", currentpoint[0]);
-						rt.addValue("CurrentPosition Y (px units)", currentpoint[1]);
-						rt.addValue("PreviousPosition X (real units)", oldpointCal[0]);
-						rt.addValue("PreviousPosition Y (real units)", oldpointCal[1]);
-						rt.addValue("CurrentPosition X (real units)", currentpointCal[0]);
-						rt.addValue("CurrentPosition Y (real units)", currentpointCal[1]);
-						rt.addValue("Length in real units", length);
-						rt.addValue("Cummulative Length in real units", endlength);
-						double[] landt = { endlengthpixel, list.get(index).thirdDimension };
-						lengthtimeend.add(landt);
-						rtAll.incrementCounter();
-
-						rtAll.addValue("FrameNumber", list.get(index).thirdDimension);
-						rtAll.addValue("Track iD", id);
-						rtAll.addValue("PreviousPosition X (px units)", oldpoint[0]);
-						rtAll.addValue("PreviousPosition Y (px units)", oldpoint[1]);
-						rtAll.addValue("CurrentPosition X (px units)", currentpoint[0]);
-						rtAll.addValue("CurrentPosition Y (px units)", currentpoint[1]);
-						rtAll.addValue("PreviousPosition X (real units)", oldpointCal[0]);
-						rtAll.addValue("PreviousPosition Y (real units)", oldpointCal[1]);
-						rtAll.addValue("CurrentPosition X (real units)", currentpointCal[0]);
-						rtAll.addValue("CurrentPosition Y (real units)", currentpointCal[1]);
-						rtAll.addValue("Length in real units", length);
-						rtAll.addValue("Cummulative Length in real units", endlength);
+						if (SaveXLS && list.size() > 0.5 * thirdDimensionSize)
+							saveResultsToExcel(usefolder + "//" + addTrackToName + "KalmanEnd" + id + ".xls", rt, id);
 
 					}
 
-					if (SaveXLS && list.size() > 0.5 * thirdDimensionSize)
-						saveResultsToExcel(usefolder + "//" + addTrackToName + "KalmanEnd" + id + ".xls", rt, id);
+					rtAll.show("Results");
 
-				
 				}
-
-				rtAll.show("Results");
-
-			}
 			}
 			if (showDeterministic) {
-				
-				
-				
+
 				NumberFormat nf = NumberFormat.getInstance(Locale.ENGLISH);
 				nf.setMaximumFractionDigits(3);
 
 				ResultsTable rtAll = new ResultsTable();
-				
-				
-				if (Trackstart){
-				ArrayList<Pair<Integer[], double[]>> lengthliststart = new ArrayList<Pair<Integer[], double[]>>();
 
-				final ArrayList<Trackproperties> first = Allstart.get(0);
-				int MaxSeedLabel = first.get(first.size() - 1).seedlabel;
-				int MinSeedLabel = first.get(0).seedlabel;
+				if (Trackstart) {
+					ArrayList<Pair<Integer[], double[]>> lengthliststart = new ArrayList<Pair<Integer[], double[]>>();
 
-				for (int currentseed = MinSeedLabel; currentseed < MaxSeedLabel + 1; ++currentseed) {
-					double startlength = 0;
-					double startlengthpixel = 0;
-					for (int index = 0; index < Allstart.size(); ++index) {
+					final ArrayList<Trackproperties> first = Allstart.get(0);
+					int MaxSeedLabel = first.get(first.size() - 1).seedlabel;
+					int MinSeedLabel = first.get(0).seedlabel;
 
-						final int framenumber = index;
-						final ArrayList<Trackproperties> thirdDimension = Allstart.get(index);
+					for (int currentseed = MinSeedLabel; currentseed < MaxSeedLabel + 1; ++currentseed) {
+						double startlength = 0;
+						double startlengthpixel = 0;
+						for (int index = 0; index < Allstart.size(); ++index) {
 
-						for (int frameindex = 0; frameindex < thirdDimension.size(); ++frameindex) {
+							final int framenumber = index;
+							final ArrayList<Trackproperties> thirdDimension = Allstart.get(index);
 
-							final Integer SeedID = thirdDimension.get(frameindex).seedlabel;
+							for (int frameindex = 0; frameindex < thirdDimension.size(); ++frameindex) {
 
-							if (SeedID == currentseed) {
+								final Integer SeedID = thirdDimension.get(frameindex).seedlabel;
 
-								final Integer[] FrameID = { framenumber, SeedID };
-								final double[] originalpoint = thirdDimension.get(frameindex).originalpoint;
-								final double[] newpoint = thirdDimension.get(frameindex).newpoint;
-								final double[] oldpoint = thirdDimension.get(frameindex).oldpoint;
-								final double[] newpointCal = new double[] {
-										thirdDimension.get(frameindex).newpoint[0] * calibration[0],
-										thirdDimension.get(frameindex).newpoint[1] * calibration[1] };
-								final double[] oldpointCal = new double[] {
-										thirdDimension.get(frameindex).oldpoint[0] * calibration[0],
-										thirdDimension.get(frameindex).oldpoint[1] * calibration[1] };
-								final double lengthpixel = util.Boundingboxes.Distance(newpoint, oldpoint);
-								final double length = util.Boundingboxes.Distance(newpointCal, oldpointCal);
-								final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, newpoint);
-								final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
-								final boolean shrink = seedtoold > seedtocurrent ? true : false;
-								final boolean growth = seedtoold > seedtocurrent ? false : true;
+								if (SeedID == currentseed) {
 
-								if (shrink) {
-									// MT shrank
-									startlength -= length;
-									startlengthpixel -= lengthpixel;
+									final Integer[] FrameID = { framenumber, SeedID };
+									final double[] originalpoint = thirdDimension.get(frameindex).originalpoint;
+									final double[] newpoint = thirdDimension.get(frameindex).newpoint;
+									final double[] oldpoint = thirdDimension.get(frameindex).oldpoint;
+									final double[] newpointCal = new double[] {
+											thirdDimension.get(frameindex).newpoint[0] * calibration[0],
+											thirdDimension.get(frameindex).newpoint[1] * calibration[1] };
+									final double[] oldpointCal = new double[] {
+											thirdDimension.get(frameindex).oldpoint[0] * calibration[0],
+											thirdDimension.get(frameindex).oldpoint[1] * calibration[1] };
+									final double lengthpixel = util.Boundingboxes.Distance(newpoint, oldpoint);
+									final double length = util.Boundingboxes.Distance(newpointCal, oldpointCal);
+									final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, newpoint);
+									final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
+									final boolean shrink = seedtoold > seedtocurrent ? true : false;
+									final boolean growth = seedtoold > seedtocurrent ? false : true;
+
+									if (shrink) {
+										// MT shrank
+										startlength -= length;
+										startlengthpixel -= lengthpixel;
+
+									}
+									if (growth) {
+
+										// MT grew
+										startlength += length;
+										startlengthpixel += lengthpixel;
+
+									}
+									final double[] startinfo = { oldpoint[0], oldpoint[1], newpoint[0], newpoint[1],
+											oldpointCal[0], oldpointCal[1], newpointCal[0], newpointCal[1], length,
+											startlength, lengthpixel, startlengthpixel };
+									Pair<Integer[], double[]> lengthpair = new Pair<Integer[], double[]>(FrameID,
+											startinfo);
+
+									lengthliststart.add(lengthpair);
 
 								}
-								if (growth) {
+							}
 
-									// MT grew
-									startlength += length;
-									startlengthpixel += lengthpixel;
+						}
+
+					}
+
+					for (int seedID = MinSeedLabel; seedID <= MaxSeedLabel; ++seedID) {
+						ResultsTable rt = new ResultsTable();
+						if (SaveTxt) {
+							try {
+
+								File fichier = new File(
+										usefolder + "//" + addTrackToName + "SeedLabel" + seedID + "-start" + ".txt");
+								File fichierMy = new File(
+										usefolder + "//" + addToName + "KymoVarun-start" + seedID + ".txt");
+								FileWriter fw = new FileWriter(fichier);
+								BufferedWriter bw = new BufferedWriter(fw);
+
+								bw.write(
+										"\tFramenumber\tSeedLabel\tOldX (px)\tOldY (px)\tNewX (px)\tNewY (px)\tOldX (real)\tOldY (real)"
+												+ "\tNewX (real)\tNewY (real)"
+												+ "\tLength ( real)\tCummulativeLength (real)n");
+
+								FileWriter fwmy = new FileWriter(fichierMy);
+								BufferedWriter bwmy = new BufferedWriter(fwmy);
+
+								bwmy.write("\tFramenumber\tLength\n");
+
+								for (int index = 0; index < lengthliststart.size(); ++index) {
+									if (lengthliststart.get(index).fst[1] == seedID) {
+										bw.write("\t" + lengthliststart.get(index).fst[0] + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).fst[1]) + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[0]) + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[1]) + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[2]) + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[3]) + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[4]) + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[5]) + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[6]) + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[7]) + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[8]) + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[9]) + "\n");
+
+										bwmy.write("\t" + lengthliststart.get(index).fst[0] + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[11]) + "\n");
+
+									}
 
 								}
-								final double[] startinfo = { oldpoint[0], oldpoint[1], newpoint[0], newpoint[1],
-										oldpointCal[0], oldpointCal[1], newpointCal[0], newpointCal[1], length,
-										startlength, lengthpixel, startlengthpixel };
-								Pair<Integer[], double[]> lengthpair = new Pair<Integer[], double[]>(FrameID,
-										startinfo);
+								bw.close();
+								fw.close();
+								bwmy.close();
+								fwmy.close();
 
-								lengthliststart.add(lengthpair);
-
+							} catch (IOException e) {
 							}
 						}
 
-					}
+						for (int index = 0; index < lengthliststart.size(); ++index) {
+							if (lengthliststart.get(index).fst[1] == seedID) {
+								rt.incrementCounter();
+								rt.addValue("FrameNumber", lengthliststart.get(index).fst[0]);
+								rt.addValue("SeedLabel", lengthliststart.get(index).fst[1]);
+								rt.addValue("OldX in px units", lengthliststart.get(index).snd[0]);
+								rt.addValue("OldY in px units", lengthliststart.get(index).snd[1]);
+								rt.addValue("NewX in px units", lengthliststart.get(index).snd[2]);
+								rt.addValue("NewY in px units", lengthliststart.get(index).snd[3]);
+								rt.addValue("OldX in real units", lengthliststart.get(index).snd[4]);
+								rt.addValue("OldY in real units", lengthliststart.get(index).snd[5]);
+								rt.addValue("NewX in real units", lengthliststart.get(index).snd[6]);
+								rt.addValue("NewY in real units", lengthliststart.get(index).snd[7]);
+								rt.addValue("Length in real units", lengthliststart.get(index).snd[8]);
+								rt.addValue("Cummulative Length in real units", lengthliststart.get(index).snd[9]);
+								double[] landt = { lengthliststart.get(index).snd[11],
+										lengthliststart.get(index).fst[0] };
+								lengthtimestart.add(landt);
 
-				}
-
-				for (int seedID = MinSeedLabel; seedID <= MaxSeedLabel; ++seedID) {
-					ResultsTable rt = new ResultsTable();
-					if (SaveTxt) {
-						try {
-
-							File fichier = new File(
-									usefolder + "//" + addTrackToName + "SeedLabel" + seedID + "-start" + ".txt");
-							File fichierMy = new File(
-									usefolder + "//" + addToName + "KymoVarun-start" + seedID + ".txt");
-							FileWriter fw = new FileWriter(fichier);
-							BufferedWriter bw = new BufferedWriter(fw);
-
-							bw.write(
-									"\tFramenumber\tSeedLabel\tOldX (px)\tOldY (px)\tNewX (px)\tNewY (px)\tOldX (real)\tOldY (real)"
-											+ "\tNewX (real)\tNewY (real)"
-											+ "\tLength ( real)\tCummulativeLength (real)n");
-
-							FileWriter fwmy = new FileWriter(fichierMy);
-							BufferedWriter bwmy = new BufferedWriter(fwmy);
-
-							bwmy.write("\tFramenumber\tLength\n");
-
-							for (int index = 0; index < lengthliststart.size(); ++index) {
-								if (lengthliststart.get(index).fst[1] == seedID) {
-									bw.write("\t" + lengthliststart.get(index).fst[0] + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).fst[1]) + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[0]) + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[1]) + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[2]) + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[3]) + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[4]) + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[5]) + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[6]) + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[7]) + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[8]) + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[9]) + "\n");
-
-									bwmy.write("\t" + lengthliststart.get(index).fst[0] + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[11]) + "\n");
-
-								}
+								rtAll.incrementCounter();
+								rtAll.addValue("FrameNumber", lengthliststart.get(index).fst[0]);
+								rtAll.addValue("SeedLabel", lengthliststart.get(index).fst[1]);
+								rtAll.addValue("OldX in px units", lengthliststart.get(index).snd[0]);
+								rtAll.addValue("OldY in px units", lengthliststart.get(index).snd[1]);
+								rtAll.addValue("NewX in px units", lengthliststart.get(index).snd[2]);
+								rtAll.addValue("NewY in px units", lengthliststart.get(index).snd[3]);
+								rtAll.addValue("OldX in real units", lengthliststart.get(index).snd[4]);
+								rtAll.addValue("OldY in real units", lengthliststart.get(index).snd[5]);
+								rtAll.addValue("NewX in real units", lengthliststart.get(index).snd[6]);
+								rtAll.addValue("NewY in real units", lengthliststart.get(index).snd[7]);
+								rtAll.addValue("Length in real units", lengthliststart.get(index).snd[8]);
+								rtAll.addValue("Cummulative Length in real units", lengthliststart.get(index).snd[9]);
 
 							}
-							bw.close();
-							fw.close();
-							bwmy.close();
-							fwmy.close();
-
-						} catch (IOException e) {
-						}
-					}
-
-					for (int index = 0; index < lengthliststart.size(); ++index) {
-						if (lengthliststart.get(index).fst[1] == seedID) {
-							rt.incrementCounter();
-							rt.addValue("FrameNumber", lengthliststart.get(index).fst[0]);
-							rt.addValue("SeedLabel", lengthliststart.get(index).fst[1]);
-							rt.addValue("OldX in px units", lengthliststart.get(index).snd[0]);
-							rt.addValue("OldY in px units", lengthliststart.get(index).snd[1]);
-							rt.addValue("NewX in px units", lengthliststart.get(index).snd[2]);
-							rt.addValue("NewY in px units", lengthliststart.get(index).snd[3]);
-							rt.addValue("OldX in real units", lengthliststart.get(index).snd[4]);
-							rt.addValue("OldY in real units", lengthliststart.get(index).snd[5]);
-							rt.addValue("NewX in real units", lengthliststart.get(index).snd[6]);
-							rt.addValue("NewY in real units", lengthliststart.get(index).snd[7]);
-							rt.addValue("Length in real units", lengthliststart.get(index).snd[8]);
-							rt.addValue("Cummulative Length in real units", lengthliststart.get(index).snd[9]);
-							double[] landt = { lengthliststart.get(index).snd[11], lengthliststart.get(index).fst[0] };
-							lengthtimestart.add(landt);
-
-							rtAll.incrementCounter();
-							rtAll.addValue("FrameNumber", lengthliststart.get(index).fst[0]);
-							rtAll.addValue("SeedLabel", lengthliststart.get(index).fst[1]);
-							rtAll.addValue("OldX in px units", lengthliststart.get(index).snd[0]);
-							rtAll.addValue("OldY in px units", lengthliststart.get(index).snd[1]);
-							rtAll.addValue("NewX in px units", lengthliststart.get(index).snd[2]);
-							rtAll.addValue("NewY in px units", lengthliststart.get(index).snd[3]);
-							rtAll.addValue("OldX in real units", lengthliststart.get(index).snd[4]);
-							rtAll.addValue("OldY in real units", lengthliststart.get(index).snd[5]);
-							rtAll.addValue("NewX in real units", lengthliststart.get(index).snd[6]);
-							rtAll.addValue("NewY in real units", lengthliststart.get(index).snd[7]);
-							rtAll.addValue("Length in real units", lengthliststart.get(index).snd[8]);
-							rtAll.addValue("Cummulative Length in real units", lengthliststart.get(index).snd[9]);
 
 						}
+						ArrayList<Line> allline = new ArrayList<Line>();
+
+						if (SaveXLS)
+							saveResultsToExcel(
+									usefolder + "//" + addTrackToName + "start" + "SeedLabel" + seedID + ".xls", rt,
+									seedID);
 
 					}
-					ArrayList<Line> allline = new ArrayList<Line>();
-					
-
-					if (SaveXLS)
-						saveResultsToExcel(usefolder + "//" + addTrackToName + "start" + "SeedLabel" + seedID + ".xls",
-								rt, seedID);
-
 				}
-				}
-				if (Trackstart == false){
+				if (Trackstart == false) {
 					final ArrayList<Trackproperties> first = Allend.get(0);
 					int MaxSeedLabel = first.get(first.size() - 1).seedlabel;
 					int MinSeedLabel = first.get(0).seedlabel;
-				ArrayList<Pair<Integer[], double[]>> lengthlistend = new ArrayList<Pair<Integer[], double[]>>();
-				for (int currentseed = MinSeedLabel; currentseed < MaxSeedLabel + 1; ++currentseed) {
-					double endlengthpixel = 0;
-					double endlength = 0;
-					for (int index = 0; index < Allend.size(); ++index) {
+					ArrayList<Pair<Integer[], double[]>> lengthlistend = new ArrayList<Pair<Integer[], double[]>>();
+					for (int currentseed = MinSeedLabel; currentseed < MaxSeedLabel + 1; ++currentseed) {
+						double endlengthpixel = 0;
+						double endlength = 0;
+						for (int index = 0; index < Allend.size(); ++index) {
 
-						final int framenumber = index;
+							final int framenumber = index;
 
-						final ArrayList<Trackproperties> thirdDimension = Allend.get(index);
+							final ArrayList<Trackproperties> thirdDimension = Allend.get(index);
 
-						for (int frameindex = 0; frameindex < thirdDimension.size(); ++frameindex) {
-							final Integer SeedID = thirdDimension.get(frameindex).seedlabel;
+							for (int frameindex = 0; frameindex < thirdDimension.size(); ++frameindex) {
+								final Integer SeedID = thirdDimension.get(frameindex).seedlabel;
 
-							if (SeedID == currentseed) {
+								if (SeedID == currentseed) {
 
-								final Integer[] FrameID = { framenumber, SeedID };
-								final double[] originalpoint = thirdDimension.get(frameindex).originalpoint;
-								final double[] newpoint = thirdDimension.get(frameindex).newpoint;
-								final double[] oldpoint = thirdDimension.get(frameindex).oldpoint;
+									final Integer[] FrameID = { framenumber, SeedID };
+									final double[] originalpoint = thirdDimension.get(frameindex).originalpoint;
+									final double[] newpoint = thirdDimension.get(frameindex).newpoint;
+									final double[] oldpoint = thirdDimension.get(frameindex).oldpoint;
 
-								final double[] newpointCal = new double[] {
-										thirdDimension.get(frameindex).newpoint[0] * calibration[0],
-										thirdDimension.get(frameindex).newpoint[1] * calibration[1] };
-								final double[] oldpointCal = new double[] {
-										thirdDimension.get(frameindex).oldpoint[0] * calibration[0],
-										thirdDimension.get(frameindex).oldpoint[1] * calibration[1] };
+									final double[] newpointCal = new double[] {
+											thirdDimension.get(frameindex).newpoint[0] * calibration[0],
+											thirdDimension.get(frameindex).newpoint[1] * calibration[1] };
+									final double[] oldpointCal = new double[] {
+											thirdDimension.get(frameindex).oldpoint[0] * calibration[0],
+											thirdDimension.get(frameindex).oldpoint[1] * calibration[1] };
 
-								final double length = util.Boundingboxes.Distance(newpointCal, oldpointCal);
-								final double lengthpixel = util.Boundingboxes.Distance(newpoint, oldpoint);
-								final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, newpoint);
-								final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
-								final boolean shrink = seedtoold > seedtocurrent ? true : false;
-								final boolean growth = seedtoold > seedtocurrent ? false : true;
+									final double length = util.Boundingboxes.Distance(newpointCal, oldpointCal);
+									final double lengthpixel = util.Boundingboxes.Distance(newpoint, oldpoint);
+									final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, newpoint);
+									final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
+									final boolean shrink = seedtoold > seedtocurrent ? true : false;
+									final boolean growth = seedtoold > seedtocurrent ? false : true;
 
-								if (shrink) {
+									if (shrink) {
 
-									// MT shrank
-									endlength -= length;
-									endlengthpixel -= lengthpixel;
+										// MT shrank
+										endlength -= length;
+										endlengthpixel -= lengthpixel;
 
-								}
-								if (growth) {
+									}
+									if (growth) {
 
-									// MT grew
-									endlength += length;
-									endlengthpixel += lengthpixel;
+										// MT grew
+										endlength += length;
+										endlengthpixel += lengthpixel;
 
-								}
+									}
 
-								final double[] endinfo = { oldpoint[0], oldpoint[1], newpoint[0], newpoint[1],
-										oldpointCal[0], oldpointCal[1], newpointCal[0], newpointCal[1], length,
-										endlength, lengthpixel, endlengthpixel };
-								Pair<Integer[], double[]> lengthpair = new Pair<Integer[], double[]>(FrameID, endinfo);
+									final double[] endinfo = { oldpoint[0], oldpoint[1], newpoint[0], newpoint[1],
+											oldpointCal[0], oldpointCal[1], newpointCal[0], newpointCal[1], length,
+											endlength, lengthpixel, endlengthpixel };
+									Pair<Integer[], double[]> lengthpair = new Pair<Integer[], double[]>(FrameID,
+											endinfo);
 
-								lengthlistend.add(lengthpair);
-
-							}
-						}
-
-					}
-
-				}
-
-				for (int seedID = MinSeedLabel; seedID <= MaxSeedLabel; ++seedID) {
-					ResultsTable rtend = new ResultsTable();
-					if (SaveTxt) {
-						try {
-							File fichier = new File(
-									usefolder + "//" + addTrackToName + "SeedLabel" + seedID + "-end" + ".txt");
-							File fichierMy = new File(usefolder + "//" + addToName + "KymoVarun-end" + seedID + ".txt");
-
-							File Rates = new File(usefolder + "//" + addToName + "Rates" + seedID + ".txt");
-							FileWriter fw = new FileWriter(fichier);
-							BufferedWriter bw = new BufferedWriter(fw);
-							bw.write(
-									"\tFramenumber\tSeedLabel\tOldX (px)\tOldY (px)\tNewX (px)\tNewY (px)\tOldX (real)\tOldY (real)"
-											+ "\tNewX (real)\tNewY (real)"
-											+ "\tLength ( real)\tCummulativeLength(real)\n");
-							FileWriter fwmy = new FileWriter(fichierMy);
-							BufferedWriter bwmy = new BufferedWriter(fwmy);
-
-							bwmy.write("\tFramenumber\tLength\n");
-							for (int index = 0; index < lengthlistend.size(); ++index) {
-								if (lengthlistend.get(index).fst[1] == seedID) {
-									bw.write("\t" + lengthlistend.get(index).fst[0] + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).fst[1]) + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[0]) + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[1]) + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[2]) + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[3]) + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[4]) + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[5]) + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[6]) + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[7]) + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[8]) + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[9]) + "\n");
-
-									bwmy.write("\t" + lengthlistend.get(index).fst[0] + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[11]) + "\n");
+									lengthlistend.add(lengthpair);
 
 								}
 							}
-							bw.close();
-							fw.close();
-							bwmy.close();
-							fwmy.close();
-
-						} catch (IOException e) {
-						}
-					}
-
-					for (int index = 0; index < lengthlistend.size(); ++index) {
-						if (lengthlistend.get(index).fst[1] == seedID) {
-							rtend.incrementCounter();
-							rtend.addValue("FrameNumber", lengthlistend.get(index).fst[0]);
-							rtend.addValue("SeedLabel", lengthlistend.get(index).fst[1]);
-							rtend.addValue("OldX in px units", lengthlistend.get(index).snd[0]);
-							rtend.addValue("OldY in px units", lengthlistend.get(index).snd[1]);
-							rtend.addValue("NewX in px units", lengthlistend.get(index).snd[2]);
-							rtend.addValue("NewY in px units", lengthlistend.get(index).snd[3]);
-							rtend.addValue("OldX in real units", lengthlistend.get(index).snd[4]);
-							rtend.addValue("OldY in real units", lengthlistend.get(index).snd[5]);
-							rtend.addValue("NewX in real units", lengthlistend.get(index).snd[6]);
-							rtend.addValue("NewY in real units", lengthlistend.get(index).snd[7]);
-							rtend.addValue("Length in real units", lengthlistend.get(index).snd[8]);
-							rtend.addValue("Cummulative Length in real units", lengthlistend.get(index).snd[9]);
-							double[] landt = { lengthlistend.get(index).snd[11], lengthlistend.get(index).fst[0] };
-							lengthtimeend.add(landt);
-							rtAll.incrementCounter();
-							rtAll.addValue("FrameNumber", lengthlistend.get(index).fst[0]);
-							rtAll.addValue("SeedLabel", lengthlistend.get(index).fst[1]);
-							rtAll.addValue("OldX in px units", lengthlistend.get(index).snd[0]);
-							rtAll.addValue("OldY in px units", lengthlistend.get(index).snd[1]);
-							rtAll.addValue("NewX in px units", lengthlistend.get(index).snd[2]);
-							rtAll.addValue("NewY in px units", lengthlistend.get(index).snd[3]);
-							rtAll.addValue("OldX in real units", lengthlistend.get(index).snd[4]);
-							rtAll.addValue("OldY in real units", lengthlistend.get(index).snd[5]);
-							rtAll.addValue("NewX in real units", lengthlistend.get(index).snd[6]);
-							rtAll.addValue("NewY in real units", lengthlistend.get(index).snd[7]);
-							rtAll.addValue("Length in real units", lengthlistend.get(index).snd[8]);
-							rtAll.addValue("Cummulative Length in real units", lengthlistend.get(index).snd[9]);
 
 						}
 
 					}
 
-					
+					for (int seedID = MinSeedLabel; seedID <= MaxSeedLabel; ++seedID) {
+						ResultsTable rtend = new ResultsTable();
+						if (SaveTxt) {
+							try {
+								File fichier = new File(
+										usefolder + "//" + addTrackToName + "SeedLabel" + seedID + "-end" + ".txt");
+								File fichierMy = new File(
+										usefolder + "//" + addToName + "KymoVarun-end" + seedID + ".txt");
 
-					if (SaveXLS)
-						saveResultsToExcel(usefolder + "//" + addTrackToName + "end" + "seedLabel" + seedID + ".xls",
-								rtend, seedID);
+								File Rates = new File(usefolder + "//" + addToName + "Rates" + seedID + ".txt");
+								FileWriter fw = new FileWriter(fichier);
+								BufferedWriter bw = new BufferedWriter(fw);
+								bw.write(
+										"\tFramenumber\tSeedLabel\tOldX (px)\tOldY (px)\tNewX (px)\tNewY (px)\tOldX (real)\tOldY (real)"
+												+ "\tNewX (real)\tNewY (real)"
+												+ "\tLength ( real)\tCummulativeLength(real)\n");
+								FileWriter fwmy = new FileWriter(fichierMy);
+								BufferedWriter bwmy = new BufferedWriter(fwmy);
 
-				}
+								bwmy.write("\tFramenumber\tLength\n");
+								for (int index = 0; index < lengthlistend.size(); ++index) {
+									if (lengthlistend.get(index).fst[1] == seedID) {
+										bw.write("\t" + lengthlistend.get(index).fst[0] + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).fst[1]) + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[0]) + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[1]) + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[2]) + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[3]) + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[4]) + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[5]) + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[6]) + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[7]) + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[8]) + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[9]) + "\n");
+
+										bwmy.write("\t" + lengthlistend.get(index).fst[0] + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[11]) + "\n");
+
+									}
+								}
+								bw.close();
+								fw.close();
+								bwmy.close();
+								fwmy.close();
+
+							} catch (IOException e) {
+							}
+						}
+
+						for (int index = 0; index < lengthlistend.size(); ++index) {
+							if (lengthlistend.get(index).fst[1] == seedID) {
+								rtend.incrementCounter();
+								rtend.addValue("FrameNumber", lengthlistend.get(index).fst[0]);
+								rtend.addValue("SeedLabel", lengthlistend.get(index).fst[1]);
+								rtend.addValue("OldX in px units", lengthlistend.get(index).snd[0]);
+								rtend.addValue("OldY in px units", lengthlistend.get(index).snd[1]);
+								rtend.addValue("NewX in px units", lengthlistend.get(index).snd[2]);
+								rtend.addValue("NewY in px units", lengthlistend.get(index).snd[3]);
+								rtend.addValue("OldX in real units", lengthlistend.get(index).snd[4]);
+								rtend.addValue("OldY in real units", lengthlistend.get(index).snd[5]);
+								rtend.addValue("NewX in real units", lengthlistend.get(index).snd[6]);
+								rtend.addValue("NewY in real units", lengthlistend.get(index).snd[7]);
+								rtend.addValue("Length in real units", lengthlistend.get(index).snd[8]);
+								rtend.addValue("Cummulative Length in real units", lengthlistend.get(index).snd[9]);
+								double[] landt = { lengthlistend.get(index).snd[11], lengthlistend.get(index).fst[0] };
+								lengthtimeend.add(landt);
+								rtAll.incrementCounter();
+								rtAll.addValue("FrameNumber", lengthlistend.get(index).fst[0]);
+								rtAll.addValue("SeedLabel", lengthlistend.get(index).fst[1]);
+								rtAll.addValue("OldX in px units", lengthlistend.get(index).snd[0]);
+								rtAll.addValue("OldY in px units", lengthlistend.get(index).snd[1]);
+								rtAll.addValue("NewX in px units", lengthlistend.get(index).snd[2]);
+								rtAll.addValue("NewY in px units", lengthlistend.get(index).snd[3]);
+								rtAll.addValue("OldX in real units", lengthlistend.get(index).snd[4]);
+								rtAll.addValue("OldY in real units", lengthlistend.get(index).snd[5]);
+								rtAll.addValue("NewX in real units", lengthlistend.get(index).snd[6]);
+								rtAll.addValue("NewY in real units", lengthlistend.get(index).snd[7]);
+								rtAll.addValue("Length in real units", lengthlistend.get(index).snd[8]);
+								rtAll.addValue("Cummulative Length in real units", lengthlistend.get(index).snd[9]);
+
+							}
+
+						}
+
+						if (SaveXLS)
+							saveResultsToExcel(
+									usefolder + "//" + addTrackToName + "end" + "seedLabel" + seedID + ".xls", rtend,
+									seedID);
+
+					}
 				}
 				rtAll.show("Start and End of MT, respectively");
 
 				if (analyzekymo) {
 					double lengthcheckstart = 0;
 					double lengthcheckend = 0;
-					if (Trackstart){
-					for (int index = 0; index < lengthtimestart.size(); ++index) {
+					if (Trackstart) {
+						for (int index = 0; index < lengthtimestart.size(); ++index) {
 
-						int time = (int) lengthtimestart.get(index)[1];
+							int time = (int) lengthtimestart.get(index)[1];
 
-						lengthcheckstart += lengthtimestart.get(index)[0];
+							lengthcheckstart += lengthtimestart.get(index)[0];
 
-						for (int secindex = 0; secindex < Length.size(); ++secindex) {
-							if ((int) Length.get(secindex)[1] == time){
-							for (int accountindex = 0; accountindex < Accountedframes.size(); ++accountindex){
+							for (int secindex = 0; secindex < Length.size(); ++secindex) {
+								if ((int) Length.get(secindex)[1] == time) {
+									for (int accountindex = 0; accountindex < Accountedframes.size(); ++accountindex) {
 
-							 if (Accountedframes.get(accountindex) == time) {
+										if (Accountedframes.get(accountindex) == time) {
 
-								float delta = (float) (lengthtimestart.get(index)[0] - Length.get(secindex)[0]);
-								float[] cudeltadeltaLstart = { delta, time };
-								deltadstart.add(cudeltadeltaLstart);
+											float delta = (float) (lengthtimestart.get(index)[0]
+													- Length.get(secindex)[0]);
+											float[] cudeltadeltaLstart = { delta, time };
+											deltadstart.add(cudeltadeltaLstart);
+
+										}
+									}
+								}
 
 							}
-							}
-							}
-
 						}
-					}
-					
-					
 
-			          /********
-			  		 * The part below removes the duplicate entries in the array
-			  		 * dor the time co-ordinate
-			  		 ********/
-			  		
-			  			int j = 0;
+						/********
+						 * The part below removes the duplicate entries in the
+						 * array dor the time co-ordinate
+						 ********/
 
-			  			for (int index = 0; index < deltadstart.size() - 1; ++index) {
-			  				
-			  				
-			  				j = index + 1;
-			  				
-			  				
-			  					
-			  					
-			  				while (j < deltadstart.size()) {
+						int j = 0;
 
-			  					if (deltadstart.get(index)[1] == deltadstart.get(j)[1]) {
+						for (int index = 0; index < deltadstart.size() - 1; ++index) {
 
-			  						deltadstart.remove(index);
-			  					}
+							j = index + 1;
 
-			  					else {
-			  						++j;
-			  						
-			  					}
-			  					
-			  					
+							while (j < deltadstart.size()) {
 
-			  				}
-			  			}
-					
-					for (int index = 0; index < deltadstart.size(); ++index) {
+								if (deltadstart.get(index)[1] == deltadstart.get(j)[1]) {
 
-						for (int secindex = 0; secindex < Accountedframes.size(); ++secindex) {
+									deltadstart.remove(index);
+								}
 
-							if ((int) deltadstart.get(index)[1] == Accountedframes.get(secindex)) {
+								else {
+									++j;
 
-								netdeltadstart += Math.abs(deltadstart.get(index)[0]);
+								}
+
+							}
+						}
+
+						for (int index = 0; index < deltadstart.size(); ++index) {
+
+							for (int secindex = 0; secindex < Accountedframes.size(); ++secindex) {
+
+								if ((int) deltadstart.get(index)[1] == Accountedframes.get(secindex)) {
+
+									netdeltadstart += Math.abs(deltadstart.get(index)[0]);
+
+								}
 
 							}
 
 						}
-
+						deltad = deltadstart;
+						lengthtime = lengthtimestart;
 					}
-					deltad = deltadstart;
-					lengthtime = lengthtimestart;
-					}
-					if(Trackstart == false){
-					for (int index = 0; index < lengthtimeend.size(); ++index) {
+					if (Trackstart == false) {
+						for (int index = 0; index < lengthtimeend.size(); ++index) {
 
-						int time = (int) lengthtimeend.get(index)[1];
+							int time = (int) lengthtimeend.get(index)[1];
 
-						lengthcheckend += lengthtimeend.get(index)[0];
+							lengthcheckend += lengthtimeend.get(index)[0];
 
-						for (int secindex = 0; secindex < Length.size(); ++secindex) {
-							if ((int) Length.get(secindex)[1] == time){
-							for (int accountindex = 0; accountindex < Accountedframes.size(); ++accountindex){
+							for (int secindex = 0; secindex < Length.size(); ++secindex) {
+								if ((int) Length.get(secindex)[1] == time) {
+									for (int accountindex = 0; accountindex < Accountedframes.size(); ++accountindex) {
 
-							
-							 if(Accountedframes.get(accountindex) == time) {
+										if (Accountedframes.get(accountindex) == time) {
 
-								float delta = (float) (lengthtimeend.get(index)[0] - Length.get(secindex)[0]);
-								float[] cudeltadeltaLend = { delta, time };
-								deltadend.add(cudeltadeltaLend);
+											float delta = (float) (lengthtimeend.get(index)[0]
+													- Length.get(secindex)[0]);
+											float[] cudeltadeltaLend = { delta, time };
+											deltadend.add(cudeltadeltaLend);
+										}
+
+									}
+
+								}
+
 							}
-								
+						}
+						/********
+						 * The part below removes the duplicate entries in the
+						 * array dor the time co-ordinate
+						 ********/
+
+						int j = 0;
+
+						for (int index = 0; index < deltadend.size() - 1; ++index) {
+
+							j = index + 1;
+
+							while (j < deltadend.size()) {
+
+								if (deltadend.get(index)[1] == deltadend.get(j)[1]) {
+
+									deltadend.remove(index);
+								}
+
+								else {
+									++j;
+
+								}
+
+							}
+						}
+
+						for (int index = 0; index < deltadend.size(); ++index) {
+
+							for (int secindex = 0; secindex < Accountedframes.size(); ++secindex) {
+
+								if ((int) deltadend.get(index)[1] == Accountedframes.get(secindex)) {
+
+									netdeltadend += Math.abs(deltadend.get(index)[0]);
+
+								}
 
 							}
 
 						}
-
-					}
-					}
-					  /********
-			  		 * The part below removes the duplicate entries in the array
-			  		 * dor the time co-ordinate
-			  		 ********/
-			  		
-			  			int j = 0;
-
-			  			for (int index = 0; index < deltadend.size() - 1; ++index) {
-			  				
-			  				
-			  				j = index + 1;
-			  				
-			  				
-			  					
-			  					
-			  				while (j < deltadend.size()) {
-
-			  					if (deltadend.get(index)[1] == deltadend.get(j)[1]) {
-
-			  						deltadend.remove(index);
-			  					}
-
-			  					else {
-			  						++j;
-			  						
-			  					}
-			  					
-			  					
-
-			  				}
-			  			}
-
-					for (int index = 0; index < deltadend.size(); ++index) {
-
-						for (int secindex = 0; secindex < Accountedframes.size(); ++secindex) {
-
-							if ((int) deltadend.get(index)[1] == Accountedframes.get(secindex)) {
-
-								netdeltadend += Math.abs(deltadend.get(index)[0]);
-
-							}
-
-						}
-
-					}
-					deltad =  deltadend;
-					lengthtime = lengthtimeend;
+						deltad = deltadend;
+						lengthtime = lengthtimeend;
 					}
 
-					if(lengthtimestart.size() > 0 && lengthtimeend.size() > 0){
-					deltad = (netdeltadstart >= netdeltadend) ? deltadend : deltadstart;
-					lengthtime = (netdeltadstart >= netdeltadend) ? lengthtimeend : lengthtimestart;
+					if (lengthtimestart.size() > 0 && lengthtimeend.size() > 0) {
+						deltad = (netdeltadstart >= netdeltadend) ? deltadend : deltadstart;
+						lengthtime = (netdeltadstart >= netdeltadend) ? lengthtimeend : lengthtimestart;
 					}
-					
+
 					FileWriter deltaw;
 					File fichierKydel = new File(usefolder + "//" + addToName + "MTtracker-deltad" + ".txt");
 
@@ -4031,10 +3890,7 @@ public class InteractiveMT implements PlugIn {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
-					
-					
-					
-					
+
 					for (int index = 0; index < deltad.size(); ++index) {
 
 						for (int secindex = 0; secindex < Accountedframes.size(); ++secindex) {
@@ -4085,16 +3941,65 @@ public class InteractiveMT implements PlugIn {
 
 				Kymoimp.show();
 			}
-			final long endTime = System.currentTimeMillis();
 
-			System.out.println("Total execution time: " + (endTime - startTime));
+			return null;
+
 		}
+
+		@Override
+		protected void done() {
+			try {
+				jpb.setIndeterminate(false);
+				get();
+				frame.dispose();
+				JOptionPane.showMessageDialog(jpb.getParent(), "Success", "Success", JOptionPane.INFORMATION_MESSAGE);
+			} catch (ExecutionException | InterruptedException e) {
+				e.printStackTrace();
+			}
+
+		}
+
 	}
 
-	protected class TrackendsListener implements ActionListener {
+	protected class SkipFramesandTrackendsListener implements ActionListener {
 
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
+
+			SwingUtilities.invokeLater(new Runnable() {
+				@Override
+				public void run() {
+
+					goSkip();
+
+				}
+
+			});
+		}
+	}
+
+	public void goTrack() {
+
+		jpb.setIndeterminate(false);
+
+		jpb.setMaximum(max);
+		panel.add(label);
+		panel.add(jpb);
+		frame.add(panel);
+		frame.pack();
+		frame.setSize(200, 100);
+		frame.setLocationRelativeTo(panelCont);
+		frame.setVisible(true);
+
+		ProgressTrack trackMT = new ProgressTrack();
+		trackMT.execute();
+
+	}
+
+	class ProgressTrack extends SwingWorker<Void, Void> {
+
+		@Override
+		protected Void doInBackground() throws Exception {
 
 			int next = 2;
 
@@ -4234,804 +4139,793 @@ public class InteractiveMT implements PlugIn {
 
 				final Trackstart trackerstart = new Trackstart(Allstart, thirdDimensionSize - next);
 				final Trackend trackerend = new Trackend(Allend, thirdDimensionSize - next);
-				if (Trackstart){
-				trackerstart.process();
-				SimpleWeightedGraph<double[], DefaultWeightedEdge> graphstart = trackerstart.getResult();
-				DisplayGraph displaygraphtrackstart = new DisplayGraph(impstartsec, graphstart);
-				displaygraphtrackstart.getImp();
-				impstartsec.draw();
+				if (Trackstart) {
+					trackerstart.process();
+					SimpleWeightedGraph<double[], DefaultWeightedEdge> graphstart = trackerstart.getResult();
+					ArrayList<Pair<Integer, double[]>> ID = trackerstart.getSeedID();
+					DisplayGraph displaygraphtrackstart = new DisplayGraph(impstartsec, graphstart, ID);
+					displaygraphtrackstart.getImp();
+					impstartsec.draw();
 				}
-				if (Trackstart== false){
+				if (Trackstart == false) {
 
-				trackerend.process();
-				SimpleWeightedGraph<double[], DefaultWeightedEdge> graphend = trackerend.getResult();
-				DisplayGraph displaygraphtrackend = new DisplayGraph(impendsec, graphend);
-				displaygraphtrackend.getImp();
-				impendsec.draw();
+					trackerend.process();
+					SimpleWeightedGraph<double[], DefaultWeightedEdge> graphend = trackerend.getResult();
+					ArrayList<Pair<Integer, double[]>> ID = trackerend.getSeedID();
+					DisplayGraph displaygraphtrackend = new DisplayGraph(impendsec, graphend, ID);
+					displaygraphtrackend.getImp();
+					impendsec.draw();
 				}
-				
-				
-				
-				if (Trackstart){
-				ArrayList<Subgraphs> subgraphstart = trackerstart.getFramedgraph();
-				DisplaysubGraphstart displaytrackstart = new DisplaysubGraphstart(impstart, subgraphstart, next - 1);
-				displaytrackstart.getImp();
-				impstart.draw();
+
+				if (Trackstart) {
+					ArrayList<Subgraphs> subgraphstart = trackerstart.getFramedgraph();
+					ArrayList<Pair<Integer, double[]>> ID = trackerstart.getSeedID();
+					DisplaysubGraphstart displaytrackstart = new DisplaysubGraphstart(impstart, subgraphstart,
+							next - 1);
+					displaytrackstart.getImp();
+					impstart.draw();
 				}
-				
-				if (Trackstart== false){
-				ArrayList<Subgraphs> subgraphend = trackerend.getFramedgraph();
-				DisplaysubGraphend displaytrackend = new DisplaysubGraphend(impend, subgraphend, next - 1);
-				displaytrackend.getImp();
-				impend.draw();
+
+				if (Trackstart == false) {
+
+					ArrayList<Subgraphs> subgraphend = trackerend.getFramedgraph();
+					ArrayList<Pair<Integer, double[]>> ID = trackerend.getSeedID();
+					DisplaysubGraphend displaytrackend = new DisplaysubGraphend(impend, subgraphend, next - 1);
+					displaytrackend.getImp();
+					impend.draw();
 
 				}
 			}
 
 			if (showKalman) {
 
-			
 				ResultsTable rtAll = new ResultsTable();
-				if (Trackstart){
+				if (Trackstart) {
 					MTtrackerstart = new KFsearch(AllstartKalman, UserchosenCostFunction, maxSearchradius,
 							initialSearchradius, thirdDimension, thirdDimensionSize, missedframes);
-				MTtrackerstart.reset();
-				MTtrackerstart.process();
-				
-				SimpleWeightedGraph<KalmanTrackproperties, DefaultWeightedEdge> graphstartKalman = MTtrackerstart
-						.getResult();
-				
+					MTtrackerstart.reset();
+					MTtrackerstart.process();
 
-				ImagePlus impstartKalman = ImageJFunctions.show(originalimg);
-				impstartKalman.setTitle("Kalman Start MT");
-				
-				DisplayGraphKalman Startdisplaytracks = new DisplayGraphKalman(impstartKalman, graphstartKalman);
-				Startdisplaytracks.getImp();
+					SimpleWeightedGraph<KalmanTrackproperties, DefaultWeightedEdge> graphstartKalman = MTtrackerstart
+							.getResult();
 
-				TrackModel modelstart = new TrackModel(graphstartKalman);
-				modelstart.getDirectedNeighborIndex();
-				IJ.log(" " + graphstartKalman.vertexSet().size());
-				
-				// Get all the track id's
-				for (final Integer id : modelstart.trackIDs(true)) {
-					ResultsTable rt = new ResultsTable();
-					// Get the corresponding set for each id
-					modelstart.setName(id, "Track" + id);
-					final HashSet<KalmanTrackproperties> Snakeset = modelstart.trackKalmanTrackpropertiess(id);
-					ArrayList<KalmanTrackproperties> list = new ArrayList<KalmanTrackproperties>();
+					ImagePlus impstartKalman = ImageJFunctions.show(originalimg);
+					impstartKalman.setTitle("Kalman Start MT");
 
-					Comparator<KalmanTrackproperties> ThirdDimcomparison = new Comparator<KalmanTrackproperties>() {
+					DisplayGraphKalman Startdisplaytracks = new DisplayGraphKalman(impstartKalman, graphstartKalman);
+					Startdisplaytracks.getImp();
 
-						@Override
-						public int compare(final KalmanTrackproperties A, final KalmanTrackproperties B) {
+					TrackModel modelstart = new TrackModel(graphstartKalman);
+					modelstart.getDirectedNeighborIndex();
+					IJ.log(" " + graphstartKalman.vertexSet().size());
 
-							return A.thirdDimension - B.thirdDimension;
+					// Get all the track id's
+					for (final Integer id : modelstart.trackIDs(true)) {
+						ResultsTable rt = new ResultsTable();
+						// Get the corresponding set for each id
+						modelstart.setName(id, "Track" + id);
+						final HashSet<KalmanTrackproperties> Snakeset = modelstart.trackKalmanTrackpropertiess(id);
+						ArrayList<KalmanTrackproperties> list = new ArrayList<KalmanTrackproperties>();
+
+						Comparator<KalmanTrackproperties> ThirdDimcomparison = new Comparator<KalmanTrackproperties>() {
+
+							@Override
+							public int compare(final KalmanTrackproperties A, final KalmanTrackproperties B) {
+
+								return A.thirdDimension - B.thirdDimension;
+
+							}
+
+						};
+
+						Iterator<KalmanTrackproperties> Snakeiter = Snakeset.iterator();
+
+						while (Snakeiter.hasNext()) {
+
+							KalmanTrackproperties currentsnake = Snakeiter.next();
+
+							list.add(currentsnake);
+
+						}
+						Collections.sort(list, ThirdDimcomparison);
+
+						final double[] originalpoint = list.get(0).originalpoint;
+						double startlength = 0;
+						double startlengthpixel = 0;
+
+						for (int index = 1; index < list.size() - 1; ++index) {
+
+							final double[] currentpoint = list.get(index).currentpoint;
+							final double[] oldpoint = list.get(index - 1).currentpoint;
+							final double[] currentpointCal = new double[] { currentpoint[0] * calibration[0],
+									currentpoint[1] * calibration[1] };
+							final double[] oldpointCal = new double[] { oldpoint[0] * calibration[0],
+									oldpoint[1] * calibration[1] };
+							final double lengthpixel = util.Boundingboxes.Distance(currentpoint, oldpoint);
+							final double length = util.Boundingboxes.Distance(currentpointCal, oldpointCal);
+							final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, currentpoint);
+							final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
+							final boolean shrink = seedtoold > seedtocurrent ? true : false;
+							final boolean growth = seedtoold > seedtocurrent ? false : true;
+
+							if (shrink && startlengthpixel - lengthpixel > -minlength) {
+								// MT shrank
+
+								startlength -= length;
+								startlengthpixel -= lengthpixel;
+
+							}
+							if (growth) {
+
+								// MT grew
+								startlength += length;
+								startlengthpixel += lengthpixel;
+
+							}
+
+							rt.incrementCounter();
+
+							rt.addValue("FrameNumber", list.get(index).thirdDimension);
+							rt.addValue("Track iD", id);
+							rt.addValue("PreviousPosition X (px units)", oldpoint[0]);
+							rt.addValue("PreviousPosition Y (px units)", oldpoint[1]);
+							rt.addValue("CurrentPosition X (px units)", currentpoint[0]);
+							rt.addValue("CurrentPosition Y (px units)", currentpoint[1]);
+							rt.addValue("PreviousPosition X (real units)", oldpointCal[0]);
+							rt.addValue("PreviousPosition Y (real units)", oldpointCal[1]);
+							rt.addValue("CurrentPosition X (real units)", currentpointCal[0]);
+							rt.addValue("CurrentPosition Y (real units)", currentpointCal[1]);
+							rt.addValue("Length in real units", length);
+							rt.addValue("Cummulative Length in real units", startlength);
+							double[] landt = { startlengthpixel, list.get(index).thirdDimension };
+							lengthtimestart.add(landt);
+							rtAll.incrementCounter();
+
+							rtAll.addValue("FrameNumber", list.get(index).thirdDimension);
+							rtAll.addValue("Track iD", id);
+							rtAll.addValue("PreviousPosition X (px units)", oldpoint[0]);
+							rtAll.addValue("PreviousPosition Y (px units)", oldpoint[1]);
+							rtAll.addValue("CurrentPosition X (px units)", currentpoint[0]);
+							rtAll.addValue("CurrentPosition Y (px units)", currentpoint[1]);
+							rtAll.addValue("PreviousPosition X (real units)", oldpointCal[0]);
+							rtAll.addValue("PreviousPosition Y (real units)", oldpointCal[1]);
+							rtAll.addValue("CurrentPosition X (real units)", currentpointCal[0]);
+							rtAll.addValue("CurrentPosition Y (real units)", currentpointCal[1]);
+							rtAll.addValue("Length in real units", length);
+							rtAll.addValue("Cummulative Length in real units", startlength);
 
 						}
 
-					};
-
-					Iterator<KalmanTrackproperties> Snakeiter = Snakeset.iterator();
-
-					while (Snakeiter.hasNext()) {
-
-						KalmanTrackproperties currentsnake = Snakeiter.next();
-
-						list.add(currentsnake);
+						if (SaveXLS && list.size() > 0.5 * thirdDimensionSize)
+							saveResultsToExcel(usefolder + "//" + addTrackToName + "KalmanStart" + id + ".xls", rt, id);
 
 					}
-					Collections.sort(list, ThirdDimcomparison);
-
-					final double[] originalpoint = list.get(0).originalpoint;
-					double startlength = 0;
-					double startlengthpixel = 0;
-
-					for (int index = 1; index < list.size() - 1; ++index) {
-
-						final double[] currentpoint = list.get(index).currentpoint;
-						final double[] oldpoint = list.get(index - 1).currentpoint;
-						final double[] currentpointCal = new double[] { currentpoint[0] * calibration[0],
-								currentpoint[1] * calibration[1] };
-						final double[] oldpointCal = new double[] { oldpoint[0] * calibration[0],
-								oldpoint[1] * calibration[1] };
-						final double lengthpixel = util.Boundingboxes.Distance(currentpoint, oldpoint);
-						final double length = util.Boundingboxes.Distance(currentpointCal, oldpointCal);
-						final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, currentpoint);
-						final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
-						final boolean shrink = seedtoold > seedtocurrent ? true : false;
-						final boolean growth = seedtoold > seedtocurrent ? false : true;
-
-						if (shrink && startlengthpixel - lengthpixel > -minlength) {
-							// MT shrank
-
-							startlength -= length;
-							startlengthpixel -= lengthpixel;
-
-						}
-						if (growth) {
-
-							// MT grew
-							startlength += length;
-							startlengthpixel += lengthpixel;
-
-						}
-
-						rt.incrementCounter();
-
-						rt.addValue("FrameNumber", list.get(index).thirdDimension);
-						rt.addValue("Track iD", id);
-						rt.addValue("PreviousPosition X (px units)", oldpoint[0]);
-						rt.addValue("PreviousPosition Y (px units)", oldpoint[1]);
-						rt.addValue("CurrentPosition X (px units)", currentpoint[0]);
-						rt.addValue("CurrentPosition Y (px units)", currentpoint[1]);
-						rt.addValue("PreviousPosition X (real units)", oldpointCal[0]);
-						rt.addValue("PreviousPosition Y (real units)", oldpointCal[1]);
-						rt.addValue("CurrentPosition X (real units)", currentpointCal[0]);
-						rt.addValue("CurrentPosition Y (real units)", currentpointCal[1]);
-						rt.addValue("Length in real units", length);
-						rt.addValue("Cummulative Length in real units", startlength);
-						double[] landt = { startlengthpixel, list.get(index).thirdDimension };
-						lengthtimestart.add(landt);
-						rtAll.incrementCounter();
-
-						rtAll.addValue("FrameNumber", list.get(index).thirdDimension);
-						rtAll.addValue("Track iD", id);
-						rtAll.addValue("PreviousPosition X (px units)", oldpoint[0]);
-						rtAll.addValue("PreviousPosition Y (px units)", oldpoint[1]);
-						rtAll.addValue("CurrentPosition X (px units)", currentpoint[0]);
-						rtAll.addValue("CurrentPosition Y (px units)", currentpoint[1]);
-						rtAll.addValue("PreviousPosition X (real units)", oldpointCal[0]);
-						rtAll.addValue("PreviousPosition Y (real units)", oldpointCal[1]);
-						rtAll.addValue("CurrentPosition X (real units)", currentpointCal[0]);
-						rtAll.addValue("CurrentPosition Y (real units)", currentpointCal[1]);
-						rtAll.addValue("Length in real units", length);
-						rtAll.addValue("Cummulative Length in real units", startlength);
-
-					}
-				
-
-					if (SaveXLS && list.size() > 0.5 * thirdDimensionSize)
-						saveResultsToExcel(usefolder + "//" + addTrackToName + "KalmanStart" + id + ".xls", rt, id);
-
-				}
 				}
 
-				if (Trackstart == false){
-				MTtrackerend = new KFsearch(AllendKalman, UserchosenCostFunction, maxSearchradius, initialSearchradius,
-						thirdDimension, thirdDimensionSize, missedframes);
-				
-				
-				MTtrackerend.reset();
-				MTtrackerend.process();
-				SimpleWeightedGraph<KalmanTrackproperties, DefaultWeightedEdge> graphendKalman = MTtrackerend
-						.getResult();
+				if (Trackstart == false) {
+					MTtrackerend = new KFsearch(AllendKalman, UserchosenCostFunction, maxSearchradius,
+							initialSearchradius, thirdDimension, thirdDimensionSize, missedframes);
 
-				ImagePlus impendKalman = ImageJFunctions.show(originalPreprocessedimg);
-				impendKalman.setTitle("Kalman End MT");
+					MTtrackerend.reset();
+					MTtrackerend.process();
+					SimpleWeightedGraph<KalmanTrackproperties, DefaultWeightedEdge> graphendKalman = MTtrackerend
+							.getResult();
 
-				IJ.log("KalmanTracking Complete " + " " + "Displaying results");
+					ImagePlus impendKalman = ImageJFunctions.show(originalPreprocessedimg);
+					impendKalman.setTitle("Kalman End MT");
 
-				
+					IJ.log("KalmanTracking Complete " + " " + "Displaying results");
 
-				DisplayGraphKalman Enddisplaytracks = new DisplayGraphKalman(impendKalman, graphendKalman);
-				Enddisplaytracks.getImp();
-				TrackModel modelend = new TrackModel(graphendKalman);
-				modelend.getDirectedNeighborIndex();
-				IJ.log(" " + graphendKalman.vertexSet().size());
-				// Get all the track id's
-				for (final Integer id : modelend.trackIDs(true)) {
-					ResultsTable rt = new ResultsTable();
-					// Get the corresponding set for each id
-					modelend.setName(id, "Track" + id);
-					final HashSet<KalmanTrackproperties> Snakeset = modelend.trackKalmanTrackpropertiess(id);
-					ArrayList<KalmanTrackproperties> list = new ArrayList<KalmanTrackproperties>();
+					DisplayGraphKalman Enddisplaytracks = new DisplayGraphKalman(impendKalman, graphendKalman);
+					Enddisplaytracks.getImp();
+					TrackModel modelend = new TrackModel(graphendKalman);
+					modelend.getDirectedNeighborIndex();
+					IJ.log(" " + graphendKalman.vertexSet().size());
+					// Get all the track id's
+					for (final Integer id : modelend.trackIDs(true)) {
+						ResultsTable rt = new ResultsTable();
+						// Get the corresponding set for each id
+						modelend.setName(id, "Track" + id);
+						final HashSet<KalmanTrackproperties> Snakeset = modelend.trackKalmanTrackpropertiess(id);
+						ArrayList<KalmanTrackproperties> list = new ArrayList<KalmanTrackproperties>();
 
-					Comparator<KalmanTrackproperties> ThirdDimcomparison = new Comparator<KalmanTrackproperties>() {
+						Comparator<KalmanTrackproperties> ThirdDimcomparison = new Comparator<KalmanTrackproperties>() {
 
-						@Override
-						public int compare(final KalmanTrackproperties A, final KalmanTrackproperties B) {
+							@Override
+							public int compare(final KalmanTrackproperties A, final KalmanTrackproperties B) {
 
-							return A.thirdDimension - B.thirdDimension;
+								return A.thirdDimension - B.thirdDimension;
+
+							}
+
+						};
+
+						Iterator<KalmanTrackproperties> Snakeiter = Snakeset.iterator();
+
+						while (Snakeiter.hasNext()) {
+
+							KalmanTrackproperties currentsnake = Snakeiter.next();
+
+							list.add(currentsnake);
+
+						}
+						Collections.sort(list, ThirdDimcomparison);
+
+						double endlength = 0;
+						double endlengthpixel = 0;
+						final double[] originalpoint = list.get(0).originalpoint;
+
+						for (int index = 1; index < list.size() - 1; ++index) {
+
+							final double[] currentpoint = list.get(index).currentpoint;
+							final double[] oldpoint = list.get(index - 1).currentpoint;
+							final double[] currentpointCal = new double[] { currentpoint[0] * calibration[0],
+									currentpoint[1] * calibration[1] };
+							final double[] oldpointCal = new double[] { oldpoint[0] * calibration[0],
+									oldpoint[1] * calibration[1] };
+							final double lengthpixel = util.Boundingboxes.Distance(currentpoint, oldpoint);
+							final double length = util.Boundingboxes.Distance(currentpointCal, oldpointCal);
+							final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, currentpoint);
+							final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
+							final boolean shrink = seedtoold > seedtocurrent ? true : false;
+							final boolean growth = seedtoold > seedtocurrent ? false : true;
+
+							if (shrink && endlengthpixel - lengthpixel > -minlength) {
+
+								// MT shrank
+								endlength -= length;
+								endlengthpixel -= lengthpixel;
+
+							}
+							if (growth) {
+
+								// MT grew
+								endlength += length;
+								endlengthpixel += lengthpixel;
+
+							}
+
+							rt.incrementCounter();
+
+							rt.addValue("FrameNumber", list.get(index).thirdDimension);
+							rt.addValue("Track iD", id);
+							rt.addValue("PreviousPosition X (px units)", oldpoint[0]);
+							rt.addValue("PreviousPosition Y (px units)", oldpoint[1]);
+							rt.addValue("CurrentPosition X (px units)", currentpoint[0]);
+							rt.addValue("CurrentPosition Y (px units)", currentpoint[1]);
+							rt.addValue("PreviousPosition X (real units)", oldpointCal[0]);
+							rt.addValue("PreviousPosition Y (real units)", oldpointCal[1]);
+							rt.addValue("CurrentPosition X (real units)", currentpointCal[0]);
+							rt.addValue("CurrentPosition Y (real units)", currentpointCal[1]);
+							rt.addValue("Length in real units", length);
+							rt.addValue("Cummulative Length in real units", endlength);
+
+							double[] landt = { endlengthpixel, list.get(index).thirdDimension };
+							lengthtimeend.add(landt);
+							rtAll.incrementCounter();
+
+							rtAll.addValue("FrameNumber", list.get(index).thirdDimension);
+							rtAll.addValue("Track iD", id);
+							rtAll.addValue("PreviousPosition X (px units)", oldpoint[0]);
+							rtAll.addValue("PreviousPosition Y (px units)", oldpoint[1]);
+							rtAll.addValue("CurrentPosition X (px units)", currentpoint[0]);
+							rtAll.addValue("CurrentPosition Y (px units)", currentpoint[1]);
+							rtAll.addValue("PreviousPosition X (real units)", oldpointCal[0]);
+							rtAll.addValue("PreviousPosition Y (real units)", oldpointCal[1]);
+							rtAll.addValue("CurrentPosition X (real units)", currentpointCal[0]);
+							rtAll.addValue("CurrentPosition Y (real units)", currentpointCal[1]);
+							rtAll.addValue("Length in real units", length);
+							rtAll.addValue("Cummulative Length in real units", endlength);
 
 						}
 
-					};
-
-					Iterator<KalmanTrackproperties> Snakeiter = Snakeset.iterator();
-
-					while (Snakeiter.hasNext()) {
-
-						KalmanTrackproperties currentsnake = Snakeiter.next();
-
-						list.add(currentsnake);
+						if (SaveXLS && list.size() > 0.5 * thirdDimensionSize)
+							saveResultsToExcel(usefolder + "//" + addTrackToName + "KalmanEnd" + id + ".xls", rt, id);
 
 					}
-					Collections.sort(list, ThirdDimcomparison);
 
-					double endlength = 0;
-					double endlengthpixel = 0;
-					final double[] originalpoint = list.get(0).originalpoint;
-
-					for (int index = 1; index < list.size() - 1; ++index) {
-
-						final double[] currentpoint = list.get(index).currentpoint;
-						final double[] oldpoint = list.get(index - 1).currentpoint;
-						final double[] currentpointCal = new double[] { currentpoint[0] * calibration[0],
-								currentpoint[1] * calibration[1] };
-						final double[] oldpointCal = new double[] { oldpoint[0] * calibration[0],
-								oldpoint[1] * calibration[1] };
-						final double lengthpixel = util.Boundingboxes.Distance(currentpoint, oldpoint);
-						final double length = util.Boundingboxes.Distance(currentpointCal, oldpointCal);
-						final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, currentpoint);
-						final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
-						final boolean shrink = seedtoold > seedtocurrent ? true : false;
-						final boolean growth = seedtoold > seedtocurrent ? false : true;
-
-						if (shrink && endlengthpixel - lengthpixel > -minlength) {
-
-							// MT shrank
-							endlength -= length;
-							endlengthpixel -= lengthpixel;
-
-						}
-						if (growth) {
-
-							// MT grew
-							endlength += length;
-							endlengthpixel += lengthpixel;
-
-						}
-
-						rt.incrementCounter();
-
-						rt.addValue("FrameNumber", list.get(index).thirdDimension);
-						rt.addValue("Track iD", id);
-						rt.addValue("PreviousPosition X (px units)", oldpoint[0]);
-						rt.addValue("PreviousPosition Y (px units)", oldpoint[1]);
-						rt.addValue("CurrentPosition X (px units)", currentpoint[0]);
-						rt.addValue("CurrentPosition Y (px units)", currentpoint[1]);
-						rt.addValue("PreviousPosition X (real units)", oldpointCal[0]);
-						rt.addValue("PreviousPosition Y (real units)", oldpointCal[1]);
-						rt.addValue("CurrentPosition X (real units)", currentpointCal[0]);
-						rt.addValue("CurrentPosition Y (real units)", currentpointCal[1]);
-						rt.addValue("Length in real units", length);
-						rt.addValue("Cummulative Length in real units", endlength);
-
-						double[] landt = { endlengthpixel, list.get(index).thirdDimension };
-						lengthtimeend.add(landt);
-						rtAll.incrementCounter();
-
-						rtAll.addValue("FrameNumber", list.get(index).thirdDimension);
-						rtAll.addValue("Track iD", id);
-						rtAll.addValue("PreviousPosition X (px units)", oldpoint[0]);
-						rtAll.addValue("PreviousPosition Y (px units)", oldpoint[1]);
-						rtAll.addValue("CurrentPosition X (px units)", currentpoint[0]);
-						rtAll.addValue("CurrentPosition Y (px units)", currentpoint[1]);
-						rtAll.addValue("PreviousPosition X (real units)", oldpointCal[0]);
-						rtAll.addValue("PreviousPosition Y (real units)", oldpointCal[1]);
-						rtAll.addValue("CurrentPosition X (real units)", currentpointCal[0]);
-						rtAll.addValue("CurrentPosition Y (real units)", currentpointCal[1]);
-						rtAll.addValue("Length in real units", length);
-						rtAll.addValue("Cummulative Length in real units", endlength);
-
-					}
-					
-
-					if (SaveXLS && list.size() > 0.5 * thirdDimensionSize)
-						saveResultsToExcel(usefolder + "//" + addTrackToName + "KalmanEnd" + id + ".xls", rt, id);
+					rtAll.show("Results");
 
 				}
-
-				rtAll.show("Results");
-
-			}
 			}
 			if (showDeterministic) {
 				NumberFormat nf = NumberFormat.getInstance(Locale.ENGLISH);
 				nf.setMaximumFractionDigits(3);
 
 				ResultsTable rtAll = new ResultsTable();
-               if (Trackstart){
-				final ArrayList<Trackproperties> first = Allstart.get(0);
-				int MaxSeedLabel = first.get(first.size() - 1).seedlabel;
-				int MinSeedLabel = first.get(0).seedlabel;
+				if (Trackstart) {
+					final ArrayList<Trackproperties> first = Allstart.get(0);
+					int MaxSeedLabel = first.get(first.size() - 1).seedlabel;
+					int MinSeedLabel = first.get(0).seedlabel;
 
-				ArrayList<Pair<Integer[], double[]>> lengthliststart = new ArrayList<Pair<Integer[], double[]>>();
-				for (int currentseed = MinSeedLabel; currentseed < MaxSeedLabel + 1; ++currentseed) {
-					double startlength = 0;
-					double startlengthpixel = 0;
+					ArrayList<Pair<Integer[], double[]>> lengthliststart = new ArrayList<Pair<Integer[], double[]>>();
+					for (int currentseed = MinSeedLabel; currentseed < MaxSeedLabel + 1; ++currentseed) {
+						double startlength = 0;
+						double startlengthpixel = 0;
 
-					for (int index = 0; index < Allstart.size(); ++index) {
+						for (int index = 0; index < Allstart.size(); ++index) {
 
-						final int framenumber = index;
-						final ArrayList<Trackproperties> thirdDimension = Allstart.get(index);
+							final int framenumber = index;
+							final ArrayList<Trackproperties> thirdDimension = Allstart.get(index);
 
-						for (int frameindex = 0; frameindex < thirdDimension.size(); ++frameindex) {
+							for (int frameindex = 0; frameindex < thirdDimension.size(); ++frameindex) {
 
-							final Integer SeedID = thirdDimension.get(frameindex).seedlabel;
+								final Integer SeedID = thirdDimension.get(frameindex).seedlabel;
 
-							if (SeedID == currentseed) {
+								if (SeedID == currentseed) {
 
-								final Integer[] FrameID = { framenumber, SeedID };
-								final double[] originalpoint = thirdDimension.get(frameindex).originalpoint;
-								final double[] newpoint = thirdDimension.get(frameindex).newpoint;
-								final double[] oldpoint = thirdDimension.get(frameindex).oldpoint;
-								final double[] newpointCal = new double[] {
-										thirdDimension.get(frameindex).newpoint[0] * calibration[0],
-										thirdDimension.get(frameindex).newpoint[1] * calibration[1] };
-								final double[] oldpointCal = new double[] {
-										thirdDimension.get(frameindex).oldpoint[0] * calibration[0],
-										thirdDimension.get(frameindex).oldpoint[1] * calibration[1] };
+									final Integer[] FrameID = { framenumber, SeedID };
+									final double[] originalpoint = thirdDimension.get(frameindex).originalpoint;
+									final double[] newpoint = thirdDimension.get(frameindex).newpoint;
+									final double[] oldpoint = thirdDimension.get(frameindex).oldpoint;
+									final double[] newpointCal = new double[] {
+											thirdDimension.get(frameindex).newpoint[0] * calibration[0],
+											thirdDimension.get(frameindex).newpoint[1] * calibration[1] };
+									final double[] oldpointCal = new double[] {
+											thirdDimension.get(frameindex).oldpoint[0] * calibration[0],
+											thirdDimension.get(frameindex).oldpoint[1] * calibration[1] };
 
-								final double length = util.Boundingboxes.Distance(newpointCal, oldpointCal);
-								final double lengthpixel = util.Boundingboxes.Distance(newpoint, oldpoint);
-								final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, newpoint);
-								final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
-								final boolean shrink = seedtoold > seedtocurrent ? true : false;
-								final boolean growth = seedtoold > seedtocurrent ? false : true;
+									final double length = util.Boundingboxes.Distance(newpointCal, oldpointCal);
+									final double lengthpixel = util.Boundingboxes.Distance(newpoint, oldpoint);
+									final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, newpoint);
+									final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
+									final boolean shrink = seedtoold > seedtocurrent ? true : false;
+									final boolean growth = seedtoold > seedtocurrent ? false : true;
 
-								if (shrink && startlengthpixel - lengthpixel > -minlength) {
-									// MT shrank
+									if (shrink && startlengthpixel - lengthpixel > -minlength) {
+										// MT shrank
 
-									startlength -= length;
-									startlengthpixel -= lengthpixel;
+										startlength -= length;
+										startlengthpixel -= lengthpixel;
 
-								}
-								if (growth) {
+									}
+									if (growth) {
 
-									// MT grew
-									startlength += length;
-									startlengthpixel += lengthpixel;
+										// MT grew
+										startlength += length;
+										startlengthpixel += lengthpixel;
 
-								}
+									}
 
-								final double[] startinfo = { oldpoint[0], oldpoint[1], newpoint[0], newpoint[1],
-										oldpointCal[0], oldpointCal[1], newpointCal[0], newpointCal[1], length,
-										startlength, lengthpixel, startlengthpixel };
-								Pair<Integer[], double[]> lengthpair = new Pair<Integer[], double[]>(FrameID,
-										startinfo);
+									final double[] startinfo = { oldpoint[0], oldpoint[1], newpoint[0], newpoint[1],
+											oldpointCal[0], oldpointCal[1], newpointCal[0], newpointCal[1], length,
+											startlength, lengthpixel, startlengthpixel };
+									Pair<Integer[], double[]> lengthpair = new Pair<Integer[], double[]>(FrameID,
+											startinfo);
 
-								lengthliststart.add(lengthpair);
-
-							}
-						}
-
-					}
-				
-				}
-
-				
-				for (int seedID = MinSeedLabel; seedID <= MaxSeedLabel; ++seedID) {
-					ResultsTable rt = new ResultsTable();
-					if (SaveTxt) {
-						try {
-							File fichier = new File(
-									usefolder + "//" + addTrackToName + "SeedLabel" + seedID + "-start" + ".txt");
-							File fichierMy = new File(
-									usefolder + "//" + addToName + "KymoVarun-start" + seedID + ".txt");
-							FileWriter fw = new FileWriter(fichier);
-							BufferedWriter bw = new BufferedWriter(fw);
-
-							bw.write(
-									"\tFramenumber\tSeedLabel\tOldX (px)\tOldY (px)\tNewX (px)\tNewY (px)\tOldX (real)\tOldY (real)"
-											+ "\tNewX (real)\tNewY (real)"
-											+ "\tLength ( real)\tCummulativeLength (real)\n");
-
-							FileWriter fwmy = new FileWriter(fichierMy);
-							BufferedWriter bwmy = new BufferedWriter(fwmy);
-
-							bwmy.write("\tFramenumber\tLength\n");
-
-							for (int index = 0; index < Allstart.size(); ++index) {
-								if (lengthliststart.get(index).fst[1] == seedID) {
-									bw.write("\t" + lengthliststart.get(index).fst[0] + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).fst[1]) + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[0]) + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[1]) + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[2]) + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[3]) + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[4]) + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[5]) + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[6]) + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[7]) + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[8]) + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[9]) + "\n");
-
-									bwmy.write("\t" + lengthliststart.get(index).fst[0] + "\t" + "\t"
-											+ nf.format(lengthliststart.get(index).snd[11]) + "\n");
+									lengthliststart.add(lengthpair);
 
 								}
 							}
-							bw.close();
-							fw.close();
-							bwmy.close();
-							fwmy.close();
-
-						} catch (IOException e) {
-						}
-					}
-
-					for (int index = 0; index < Allstart.size(); ++index) {
-						if (lengthliststart.get(index).fst[1] == seedID) {
-							rt.incrementCounter();
-							rt.addValue("FrameNumber", lengthliststart.get(index).fst[0]);
-							rt.addValue("SeedLabel", lengthliststart.get(index).fst[1]);
-							rt.addValue("OldX in px units", (float) lengthliststart.get(index).snd[0]);
-							rt.addValue("OldY in px units", (float) lengthliststart.get(index).snd[1]);
-							rt.addValue("NewX in px units", (float) lengthliststart.get(index).snd[2]);
-							rt.addValue("NewY in px units", (float) lengthliststart.get(index).snd[3]);
-							rt.addValue("OldX in real units", (float) lengthliststart.get(index).snd[4]);
-							rt.addValue("OldY in real units", (float) lengthliststart.get(index).snd[5]);
-							rt.addValue("NewX in real units", (float) lengthliststart.get(index).snd[6]);
-							rt.addValue("NewY in real units", (float) lengthliststart.get(index).snd[7]);
-							rt.addValue("Length in real units", (float) lengthliststart.get(index).snd[8]);
-							rt.addValue("Cummulative Length in real units", (float) lengthliststart.get(index).snd[9]);
-							double[] landt = { lengthliststart.get(index).snd[11], lengthliststart.get(index).fst[0] };
-							lengthtimestart.add(landt);
-
-							rtAll.incrementCounter();
-							rtAll.addValue("FrameNumber", lengthliststart.get(index).fst[0]);
-							rtAll.addValue("SeedLabel", lengthliststart.get(index).fst[1]);
-							rtAll.addValue("OldX in px units", lengthliststart.get(index).snd[0]);
-							rtAll.addValue("OldY in px units", lengthliststart.get(index).snd[1]);
-							rtAll.addValue("NewX in px units", lengthliststart.get(index).snd[2]);
-							rtAll.addValue("NewY in px units", lengthliststart.get(index).snd[3]);
-							rtAll.addValue("OldX in real units", lengthliststart.get(index).snd[4]);
-							rtAll.addValue("OldY in real units", lengthliststart.get(index).snd[5]);
-							rtAll.addValue("NewX in real units", lengthliststart.get(index).snd[6]);
-							rtAll.addValue("NewY in real units", lengthliststart.get(index).snd[7]);
-							rtAll.addValue("Length in real units", lengthliststart.get(index).snd[8]);
-							rtAll.addValue("Cummulative Length in real units", lengthliststart.get(index).snd[9]);
 
 						}
 
 					}
 
-					
+					for (int seedID = MinSeedLabel; seedID <= MaxSeedLabel; ++seedID) {
+						ResultsTable rt = new ResultsTable();
+						if (SaveTxt) {
+							try {
+								File fichier = new File(
+										usefolder + "//" + addTrackToName + "SeedLabel" + seedID + "-start" + ".txt");
+								File fichierMy = new File(
+										usefolder + "//" + addToName + "KymoVarun-start" + seedID + ".txt");
+								FileWriter fw = new FileWriter(fichier);
+								BufferedWriter bw = new BufferedWriter(fw);
 
-					if (SaveXLS)
-						saveResultsToExcel(usefolder + "//" + addTrackToName + "start" + "SeedLabel" + seedID + ".xls",
-								rt, seedID);
+								bw.write(
+										"\tFramenumber\tSeedLabel\tOldX (px)\tOldY (px)\tNewX (px)\tNewY (px)\tOldX (real)\tOldY (real)"
+												+ "\tNewX (real)\tNewY (real)"
+												+ "\tLength ( real)\tCummulativeLength (real)\n");
 
-				}
-               }
-               
-               if (Trackstart== false){
-				ArrayList<Pair<Integer[], double[]>> lengthlistend = new ArrayList<Pair<Integer[], double[]>>();
-				final ArrayList<Trackproperties> first = Allend.get(0);
-				int MaxSeedLabel = first.get(first.size() - 1).seedlabel;
-				int MinSeedLabel = first.get(0).seedlabel;
-				for (int currentseed = MinSeedLabel; currentseed < MaxSeedLabel + 1; ++currentseed) {
-					double endlength = 0;
-					double endlengthpixel = 0;
-					for (int index = 0; index < Allend.size(); ++index) {
+								FileWriter fwmy = new FileWriter(fichierMy);
+								BufferedWriter bwmy = new BufferedWriter(fwmy);
 
-						final int framenumber = index;
-						final ArrayList<Trackproperties> thirdDimension = Allend.get(index);
+								bwmy.write("\tFramenumber\tLength\n");
 
-						for (int frameindex = 0; frameindex < thirdDimension.size(); ++frameindex) {
+								for (int index = 0; index < Allstart.size(); ++index) {
+									if (lengthliststart.get(index).fst[1] == seedID) {
+										bw.write("\t" + lengthliststart.get(index).fst[0] + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).fst[1]) + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[0]) + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[1]) + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[2]) + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[3]) + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[4]) + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[5]) + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[6]) + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[7]) + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[8]) + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[9]) + "\n");
 
-							final Integer SeedID = thirdDimension.get(frameindex).seedlabel;
+										bwmy.write("\t" + lengthliststart.get(index).fst[0] + "\t" + "\t"
+												+ nf.format(lengthliststart.get(index).snd[11]) + "\n");
 
-							if (SeedID == currentseed) {
-
-								final Integer[] FrameID = { framenumber, SeedID };
-								final double[] originalpoint = thirdDimension.get(frameindex).originalpoint;
-								final double[] newpoint = thirdDimension.get(frameindex).newpoint;
-								final double[] oldpoint = thirdDimension.get(frameindex).oldpoint;
-
-								final double[] newpointCal = new double[] {
-										thirdDimension.get(frameindex).newpoint[0] * calibration[0],
-										thirdDimension.get(frameindex).newpoint[1] * calibration[1] };
-								final double[] oldpointCal = new double[] {
-										thirdDimension.get(frameindex).oldpoint[0] * calibration[0],
-										thirdDimension.get(frameindex).oldpoint[1] * calibration[1] };
-
-								final double length = util.Boundingboxes.Distance(newpointCal, oldpointCal);
-								final double lengthpixel = util.Boundingboxes.Distance(newpoint, oldpoint);
-								final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, newpoint);
-								final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
-								final boolean shrink = seedtoold > seedtocurrent ? true : false;
-								final boolean growth = seedtoold > seedtocurrent ? false : true;
-
-								if (shrink) {
-
-									// MT shrank
-
-									endlength -= length;
-									endlengthpixel -= lengthpixel;
-
+									}
 								}
+								bw.close();
+								fw.close();
+								bwmy.close();
+								fwmy.close();
 
-								if (growth) {
+							} catch (IOException e) {
+							}
+						}
 
-									// MT grew
+						for (int index = 0; index < Allstart.size(); ++index) {
+							if (lengthliststart.get(index).fst[1] == seedID) {
+								rt.incrementCounter();
+								rt.addValue("FrameNumber", lengthliststart.get(index).fst[0]);
+								rt.addValue("SeedLabel", lengthliststart.get(index).fst[1]);
+								rt.addValue("OldX in px units", (float) lengthliststart.get(index).snd[0]);
+								rt.addValue("OldY in px units", (float) lengthliststart.get(index).snd[1]);
+								rt.addValue("NewX in px units", (float) lengthliststart.get(index).snd[2]);
+								rt.addValue("NewY in px units", (float) lengthliststart.get(index).snd[3]);
+								rt.addValue("OldX in real units", (float) lengthliststart.get(index).snd[4]);
+								rt.addValue("OldY in real units", (float) lengthliststart.get(index).snd[5]);
+								rt.addValue("NewX in real units", (float) lengthliststart.get(index).snd[6]);
+								rt.addValue("NewY in real units", (float) lengthliststart.get(index).snd[7]);
+								rt.addValue("Length in real units", (float) lengthliststart.get(index).snd[8]);
+								rt.addValue("Cummulative Length in real units",
+										(float) lengthliststart.get(index).snd[9]);
+								double[] landt = { lengthliststart.get(index).snd[11],
+										lengthliststart.get(index).fst[0] };
+								lengthtimestart.add(landt);
 
-									endlength += length;
-									endlengthpixel += lengthpixel;
-
-								}
-
-								final double[] endinfo = { oldpoint[0], oldpoint[1], newpoint[0], newpoint[1],
-										oldpointCal[0], oldpointCal[1], newpointCal[0], newpointCal[1], length,
-										endlength, lengthpixel, endlengthpixel };
-								Pair<Integer[], double[]> lengthpair = new Pair<Integer[], double[]>(FrameID, endinfo);
-
-								lengthlistend.add(lengthpair);
+								rtAll.incrementCounter();
+								rtAll.addValue("FrameNumber", lengthliststart.get(index).fst[0]);
+								rtAll.addValue("SeedLabel", lengthliststart.get(index).fst[1]);
+								rtAll.addValue("OldX in px units", lengthliststart.get(index).snd[0]);
+								rtAll.addValue("OldY in px units", lengthliststart.get(index).snd[1]);
+								rtAll.addValue("NewX in px units", lengthliststart.get(index).snd[2]);
+								rtAll.addValue("NewY in px units", lengthliststart.get(index).snd[3]);
+								rtAll.addValue("OldX in real units", lengthliststart.get(index).snd[4]);
+								rtAll.addValue("OldY in real units", lengthliststart.get(index).snd[5]);
+								rtAll.addValue("NewX in real units", lengthliststart.get(index).snd[6]);
+								rtAll.addValue("NewY in real units", lengthliststart.get(index).snd[7]);
+								rtAll.addValue("Length in real units", lengthliststart.get(index).snd[8]);
+								rtAll.addValue("Cummulative Length in real units", lengthliststart.get(index).snd[9]);
 
 							}
 
 						}
 
-					}
+						if (SaveXLS)
+							saveResultsToExcel(
+									usefolder + "//" + addTrackToName + "start" + "SeedLabel" + seedID + ".xls", rt,
+									seedID);
 
+					}
 				}
 
-				for (int seedID = MinSeedLabel; seedID <= MaxSeedLabel; ++seedID) {
-					ResultsTable rtend = new ResultsTable();
-					if (SaveTxt) {
-						try {
-							File fichier = new File(
-									usefolder + "//" + addTrackToName + "SeedLabel" + seedID + "-end" + ".txt");
+				if (Trackstart == false) {
+					ArrayList<Pair<Integer[], double[]>> lengthlistend = new ArrayList<Pair<Integer[], double[]>>();
+					final ArrayList<Trackproperties> first = Allend.get(0);
+					int MaxSeedLabel = first.get(first.size() - 1).seedlabel;
+					int MinSeedLabel = first.get(0).seedlabel;
+					for (int currentseed = MinSeedLabel; currentseed < MaxSeedLabel + 1; ++currentseed) {
+						double endlength = 0;
+						double endlengthpixel = 0;
+						for (int index = 0; index < Allend.size(); ++index) {
 
-							File fichierMy = new File(usefolder + "//" + addToName + "KymoVarun-end" + seedID + ".txt");
-							File Rates = new File(usefolder + "//" + addToName + "Rates" + seedID + ".txt");
+							final int framenumber = index;
+							final ArrayList<Trackproperties> thirdDimension = Allend.get(index);
 
-							FileWriter fw = new FileWriter(fichier);
-							BufferedWriter bw = new BufferedWriter(fw);
+							for (int frameindex = 0; frameindex < thirdDimension.size(); ++frameindex) {
 
-							FileWriter fr = new FileWriter(Rates);
-							BufferedWriter br = new BufferedWriter(fr);
+								final Integer SeedID = thirdDimension.get(frameindex).seedlabel;
 
-							br.write("\tStartframe\tEndframe\trate\tShrink\n");
+								if (SeedID == currentseed) {
 
-							bw.write(
-									"\tFramenumber\tSeedLabel\tOldX (px)\tOldY (px)\tNewX (px)\tNewY (px)\tOldX (real)\tOldY (real)"
-											+ "\tNewX (real)\tNewY (real)"
-											+ "\tLength ( real)\tCummulativeLength (real)\n");
+									final Integer[] FrameID = { framenumber, SeedID };
+									final double[] originalpoint = thirdDimension.get(frameindex).originalpoint;
+									final double[] newpoint = thirdDimension.get(frameindex).newpoint;
+									final double[] oldpoint = thirdDimension.get(frameindex).oldpoint;
 
-							FileWriter fwmy = new FileWriter(fichierMy);
-							BufferedWriter bwmy = new BufferedWriter(fwmy);
+									final double[] newpointCal = new double[] {
+											thirdDimension.get(frameindex).newpoint[0] * calibration[0],
+											thirdDimension.get(frameindex).newpoint[1] * calibration[1] };
+									final double[] oldpointCal = new double[] {
+											thirdDimension.get(frameindex).oldpoint[0] * calibration[0],
+											thirdDimension.get(frameindex).oldpoint[1] * calibration[1] };
 
-							bwmy.write("\tFramenumber\tLength\n");
-							for (int index = 0; index < Allend.size(); ++index) {
-								if (lengthlistend.get(index).fst[1] == seedID) {
-									bw.write("\t" + lengthlistend.get(index).fst[0] + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).fst[1]) + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[0]) + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[1]) + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[2]) + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[3]) + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[4]) + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[5]) + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[6]) + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[7]) + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[8]) + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[9]) + "\n");
+									final double length = util.Boundingboxes.Distance(newpointCal, oldpointCal);
+									final double lengthpixel = util.Boundingboxes.Distance(newpoint, oldpoint);
+									final double seedtocurrent = util.Boundingboxes.Distancesq(originalpoint, newpoint);
+									final double seedtoold = util.Boundingboxes.Distancesq(originalpoint, oldpoint);
+									final boolean shrink = seedtoold > seedtocurrent ? true : false;
+									final boolean growth = seedtoold > seedtocurrent ? false : true;
 
-									bwmy.write("\t" + lengthlistend.get(index).fst[0] + "\t" + "\t"
-											+ nf.format(lengthlistend.get(index).snd[11]) + "\n");
+									if (shrink) {
+
+										// MT shrank
+
+										endlength -= length;
+										endlengthpixel -= lengthpixel;
+
+									}
+
+									if (growth) {
+
+										// MT grew
+
+										endlength += length;
+										endlengthpixel += lengthpixel;
+
+									}
+
+									final double[] endinfo = { oldpoint[0], oldpoint[1], newpoint[0], newpoint[1],
+											oldpointCal[0], oldpointCal[1], newpointCal[0], newpointCal[1], length,
+											endlength, lengthpixel, endlengthpixel };
+									Pair<Integer[], double[]> lengthpair = new Pair<Integer[], double[]>(FrameID,
+											endinfo);
+
+									lengthlistend.add(lengthpair);
 
 								}
 
 							}
-							bwmy.close();
-							fwmy.close();
-							bw.close();
-							fw.close();
-							br.close();
-							fr.close();
-						} catch (IOException e) {
-						}
-					}
-
-					for (int index = 0; index < Allend.size(); ++index) {
-
-						if (lengthlistend.get(index).fst[1] == seedID) {
-							rtend.incrementCounter();
-							rtend.addValue("FrameNumber", lengthlistend.get(index).fst[0]);
-							rtend.addValue("SeedLabel", lengthlistend.get(index).fst[1]);
-							rtend.addValue("OldX in px units", (float) lengthlistend.get(index).snd[0]);
-							rtend.addValue("OldY in px units", (float) lengthlistend.get(index).snd[1]);
-							rtend.addValue("NewX in px units", (float) lengthlistend.get(index).snd[2]);
-							rtend.addValue("NewY in px units", (float) lengthlistend.get(index).snd[3]);
-							rtend.addValue("OldX in real units", (float) lengthlistend.get(index).snd[4]);
-							rtend.addValue("OldY in real units", (float) lengthlistend.get(index).snd[5]);
-							rtend.addValue("NewX in real units", (float) lengthlistend.get(index).snd[6]);
-							rtend.addValue("NewY in real units", (float) lengthlistend.get(index).snd[7]);
-							rtend.addValue("Length in real units", (float) lengthlistend.get(index).snd[8]);
-							rtend.addValue("Cummulative Length in real units", (float) lengthlistend.get(index).snd[9]);
-
-							double[] landt = { lengthlistend.get(index).snd[11], lengthlistend.get(index).fst[0] };
-							lengthtimeend.add(landt);
-							rtAll.incrementCounter();
-							rtAll.addValue("FrameNumber", lengthlistend.get(index).fst[0]);
-							rtAll.addValue("SeedLabel", lengthlistend.get(index).fst[1]);
-							rtAll.addValue("OldX in px units", (float) lengthlistend.get(index).snd[0]);
-							rtAll.addValue("OldY in px units", (float) lengthlistend.get(index).snd[1]);
-							rtAll.addValue("NewX in px units", (float) lengthlistend.get(index).snd[2]);
-							rtAll.addValue("NewY in px units", (float) lengthlistend.get(index).snd[3]);
-							rtAll.addValue("OldX in real units", (float) lengthlistend.get(index).snd[4]);
-							rtAll.addValue("OldY in real units", (float) lengthlistend.get(index).snd[5]);
-							rtAll.addValue("NewX in real units", (float) lengthlistend.get(index).snd[6]);
-							rtAll.addValue("NewY in real units", (float) lengthlistend.get(index).snd[7]);
-							rtAll.addValue("Length in real units", (float) lengthlistend.get(index).snd[8]);
-							rtAll.addValue("Cummulative Length in real units", (float) lengthlistend.get(index).snd[9]);
 
 						}
 
 					}
 
-				
-					if (SaveXLS)
-						saveResultsToExcel(usefolder + "//" + addTrackToName + "end" + "SeedLabel" + seedID + ".xls",
-								rtend, seedID);
+					for (int seedID = MinSeedLabel; seedID <= MaxSeedLabel; ++seedID) {
+						ResultsTable rtend = new ResultsTable();
+						if (SaveTxt) {
+							try {
+								File fichier = new File(
+										usefolder + "//" + addTrackToName + "SeedLabel" + seedID + "-end" + ".txt");
 
+								File fichierMy = new File(
+										usefolder + "//" + addToName + "KymoVarun-end" + seedID + ".txt");
+								File Rates = new File(usefolder + "//" + addToName + "Rates" + seedID + ".txt");
+
+								FileWriter fw = new FileWriter(fichier);
+								BufferedWriter bw = new BufferedWriter(fw);
+
+								FileWriter fr = new FileWriter(Rates);
+								BufferedWriter br = new BufferedWriter(fr);
+
+								br.write("\tStartframe\tEndframe\trate\tShrink\n");
+
+								bw.write(
+										"\tFramenumber\tSeedLabel\tOldX (px)\tOldY (px)\tNewX (px)\tNewY (px)\tOldX (real)\tOldY (real)"
+												+ "\tNewX (real)\tNewY (real)"
+												+ "\tLength ( real)\tCummulativeLength (real)\n");
+
+								FileWriter fwmy = new FileWriter(fichierMy);
+								BufferedWriter bwmy = new BufferedWriter(fwmy);
+
+								bwmy.write("\tFramenumber\tLength\n");
+								for (int index = 0; index < Allend.size(); ++index) {
+									if (lengthlistend.get(index).fst[1] == seedID) {
+										bw.write("\t" + lengthlistend.get(index).fst[0] + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).fst[1]) + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[0]) + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[1]) + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[2]) + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[3]) + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[4]) + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[5]) + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[6]) + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[7]) + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[8]) + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[9]) + "\n");
+
+										bwmy.write("\t" + lengthlistend.get(index).fst[0] + "\t" + "\t"
+												+ nf.format(lengthlistend.get(index).snd[11]) + "\n");
+
+									}
+
+								}
+								bwmy.close();
+								fwmy.close();
+								bw.close();
+								fw.close();
+								br.close();
+								fr.close();
+							} catch (IOException e) {
+							}
+						}
+
+						for (int index = 0; index < Allend.size(); ++index) {
+
+							if (lengthlistend.get(index).fst[1] == seedID) {
+								rtend.incrementCounter();
+								rtend.addValue("FrameNumber", lengthlistend.get(index).fst[0]);
+								rtend.addValue("SeedLabel", lengthlistend.get(index).fst[1]);
+								rtend.addValue("OldX in px units", (float) lengthlistend.get(index).snd[0]);
+								rtend.addValue("OldY in px units", (float) lengthlistend.get(index).snd[1]);
+								rtend.addValue("NewX in px units", (float) lengthlistend.get(index).snd[2]);
+								rtend.addValue("NewY in px units", (float) lengthlistend.get(index).snd[3]);
+								rtend.addValue("OldX in real units", (float) lengthlistend.get(index).snd[4]);
+								rtend.addValue("OldY in real units", (float) lengthlistend.get(index).snd[5]);
+								rtend.addValue("NewX in real units", (float) lengthlistend.get(index).snd[6]);
+								rtend.addValue("NewY in real units", (float) lengthlistend.get(index).snd[7]);
+								rtend.addValue("Length in real units", (float) lengthlistend.get(index).snd[8]);
+								rtend.addValue("Cummulative Length in real units",
+										(float) lengthlistend.get(index).snd[9]);
+
+								double[] landt = { lengthlistend.get(index).snd[11], lengthlistend.get(index).fst[0] };
+								lengthtimeend.add(landt);
+								rtAll.incrementCounter();
+								rtAll.addValue("FrameNumber", lengthlistend.get(index).fst[0]);
+								rtAll.addValue("SeedLabel", lengthlistend.get(index).fst[1]);
+								rtAll.addValue("OldX in px units", (float) lengthlistend.get(index).snd[0]);
+								rtAll.addValue("OldY in px units", (float) lengthlistend.get(index).snd[1]);
+								rtAll.addValue("NewX in px units", (float) lengthlistend.get(index).snd[2]);
+								rtAll.addValue("NewY in px units", (float) lengthlistend.get(index).snd[3]);
+								rtAll.addValue("OldX in real units", (float) lengthlistend.get(index).snd[4]);
+								rtAll.addValue("OldY in real units", (float) lengthlistend.get(index).snd[5]);
+								rtAll.addValue("NewX in real units", (float) lengthlistend.get(index).snd[6]);
+								rtAll.addValue("NewY in real units", (float) lengthlistend.get(index).snd[7]);
+								rtAll.addValue("Length in real units", (float) lengthlistend.get(index).snd[8]);
+								rtAll.addValue("Cummulative Length in real units",
+										(float) lengthlistend.get(index).snd[9]);
+
+							}
+
+						}
+
+						if (SaveXLS)
+							saveResultsToExcel(
+									usefolder + "//" + addTrackToName + "end" + "SeedLabel" + seedID + ".xls", rtend,
+									seedID);
+
+					}
 				}
-               }
 				rtAll.show("Start and End of MT");
-               
+
 				if (analyzekymo) {
 					double lengthcheckstart = 0;
 					double lengthcheckend = 0;
-					if (Trackstart){
-					
-					for (int index = 0; index < lengthtimestart.size(); ++index) {
+					if (Trackstart) {
 
-						int time = (int) lengthtimestart.get(index)[1];
+						for (int index = 0; index < lengthtimestart.size(); ++index) {
 
-						lengthcheckstart += lengthtimestart.get(index)[0];
+							int time = (int) lengthtimestart.get(index)[1];
 
-						for (int secindex = 0; secindex < Length.size(); ++secindex) {
-							
-							for (int accountindex = 0; accountindex < Accountedframes.size(); ++accountindex){
+							lengthcheckstart += lengthtimestart.get(index)[0];
 
-							if ((int) Length.get(secindex)[1] == time && Accountedframes.get(accountindex) == time) {
+							for (int secindex = 0; secindex < Length.size(); ++secindex) {
 
-								float delta = (float) (lengthtimestart.get(index)[0] - Length.get(secindex)[0]);
-								float[] cudeltadeltaLstart = { delta, time };
-								deltadstart.add(cudeltadeltaLstart);
+								for (int accountindex = 0; accountindex < Accountedframes.size(); ++accountindex) {
 
-							}
-							}
+									if ((int) Length.get(secindex)[1] == time
+											&& Accountedframes.get(accountindex) == time) {
 
-						}
-					}
-					
-					  /********
-			  		 * The part below removes the duplicate entries in the array
-			  		 * dor the time co-ordinate
-			  		 ********/
-			  		
-			  			int j = 0;
+										float delta = (float) (lengthtimestart.get(index)[0] - Length.get(secindex)[0]);
+										float[] cudeltadeltaLstart = { delta, time };
+										deltadstart.add(cudeltadeltaLstart);
 
-			  			for (int index = 0; index < deltadstart.size() - 1; ++index) {
-			  				
-			  				
-			  				j = index + 1;
-			  				
-			  				
-			  					
-			  					
-			  				while (j < deltadstart.size()) {
-
-			  					if (deltadstart.get(index)[1] == deltadstart.get(j)[1]) {
-
-			  						deltadstart.remove(index);
-			  					}
-
-			  					else {
-			  						++j;
-			  						
-			  					}
-			  					
-			  					
-
-			  				}
-			  			}
-					
-					
-					for (int index = 0; index < deltadstart.size(); ++index) {
-
-						for (int secindex = 0; secindex < Accountedframes.size(); ++secindex) {
-
-							if ((int) deltadstart.get(index)[1] == Accountedframes.get(secindex)) {
-
-								netdeltadstart += Math.abs(deltadstart.get(index)[0]);
+									}
+								}
 
 							}
-
 						}
 
-					}
-					deltad = deltadstart;
-					lengthtime = lengthtimestart;
+						/********
+						 * The part below removes the duplicate entries in the
+						 * array dor the time co-ordinate
+						 ********/
 
-					}
+						int j = 0;
 
-					if(Trackstart == false){
-					for (int index = 0; index < lengthtimeend.size(); ++index) {
+						for (int index = 0; index < deltadstart.size() - 1; ++index) {
 
-						int time = (int) lengthtimeend.get(index)[1];
+							j = index + 1;
 
-						lengthcheckend += lengthtimeend.get(index)[0];
+							while (j < deltadstart.size()) {
 
-						for (int secindex = 0; secindex < Length.size(); ++secindex) {
+								if (deltadstart.get(index)[1] == deltadstart.get(j)[1]) {
 
-							for (int accountindex = 0; accountindex < Accountedframes.size(); ++accountindex){
+									deltadstart.remove(index);
+								}
 
-								if ((int) Length.get(secindex)[1] == time && Accountedframes.get(accountindex) == time) {
-							
-							if ((int) Length.get(secindex)[1] == time && Accountedframes.get(accountindex) == time) {
+								else {
+									++j;
 
-								float delta = (float) (lengthtimeend.get(index)[0] - Length.get(secindex)[0]);
-								float[] cudeltadeltaLend = { delta, time };
-								deltadend.add(cudeltadeltaLend);
+								}
+
 							}
+						}
+
+						for (int index = 0; index < deltadstart.size(); ++index) {
+
+							for (int secindex = 0; secindex < Accountedframes.size(); ++secindex) {
+
+								if ((int) deltadstart.get(index)[1] == Accountedframes.get(secindex)) {
+
+									netdeltadstart += Math.abs(deltadstart.get(index)[0]);
+
 								}
 
 							}
 
 						}
+						deltad = deltadstart;
+						lengthtime = lengthtimestart;
+
 					}
-					/********
-			  		 * The part below removes the duplicate entries in the array
-			  		 * dor the time co-ordinate
-			  		 ********/
-			  		
-			  			int j = 0;
 
-			  			for (int index = 0; index < deltadend.size() - 1; ++index) {
-			  				
-			  				
-			  				j = index + 1;
-			  				
-			  				
-			  					
-			  					
-			  				while (j < deltadend.size()) {
+					if (Trackstart == false) {
+						for (int index = 0; index < lengthtimeend.size(); ++index) {
 
-			  					if (deltadend.get(index)[1] == deltadend.get(j)[1]) {
+							int time = (int) lengthtimeend.get(index)[1];
 
-			  						deltadend.remove(index);
-			  					}
+							lengthcheckend += lengthtimeend.get(index)[0];
 
-			  					else {
-			  						++j;
-			  						
-			  					}
-			  					
-			  					
+							for (int secindex = 0; secindex < Length.size(); ++secindex) {
 
-			  				}
-			  			}
-					
-					for (int index = 0; index < deltadend.size(); ++index) {
+								for (int accountindex = 0; accountindex < Accountedframes.size(); ++accountindex) {
 
-						for (int secindex = 0; secindex < Accountedframes.size(); ++secindex) {
+									if ((int) Length.get(secindex)[1] == time
+											&& Accountedframes.get(accountindex) == time) {
 
-							if ((int) deltadend.get(index)[1] == Accountedframes.get(secindex)) {
+										if ((int) Length.get(secindex)[1] == time
+												&& Accountedframes.get(accountindex) == time) {
 
-								netdeltadend += Math.abs(deltadend.get(index)[0]);
+											float delta = (float) (lengthtimeend.get(index)[0]
+													- Length.get(secindex)[0]);
+											float[] cudeltadeltaLend = { delta, time };
+											deltadend.add(cudeltadeltaLend);
+										}
+									}
+
+								}
+
+							}
+						}
+						/********
+						 * The part below removes the duplicate entries in the
+						 * array dor the time co-ordinate
+						 ********/
+
+						int j = 0;
+
+						for (int index = 0; index < deltadend.size() - 1; ++index) {
+
+							j = index + 1;
+
+							while (j < deltadend.size()) {
+
+								if (deltadend.get(index)[1] == deltadend.get(j)[1]) {
+
+									deltadend.remove(index);
+								}
+
+								else {
+									++j;
+
+								}
+
+							}
+						}
+
+						for (int index = 0; index < deltadend.size(); ++index) {
+
+							for (int secindex = 0; secindex < Accountedframes.size(); ++secindex) {
+
+								if ((int) deltadend.get(index)[1] == Accountedframes.get(secindex)) {
+
+									netdeltadend += Math.abs(deltadend.get(index)[0]);
+
+								}
 
 							}
 
 						}
 
-					}
-					
-					deltad =  deltadend;
-					lengthtime = lengthtimeend;
+						deltad = deltadend;
+						lengthtime = lengthtimeend;
 					}
 
-					
-					
-
-					if(lengthtimestart.size() > 0 && lengthtimeend.size() > 0){
-					deltad = (netdeltadstart >= netdeltadend) ? deltadend : deltadstart;
-					lengthtime = (netdeltadstart >= netdeltadend) ? lengthtimeend : lengthtimestart;
+					if (lengthtimestart.size() > 0 && lengthtimeend.size() > 0) {
+						deltad = (netdeltadstart >= netdeltadend) ? deltadend : deltadstart;
+						lengthtime = (netdeltadstart >= netdeltadend) ? lengthtimeend : lengthtimestart;
 					}
-					
+
 					FileWriter deltaw;
 					File fichierKydel = new File(usefolder + "//" + addToName + "MTtracker-deltad" + ".txt");
 
@@ -5054,10 +4948,7 @@ public class InteractiveMT implements PlugIn {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
-					
-					
-					
-					
+
 					for (int index = 0; index < deltad.size(); ++index) {
 
 						for (int secindex = 0; secindex < Accountedframes.size(); ++secindex) {
@@ -5105,6 +4996,39 @@ public class InteractiveMT implements PlugIn {
 				}
 				Kymoimp.show();
 			}
+
+			return null;
+		}
+
+		@Override
+		protected void done() {
+			try {
+				jpb.setIndeterminate(false);
+				get();
+				frame.dispose();
+				JOptionPane.showMessageDialog(jpb.getParent(), "Success", "Success", JOptionPane.INFORMATION_MESSAGE);
+			} catch (ExecutionException | InterruptedException e) {
+				e.printStackTrace();
+			}
+
+		}
+
+	}
+
+	protected class TrackendsListener implements ActionListener {
+
+		@Override
+		public void actionPerformed(final ActionEvent arg0) {
+
+			SwingUtilities.invokeLater(new Runnable() {
+				@Override
+				public void run() {
+
+					goTrack();
+
+				}
+
+			});
 
 		}
 	}
@@ -6557,8 +6481,6 @@ public class InteractiveMT implements PlugIn {
 				final double[] meanandcov = { rootmser.mean()[0], rootmser.mean()[1], rootmser.cov()[0],
 						rootmser.cov()[1], rootmser.cov()[2] };
 				AllmeanCovar.add(meanandcov);
-				
-				
 
 			}
 		}
@@ -6567,22 +6489,17 @@ public class InteractiveMT implements PlugIn {
 		// changed if the program is run again
 		SortListbyproperty.sortpointList(AllmeanCovar);
 		for (int index = 0; index < AllmeanCovar.size(); ++index) {
-			
+
 			final double[] mean = { AllmeanCovar.get(index)[0], AllmeanCovar.get(index)[1] };
 			final double[] covar = { AllmeanCovar.get(index)[2], AllmeanCovar.get(index)[3],
 					AllmeanCovar.get(index)[4] };
 
 			EllipseRoi roi = createEllipse(mean, covar, 3);
-		
-			
+
 			Allrois.add(roi);
-			
 
 		}
 
-	
-		
-		
 		return Allrois;
 
 	}
@@ -6600,8 +6517,7 @@ public class InteractiveMT implements PlugIn {
 		gd.addNumericField("Min Intensity = R * Max Intensity along MT, R (enter 0.2 to 0.9) = ", Intensityratio, 2);
 		gd.addNumericField("Spacing between Gaussians = G * Min(Psf), G (enter 0.3 to 1.0) = ",
 				Inispacing / Math.min(psf[0], psf[1]), 2);
-		gd.addNumericField("Average max difference between Kymo and tracker = ",
-				deltadcutoff, 2);
+		gd.addNumericField("Average max difference between Kymo and tracker = ", deltadcutoff, 2);
 
 		gd.showDialog();
 		indexmodel = gd.getNextChoiceIndex();
@@ -6619,8 +6535,7 @@ public class InteractiveMT implements PlugIn {
 
 		return !gd.wasCanceled();
 	}
-	
-	
+
 	public boolean DialogueModelChoiceHF() {
 
 		GenericDialog gd = new GenericDialog("Model Choice for sub-pixel Localization");
@@ -6633,8 +6548,7 @@ public class InteractiveMT implements PlugIn {
 		gd.addNumericField("Min Intensity = R * Max Intensity along MT, R (enter 0.2 to 0.9) = ", Intensityratio, 2);
 		gd.addNumericField("Spacing between Gaussians = G * Min(Psf), G (enter 0.3 to 1.0) = ",
 				Inispacing / Math.min(psf[0], psf[1]), 2);
-		gd.addNumericField("Average max difference between Kymo and tracker = ",
-				deltadcutoff, 2);
+		gd.addNumericField("Average max difference between Kymo and tracker = ", deltadcutoff, 2);
 
 		gd.showDialog();
 		indexmodel = gd.getNextChoiceIndex();
@@ -6652,7 +6566,6 @@ public class InteractiveMT implements PlugIn {
 
 		return !gd.wasCanceled();
 	}
-	
 
 	public boolean DialogueMedian() {
 		// Create dialog
@@ -6670,10 +6583,8 @@ public class InteractiveMT implements PlugIn {
 		final ImgFactory<FloatType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(intervalView, type);
 		RandomAccessibleInterval<FloatType> totalimg = factory.create(intervalView, type);
 		final RandomAccessibleInterval<FloatType> img = Views.interval(intervalView, interval);
-		
+
 		totalimg = Views.interval(Views.extendZero(img), intervalView);
-		
-		
 
 		return totalimg;
 	}
@@ -6842,15 +6753,16 @@ public class InteractiveMT implements PlugIn {
 
 			int x = cursorOutput.getIntPosition(0);
 			int y = cursorOutput.getIntPosition(1);
-			
-			if (standardRectangle.contains(x, y)){
-			
-			ranac.setPosition(cursorOutput);
 
-			// set the value of this pixel of the output image to the same as
-			// the input,
-			// every Type supports T.set( T type )
-			cursorOutput.get().set((int) ranac.get().get());
+			if (standardRectangle.contains(x, y)) {
+
+				ranac.setPosition(cursorOutput);
+
+				// set the value of this pixel of the output image to the same
+				// as
+				// the input,
+				// every Type supports T.set( T type )
+				cursorOutput.get().set((int) ranac.get().get());
 			}
 		}
 
@@ -6881,48 +6793,17 @@ public class InteractiveMT implements PlugIn {
 		final double dx = scale1 * Math.cos(theta);
 		final double dy = scale1 * Math.sin(theta);
 		final EllipseRoi ellipse = new EllipseRoi(x - dx, y - dy, x + dx, y + dy, scale2 / scale1);
-		
+
 		return ellipse;
 	}
 
 	public static void main(String[] args) {
 		new ImageJ();
 
-		ImagePlus imp = new Opener().openImage(
-				"/Users/varunkapoor/Documents/2017022Video1/2017-02-01_porcine_cy5seeds_cy3_12uM002_concatenated.tif");
-		ImagePlus Preprocessedimp = new Opener().openImage(
-				"/Users/varunkapoor/Documents/2017022Video1/BGMF2017-02-01_porcine_cy5seeds_cy3_12uM002_concatenated.tif");
-		ImagePlus Kymoimp = new Opener().openImage("/Users/varunkapoor/Documents/2017022Video1/Kymograph1-1.tif");
+		JFrame frame = new JFrame("");
+		FileChooser panel = new FileChooser();
 
-		RandomAccessibleInterval<FloatType> originalimg = ImageJFunctions.convertFloat(imp);
-		RandomAccessibleInterval<FloatType> originalPreprocessedimg = ImageJFunctions.convertFloat(Preprocessedimp);
-		RandomAccessibleInterval<FloatType> kymoimg = ImageJFunctions.convertFloat(Kymoimp);
-
-		new Normalize();
-
-		FloatType minval = new FloatType(0);
-		FloatType maxval = new FloatType(1);
-		Normalize.normalize(Views.iterable(originalimg), minval, maxval);
-		Normalize.normalize(Views.iterable(originalPreprocessedimg), minval, maxval);
-
-		double[] calibration = new double[] { imp.getCalibration().pixelWidth, imp.getCalibration().pixelHeight };
-
-		// MT2012017
-
-		final double[] psf = { 1.65, 1.47 };
-		final int frametosec = 5;
-
-		final long radius = (long) (Math.ceil(Math.sqrt(psf[0] * psf[0] + psf[1] * psf[1])));
-
-		// minimum length of the lines to be detected, the smallest possible
-		// number is 2.
-		final int minlength = 2;
-
-		// new InteractiveMT(originalimg, originalPreprocessedimg, psf,
-		// calibration, minlength).run(null);
-
-		new InteractiveMT(originalimg, originalPreprocessedimg, kymoimg, psf, calibration, minlength, frametosec)
-				.run(null);
-
+		frame.getContentPane().add(panel, "Center");
+		frame.setSize(panel.getPreferredSize());
 	}
 }

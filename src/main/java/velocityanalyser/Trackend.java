@@ -4,6 +4,8 @@ import java.util.Iterator;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
 
+import com.sun.tools.javac.util.Pair;
+
 import graphconstructs.Logger;
 import graphconstructs.Trackproperties;
 import labeledObjects.Subgraphs;
@@ -18,7 +20,7 @@ public class Trackend implements Linetracker {
 		private ArrayList<Subgraphs> Framedgraph;
 		protected Logger logger = Logger.DEFAULT_LOGGER;
 		protected String errorMessage;
-
+		private ArrayList<Pair<Integer, double[]>> ID;
 		public Trackend(
 				final ArrayList<ArrayList<Trackproperties>> Allstartand,  
 				final int maxframe){
@@ -35,7 +37,10 @@ public class Trackend implements Linetracker {
 			return Framedgraph;
 		}
 		
-		
+		public ArrayList<Pair<Integer, double[]>> getSeedID() {
+
+			return ID;
+		}
 
 		@Override
 		public boolean process() {
@@ -45,7 +50,7 @@ public class Trackend implements Linetracker {
 			/*
 			 * Outputs
 			 */
-
+			ID = new ArrayList<Pair<Integer, double[]>>();
 			graph = new SimpleWeightedGraph<double[], DefaultWeightedEdge>(DefaultWeightedEdge.class);
 			Framedgraph = new ArrayList<Subgraphs>();
 			for (int frame = 1; frame < maxframe   ; ++frame){
@@ -77,6 +82,8 @@ public class Trackend implements Linetracker {
 						
 						
 					}
+					Pair<Integer, double[]> currentid = new Pair<Integer, double[]>(source.seedlabel, source.oldpoint);
+					ID.add(currentid);
 					subgraph.addVertex(source.oldpoint);
 					subgraph.addVertex(source.newpoint);
 					final DefaultWeightedEdge subedge = subgraph.addEdge(source.oldpoint, source.newpoint);

@@ -406,7 +406,7 @@ public class GetLocalmaxmin {
 			double bigsigma) {
 
 		ArrayList<Point> SubpixelMinlist = new ArrayList<Point>(inputimg.numDimensions());
-		// Create a Dog Detection object in Hough space
+		// Create a Dog Detection object in Hough spacex
 		DogDetection<FloatType> newdog = new DogDetection<FloatType>(Views.extendMirrorSingle(inputimg), interval,
 				new double[] { thetaPerPixel, rhoPerPixel }, smallsigma, bigsigma, DogDetection.ExtremaType.MINIMA,
 				minPeakValue, true);
