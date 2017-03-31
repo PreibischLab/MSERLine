@@ -69,7 +69,7 @@ public class FileChooser extends JPanel {
 		inputFieldX = new TextField();
 		inputFieldX.setColumns(10);
 
-		inputLabelY = new JLabel("Enter psfX: ");
+		inputLabelY = new JLabel("Enter psfY: ");
 		inputFieldY = new TextField();
 		inputFieldY.setColumns(10);
 

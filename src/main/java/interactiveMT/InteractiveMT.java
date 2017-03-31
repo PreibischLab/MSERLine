@@ -93,6 +93,7 @@ import ij.ImageStack;
 import ij.gui.EllipseRoi;
 import ij.gui.GenericDialog;
 import ij.gui.Line;
+import ij.gui.OvalRoi;
 import ij.gui.Overlay;
 import ij.gui.PolygonRoi;
 import ij.gui.Roi;
@@ -100,6 +101,7 @@ import ij.io.Opener;
 import ij.measure.ResultsTable;
 import ij.plugin.PlugIn;
 import ij.plugin.frame.RoiManager;
+import ij.process.ColorProcessor;
 import ij.process.FloatProcessor;
 import interactiveMT.InteractiveKymoAnalyze.GetBaseCords;
 import interactiveMT.InteractiveKymoAnalyze.GetCords;
@@ -165,10 +167,10 @@ import velocityanalyser.Trackstart;
 
 public class InteractiveMT implements PlugIn {
 
-	String usefolder = "/Users/varunkapoor/Documents/2017022Video1/";
-	// IJ.getDirectory("imagej");
-	String addToName = "MT1porcineVKR0.58";
-	String addTrackToName = "MT1porcineVKR0.58";
+	String usefolder = IJ.getDirectory("imagej");
+	
+	String addToName = "MTTrack";
+	String addTrackToName = "MTTrack";
 	ArrayList<float[]> deltadstart = new ArrayList<>();
 	ArrayList<float[]> deltadend = new ArrayList<>();
 	ArrayList<float[]> deltad = new ArrayList<>();
@@ -201,6 +203,7 @@ public class InteractiveMT implements PlugIn {
 	boolean darktobright = false;
 	boolean displayBitimg = false;
 	boolean displayWatershedimg = false;
+	boolean displayoverlay = false;
 	long minSize = 1;
 	long maxSize = 1000;
 	long minSizemin = 0;
@@ -344,7 +347,7 @@ public class InteractiveMT implements PlugIn {
 	Pair<Pair<ArrayList<KalmanTrackproperties>, ArrayList<KalmanTrackproperties>>, Pair<ArrayList<KalmanIndexedlength>, ArrayList<KalmanIndexedlength>>> returnVectorKalman;
 
 	ArrayList<CommonOutputHF> output;
-
+	ImageStack prestack;
 	public Rectangle standardRectangle;
 	public FinalInterval interval;
 	RandomAccessibleInterval<UnsignedByteType> newimg;
@@ -535,7 +538,15 @@ public class InteractiveMT implements PlugIn {
 
 	}
 
-	
+	public String getFolder() {
+
+		return usefolder;
+	}
+
+	public String getFile() {
+
+		return addToName;
+	}
 
 	public InteractiveMT(final RandomAccessibleInterval<FloatType> originalimg,
 			final RandomAccessibleInterval<FloatType> originalPreprocessedimg, final double[] psf,
@@ -605,7 +616,8 @@ public class InteractiveMT implements PlugIn {
 			Kymoimp = ImageJFunctions.show(Kymoimg);
 
 		}
-
+		prestack = new ImageStack((int) originalimg.dimension(0), (int) originalimg.dimension(1),
+				java.awt.image.ColorModel.getRGBdefault());
 		CurrentView = getCurrentView();
 		CurrentPreprocessedView = getCurrentPreView();
 
@@ -675,7 +687,12 @@ public class InteractiveMT implements PlugIn {
 
 		if (change == ValueChange.THIRDDIMTrack) {
 			// check if Roi changed
-
+			if(displayoverlay){
+				if (imp != null)
+					imp.close();
+				imp = ImageJFunctions.wrap(CurrentView, "");
+				
+				}
 			System.out.println("Current Time point: " + thirdDimension);
 
 			long[] min = { (long) standardRectangle.getMinX(), (long) standardRectangle.getMinY() };
@@ -738,6 +755,9 @@ public class InteractiveMT implements PlugIn {
 		}
 
 		if (change != ValueChange.THIRDDIMTrack) {
+			
+
+			
 			Roi roi = preprocessedimp.getRoi();
 			if (roi == null || roi.getType() != Roi.RECTANGLE) {
 				preprocessedimp.setRoi(new Rectangle(standardRectangle));
@@ -811,15 +831,26 @@ public class InteractiveMT implements PlugIn {
 
 			newtree = MserTree.buildMserTree(newimg, delta, minSize, maxSize, maxVar, minDiversity, darktobright);
 			Rois = getcurrentRois(newtree);
-
+			
+			
+            
+			
+				
+				
 			if (preprocessedimp != null) {
+			
 				Overlay o = preprocessedimp.getOverlay();
 
 				if (o == null) {
 					o = new Overlay();
 					preprocessedimp.setOverlay(o);
 				}
-
+				
+			
+				
+				prestack.addSlice(imp.getImageStack().getProcessor(thirdDimension).convertToRGB());
+				ColorProcessor cp = (ColorProcessor) (prestack.getProcessor(thirdDimension).duplicate());
+				
 				o.clear();
 
 				for (int index = 0; index < Rois.size(); ++index) {
@@ -828,8 +859,26 @@ public class InteractiveMT implements PlugIn {
 
 					or.setStrokeColor(Color.red);
 					o.add(or);
+					
+					if (displayoverlay){
+						
+						cp.setColor(Color.red);
+						cp.setLineWidth(1);
+						cp.draw(or);
+						
+						
+						}
+					
+					
+					
 					roimanager.addRoi(or);
+					
+					
+					
 				}
+				if (displayoverlay)
+				prestack.setPixels(cp.getPixels(), thirdDimension);
+				
 			}
 
 		}
@@ -1114,6 +1163,81 @@ public class InteractiveMT implements PlugIn {
 			KalmanTracker.addItemListener(new KalmanchoiceListener());
 			DeterTracker.addItemListener(new DeterchoiceListener());
 		}
+		
+		if (analyzekymo == false || Kymoimg == null){
+		panelEighth.removeAll();
+
+		panelEighth.setLayout(layout);
+		c.fill = GridBagConstraints.HORIZONTAL;
+		c.gridx = 0;
+		c.gridy = 0;
+		c.weightx = 4;
+		c.weighty = 1.5;
+
+		
+	
+		final Label SuccessB = new Label(" Now you can compute rates, choose start and end frame: ",
+				Label.CENTER);
+
+		final Label Done = new Label("The results have been compiled and stored, you can now exit",
+				Label.CENTER);
+
+		final Button Analyze = new Button("Do Rough Analysis");
+
+		final Scrollbar startS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 10, 0,
+				10 + scrollbarSize);
+		final Scrollbar endS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 10, 0,
+				10 + scrollbarSize);
+		starttime = (int) computeValueFromScrollbarPosition(thirdDimensionsliderInit, 0, thirdDimensionSize,
+				scrollbarSize);
+		endtime = (int) computeValueFromScrollbarPosition(thirdDimensionsliderInit, 0, thirdDimensionSize,
+				scrollbarSize);
+		final Label startText = new Label("startFrame = ", Label.CENTER);
+		final Label endText = new Label("endFrame = ", Label.CENTER);
+
+		
+
+		SuccessB.setBackground(new Color(1, 0, 1));
+		SuccessB.setForeground(new Color(255, 255, 255));
+		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 50);
+		panelEighth.add(SuccessB, c);
+		
+		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 50);
+		panelEighth.add(startText, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 50);
+		panelEighth.add(startS, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 50);
+		panelEighth.add(endText, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 50);
+		panelEighth.add(endS, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 50);
+		panelEighth.add(Analyze, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 50);
+		panelEighth.add(Done, c);
+
+		startS.addAdjustmentListener(new starttimeListener(startText, thirdDimensionsliderInit,
+				thirdDimensionSize, scrollbarSize, startS));
+		endS.addAdjustmentListener(new endtimeListener(endText, thirdDimensionsliderInit, thirdDimensionSize,
+				scrollbarSize, endS));
+		Analyze.addActionListener(new AnalyzeListener());
+
+		panelEighth.validate();
+		panelEighth.repaint();
+		}
 
 		Cardframe.add(panelCont, BorderLayout.CENTER);
 		Cardframe.add(control, BorderLayout.SOUTH);
@@ -1312,6 +1436,8 @@ public class InteractiveMT implements PlugIn {
 				final Button SkipframeandTrackEndPoints = new Button(
 						"TrackEndPoint (User specified first and last frame)");
 				final Button CheckResults = new Button("Check Results (then click next)");
+				
+				
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 175);
 				panelSeventh.add(TrackEndPoints, c);
@@ -1329,6 +1455,9 @@ public class InteractiveMT implements PlugIn {
 				c.insets = new Insets(10, 175, 0, 175);
 				panelSeventh.add(CheckResults, c);
 				}
+				
+				
+				
 				TrackEndPoints.addActionListener(new TrackendsListener());
 				SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
 				CheckResults.addActionListener(new CheckResultsListener());
@@ -1582,7 +1711,7 @@ public class InteractiveMT implements PlugIn {
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 175);
 				panelSeventh.add(SkipframeandTrackEndPoints, c);
-
+				if (analyzekymo && Kymoimg!=null){
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 0);
 				panelSeventh.add(Checkres, c);
@@ -1590,7 +1719,7 @@ public class InteractiveMT implements PlugIn {
 				++c.gridy;
 				c.insets = new Insets(10, 175, 0, 175);
 				panelSeventh.add(CheckResults, c);
-
+				}
 				TrackEndPoints.addActionListener(new TrackendsListener());
 				SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
 				CheckResults.addActionListener(new CheckResultsListener());
@@ -1704,7 +1833,7 @@ public class InteractiveMT implements PlugIn {
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 175);
 				panelSeventh.add(SkipframeandTrackEndPoints, c);
-
+				if (analyzekymo && Kymoimg!=null){
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 0);
 				panelSeventh.add(Checkres, c);
@@ -1712,7 +1841,7 @@ public class InteractiveMT implements PlugIn {
 				++c.gridy;
 				c.insets = new Insets(10, 175, 0, 175);
 				panelSeventh.add(CheckResults, c);
-
+				}
 				TrackEndPoints.addActionListener(new TrackendsListener());
 				SkipframeandTrackEndPoints.addActionListener(new SkipFramesandTrackendsListener());
 				CheckResults.addActionListener(new CheckResultsListener());
@@ -1920,6 +2049,22 @@ public class InteractiveMT implements PlugIn {
 																	// to the
 																	// component
 					ClickedPoints.add(new int[] { x, y });
+					
+					
+					Overlay overlaysec = preprocessedimp.getOverlay();
+
+					if (overlaysec == null) {
+						overlaysec = new Overlay();
+
+						preprocessedimp.setOverlay(overlaysec);
+
+					}
+					
+				
+					
+					final OvalRoi Bigroi = new OvalRoi(Util.round(x - 5), Util.round(y - 5 ), Util.round(5),
+							Util.round(5));
+					overlaysec.add(Bigroi);
 
 				}
 
@@ -3413,7 +3558,7 @@ public class InteractiveMT implements PlugIn {
 						}
 
 						if (SaveXLS && list.size() > 0.5 * thirdDimensionSize)
-							saveResultsToExcel(usefolder + "//" + addTrackToName + "KalmanStart" + id + ".xls", rt, id);
+							saveResultsToExcel(usefolder + "//" + addTrackToName + "KalmanStart" + id + ".xls", rt);
 
 					}
 
@@ -3533,7 +3678,7 @@ public class InteractiveMT implements PlugIn {
 						}
 
 						if (SaveXLS && list.size() > 0.5 * thirdDimensionSize)
-							saveResultsToExcel(usefolder + "//" + addTrackToName + "KalmanEnd" + id + ".xls", rt, id);
+							saveResultsToExcel(usefolder + "//" + addTrackToName + "KalmanEnd" + id + ".xls", rt);
 
 					}
 
@@ -3706,8 +3851,7 @@ public class InteractiveMT implements PlugIn {
 
 						if (SaveXLS)
 							saveResultsToExcel(
-									usefolder + "//" + addTrackToName + "start" + "SeedLabel" + seedID + ".xls", rt,
-									seedID);
+									usefolder + "//" + addTrackToName + "start" + "SeedLabel" + seedID + ".xls", rt);
 
 					}
 				}
@@ -3865,8 +4009,7 @@ public class InteractiveMT implements PlugIn {
 
 						if (SaveXLS)
 							saveResultsToExcel(
-									usefolder + "//" + addTrackToName + "end" + "seedLabel" + seedID + ".xls", rtend,
-									seedID);
+									usefolder + "//" + addTrackToName + "end" + "seedLabel" + seedID + ".xls", rtend);
 
 					}
 				}
@@ -4152,6 +4295,14 @@ public class InteractiveMT implements PlugIn {
 		@Override
 		protected Void doInBackground() throws Exception {
 
+			if (prestack != null) {
+				for (int index = 1; index < prestack.getSize(); ++index) {
+
+					prestack.deleteSlice(index);
+				}
+			}
+			
+			
 			int next = 2;
 
 			maxStack();
@@ -4446,7 +4597,7 @@ public class InteractiveMT implements PlugIn {
 						}
 
 						if (SaveXLS && list.size() > 0.5 * thirdDimensionSize)
-							saveResultsToExcel(usefolder + "//" + addTrackToName + "KalmanStart" + id + ".xls", rt, id);
+							saveResultsToExcel(usefolder + "//" + addTrackToName + "KalmanStart" + id + ".xls", rt);
 
 					}
 				}
@@ -4569,7 +4720,7 @@ public class InteractiveMT implements PlugIn {
 						}
 
 						if (SaveXLS && list.size() > 0.5 * thirdDimensionSize)
-							saveResultsToExcel(usefolder + "//" + addTrackToName + "KalmanEnd" + id + ".xls", rt, id);
+							saveResultsToExcel(usefolder + "//" + addTrackToName + "KalmanEnd" + id + ".xls", rt);
 
 					}
 
@@ -4741,8 +4892,7 @@ public class InteractiveMT implements PlugIn {
 
 						if (SaveXLS)
 							saveResultsToExcel(
-									usefolder + "//" + addTrackToName + "start" + "SeedLabel" + seedID + ".xls", rt,
-									seedID);
+									usefolder + "//" + addTrackToName + "start" + "SeedLabel" + seedID + ".xls", rt);
 
 					}
 				}
@@ -4919,8 +5069,7 @@ public class InteractiveMT implements PlugIn {
 
 						if (SaveXLS)
 							saveResultsToExcel(
-									usefolder + "//" + addTrackToName + "end" + "SeedLabel" + seedID + ".xls", rtend,
-									seedID);
+									usefolder + "//" + addTrackToName + "end" + "SeedLabel" + seedID + ".xls", rtend);
 
 					}
 				}
@@ -5185,7 +5334,7 @@ public class InteractiveMT implements PlugIn {
 		}
 	}
 
-	public void saveResultsToExcel(String xlFile, ResultsTable rt, int SeedID) {
+	public void saveResultsToExcel(String xlFile, ResultsTable rt) {
 
 		FileOutputStream xlOut = null;
 		try {
@@ -6666,16 +6815,23 @@ public class InteractiveMT implements PlugIn {
 
 		gd.addChoice("Choose your model: ", LineModel, LineModel[indexmodel]);
 		gd.addCheckbox("Do Gaussian Mask Fits", Domask);
-		gd.addStringField("Advanced Options for the optimizer", " Options ");
+		
+		gd.addTextAreas("Advanced Options for the optimizer", null, 1 , 35);
 		gd.addNumericField("Min Intensity = R * Max Intensity along MT, R (enter 0.2 to 0.9) = ", Intensityratio, 2);
 		gd.addNumericField("Spacing between Gaussians = G * Min(Psf), G (enter 0.3 to 1.0) = ",
 				Inispacing / Math.min(psf[0], psf[1]), 2);
+		
+		gd.addStringField("Use_folder:", usefolder);
+		gd.addStringField("Choose_filestartname:", addToName);
+		
+		if (analyzekymo && Kymoimg!=null){
 		gd.addNumericField("Average max difference between Kymo and tracker = ", deltadcutoff, 2);
+		}
 
 		gd.showDialog();
 		indexmodel = gd.getNextChoiceIndex();
 		Domask = gd.getNextBoolean();
-
+	
 		if (indexmodel == 0)
 			userChoiceModel = UserChoiceModel.Line;
 		if (indexmodel == 1)
@@ -6684,6 +6840,12 @@ public class InteractiveMT implements PlugIn {
 			userChoiceModel = UserChoiceModel.Splineorderthird;
 		Intensityratio = gd.getNextNumber();
 		Inispacing = gd.getNextNumber() * Math.min(psf[0], psf[1]);
+		
+		
+		usefolder = gd.getNextString();
+		addToName = gd.getNextString();
+		
+		if (analyzekymo && Kymoimg!=null)
 		deltadcutoff = (float) gd.getNextNumber();
 
 		return !gd.wasCanceled();
@@ -6697,14 +6859,16 @@ public class InteractiveMT implements PlugIn {
 		int indexmodel = 0;
 
 		gd.addChoice("Choose your model: ", LineModel, LineModel[indexmodel]);
-		gd.addStringField("Advanced Options for the optimizer", " Options ");
+		gd.addCheckbox("Display rois:", displayoverlay);
+		gd.addTextAreas("Advanced Options for the optimizer", null ,1, 35);
 		gd.addNumericField("Min Intensity = R * Max Intensity along MT, R (enter 0.2 to 0.9) = ", Intensityratio, 2);
 		gd.addNumericField("Spacing between Gaussians = G * Min(Psf), G (enter 0.3 to 1.0) = ",
 				Inispacing / Math.min(psf[0], psf[1]), 2);
-		gd.addNumericField("Average max difference between Kymo and tracker = ", deltadcutoff, 2);
-
+		gd.addStringField("Use_folder:", usefolder);
+		gd.addStringField("Choose_filestartname:", addToName);
 		gd.showDialog();
 		indexmodel = gd.getNextChoiceIndex();
+		displayoverlay = gd.getNextBoolean();
 		Domask = false;
 
 		if (indexmodel == 0)
@@ -6715,7 +6879,12 @@ public class InteractiveMT implements PlugIn {
 			userChoiceModel = UserChoiceModel.Splineorderthird;
 		Intensityratio = gd.getNextNumber();
 		Inispacing = gd.getNextNumber() * Math.min(psf[0], psf[1]);
-		deltadcutoff = (float) gd.getNextNumber();
+		
+		
+		usefolder = gd.getNextString();
+		addToName = gd.getNextString();
+		
+		
 
 		return !gd.wasCanceled();
 	}

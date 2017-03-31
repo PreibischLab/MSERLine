@@ -2,6 +2,7 @@ package interpolation;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Random;
 
 import Jama.Matrix;
 import Jama.QRDecomposition;
@@ -9,44 +10,31 @@ import mpicbg.models.IllDefinedDataPointsException;
 import mpicbg.models.NotEnoughDataPointsException;
 import mpicbg.models.Point;
 
-public class Polynomial extends AbstractFunction<Line> {
+public class Polynomial extends AbstractFunction<Polynomial> {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 5010369758205651325L;
-	final int minNumPoints = 2;
+	final int minNumPoints;
 	int degree;
-	public Matrix Coefficients;
-	double n, m;
+	public Matrix coefficients;
 	private double SSE;
 	private double SST;
-	
-	public Polynomial (final int degree){
-		
+	public final double[] coeff;
+
+	public Polynomial(final int degree) {
+
 		this.degree = degree;
-	}
-	
-
-	/**
-	 * @return - the center of the circle in x
-	 */
-	public double getN() {
-		return n;
-	}
-
-	/**
-	 * @return - the center of the circle in y
-	 */
-	public double getM() {
-		return m;
+		this.minNumPoints = degree + 1;
+		this.coeff = new double[degree + 1];
 	}
 
 	/**
 	 * @return - the coefficients of the polynomial in x
 	 */
-	public double GetCoefficients(int j) {
-		return Coefficients.get(j, 0);
+	public double getCoefficients(final int j) {
+		return coeff[j];
 	}
 
 	@Override
@@ -70,7 +58,7 @@ public class Polynomial extends AbstractFunction<Line> {
 		int count = 0;
 		for (final Point p : points) {
 			x[count] = p.getW()[0];
-			y[count] = p.getL()[1];
+			y[count] = p.getW()[1];
 			count++;
 		}
 
@@ -88,7 +76,7 @@ public class Polynomial extends AbstractFunction<Line> {
 
 		// find least squares solution
 		QRDecomposition qr = new QRDecomposition(X);
-		Coefficients = qr.solve(Y);
+		coefficients = qr.solve(Y);
 
 		// mean of y[] values
 		double sum = 0.0;
@@ -103,36 +91,114 @@ public class Polynomial extends AbstractFunction<Line> {
 		}
 
 		// variation not accounted for
-		Matrix residuals = X.times(Coefficients).minus(Y);
+		Matrix residuals = X.times(coefficients).minus(Y);
 		SSE = residuals.norm2() * residuals.norm2();
+
+		for (int j = degree; j >= 0; j--) {
+			this.coeff[j] = coefficients.get(j, 0);
+
+		}
 
 	}
 
-	
-
+	// Distance of a point from a polynomial
 	@Override
 	public double distanceTo(final Point point) {
 		final double x1 = point.getW()[0];
 		final double y1 = point.getW()[1];
 
-		return Math.abs(y1 - m * x1 - n) / (Math.sqrt(m * m + 1));
+		// Initial guesses for Newton Raphson
+		final Random rndx = new Random(30);
+		double xc = rndx.nextFloat();
+
+		double polyfunc = 0;
+		double polyfuncdiff = 0;
+		double delpolyfuncdiff = 0;
+		double Dmin = 0;
+		double Dmindiff = 0;
+		double xcNew = 0;
+
+		/**
+		 * Newton Raphson routine to get the shortest distance of a point from a
+		 * curve
+		 */
+
+		do {
+
+			xc = xcNew;
+
+			Dmin = (polyfunc - y1) * polyfuncdiff + (xc - x1);
+
+			Dmindiff = polyfuncdiff * polyfuncdiff + polyfunc * delpolyfuncdiff + 1;
+
+			// Compute the first iteration of the new point
+			xcNew = (float) NewtonRaphson(xc, Dmin, Dmindiff);
+
+			// Compute the functions and the required derivates at the new point
+			delpolyfuncdiff = 0;
+			polyfunc = 0;
+			polyfuncdiff = 0;
+			for (int j = degree; j >= 0; j--) {
+
+				polyfunc += coeff[j] * Math.pow(xcNew, j);
+
+			}
+			for (int j = degree; j >= 0; j--) {
+
+				polyfuncdiff += j * coeff[j] * Math.pow(xcNew, j - 1);
+
+			}
+
+			for (int j = degree; j > 2; j--)
+				delpolyfuncdiff += j * (j - 1) * coeff[j] * Math.pow(xcNew, j - 2);
+			System.out.println(xcNew);
+
+		} while (Math.abs((xcNew - xc)) > 1.0E-5);
+
+		// After the solution is found compute the y co-oordinate of the point
+		// on the curve
+		polyfunc = 0;
+		for (int j = degree; j >= 0; j--) {
+
+			polyfunc += coeff[j] * Math.pow(xc, j);
+
+		}
+
+		// Get the distance of (x1, y1) point from the curve and return the
+		// value
+
+		double returndist = util.Boundingboxes.Distance(new double[] { x1, y1 }, new double[] { xc, polyfunc });
+
+		return returndist;
+	}
+
+	public double NewtonRaphson(final double oldpoint, final double Function, final double Functionderiv) {
+
+		return oldpoint - Function / Functionderiv;
+
 	}
 
 	public static int i = 0;
 
 	@Override
-	public void set(final Line m) {
-		this.n = m.getN();
-		this.m = m.getM();
-		this.setCost(m.getCost());
+	public void set(final Polynomial p) {
+
+		for (int j = degree; j >= 0; j--) {
+
+			this.coeff[j] = p.getCoefficients(j);
+		}
+
+		this.setCost(p.getCost());
 	}
 
 	@Override
-	public Line copy() {
-		Line c = new Line();
+	public Polynomial copy() {
+		Polynomial c = new Polynomial(degree);
 
-		c.n = getN();
-		c.m = getM();
+		for (int j = degree; j >= 0; j--) {
+			c.coeff[j] = getCoefficients(j);
+		}
+
 		c.setCost(getCost());
 
 		return c;
@@ -151,7 +217,7 @@ public class Polynomial extends AbstractFunction<Line> {
 		// horner's method
 		double y = 0.0;
 		for (int j = degree; j >= 0; j--)
-			y = GetCoefficients(j) + (x * y);
+			y = getCoefficients(j) + (x * y);
 		return y;
 	}
 
@@ -170,38 +236,29 @@ public class Polynomial extends AbstractFunction<Line> {
 
 		final ArrayList<PointFunctionMatch> candidates = new ArrayList<PointFunctionMatch>();
 		final ArrayList<PointFunctionMatch> inliersPoly = new ArrayList<PointFunctionMatch>();
-		final ArrayList<PointFunctionMatch> inliersLine = new ArrayList<PointFunctionMatch>();
 
 		for (final Point p : points)
 			candidates.add(new PointFunctionMatch(p));
 
-		final int degree = 3;
+		final int degree = 1;
 		// Using the polynomial model to do the fitting
 		final Polynomial regression = new Polynomial(degree);
+
 		regression.ransac(candidates, inliersPoly, 100, 0.1, 0.5);
 
 		System.out.println(inliersPoly.size());
 
 		regression.fit(inliersPoly);
-		System.out.println(" y = " + regression.GetCoefficients(3) + " x*x*x + " + "  " + regression.GetCoefficients(2)
-				+ " x*x " + " " + regression.GetCoefficients(1) + " x " + " +  " + +regression.GetCoefficients(0));
-		
 
-		for (final PointFunctionMatch p : inliersPoly)
-			System.out.println(regression.distanceTo(p.getP1()));
+		if (degree > 2)
+			System.out.println(" y = " + regression.getCoefficients(3) + " x*x*x" + "  " + " "
+					+ regression.getCoefficients(2) + " x*x " + " " + regression.getCoefficients(1) + " x " + " + "
+					+ +regression.getCoefficients(0));
 
-		// Using the line model to do the fitting
-		final Line l = new Line();
-		l.ransac(candidates, inliersLine, 100, 0.1, 0.5);
-		System.out.println(inliersLine.size());
+		if (degree <= 2)
+			System.out
+					.println(" y = " + regression.getCoefficients(1) + " x " + " +  " + +regression.getCoefficients(0));
 
-		l.fit(inliersLine);
-
-		System.out.println("y = " + l.m + " x + " + l.n);
-		for (final PointFunctionMatch p : inliersLine)
-			System.out.println(l.distanceTo(p.getP1()));
-
-		
 	}
 
 }
