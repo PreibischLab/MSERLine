@@ -108,31 +108,53 @@ public class Polynomial extends AbstractFunction<Polynomial> {
 		final double y1 = point.getW()[1];
 
 		// Initial guesses for Newton Raphson
-		final Random rndx = new Random(30);
+		final Random rndx = new Random();
 		double xc = rndx.nextFloat();
 
 		double polyfunc = 0;
 		double polyfuncdiff = 0;
 		double delpolyfuncdiff = 0;
+		double secdelpolyfuncdiff = 0;
 		double Dmin = 0;
 		double Dmindiff = 0;
-		double xcNew = 0;
+		double Dminsecdiff = 0;
+		double xcNew = rndx.nextFloat();
 
 		/**
-		 * Newton Raphson routine to get the shortest distance of a point from a
-		 * curve
+		 * High order Newton Raphson routine to get the shortest distance of a point from a
+		 * curve A third-order Newton type method for nonlinear
+         *   equations based on modified homotopy
+         *   perturbation method
+         *   A. Golbabai, M. Javidi *
+         *   Department of Mathematics, Iran University of Science and Technology, Narmak, Tehran 16844, Iran
 		 */
+		for (int j = degree; j >= 0; j--) {
 
+				polyfunc += coeff[j] * Math.pow(xc, j);
+
+			}
+			for (int j = degree; j >= 0; j--) {
+
+				polyfuncdiff += j * coeff[j] * Math.pow(xc, j - 1);
+
+			}
+		
 		do {
 
 			xc = xcNew;
 
+			if (Math.abs(xc -xcNew) < 0.1)
 			Dmin = (polyfunc - y1) * polyfuncdiff + (xc - x1);
 
-			Dmindiff = polyfuncdiff * polyfuncdiff + polyfunc * delpolyfuncdiff + 1;
+			Dmindiff = polyfuncdiff * polyfuncdiff +  (polyfunc - y1)* delpolyfuncdiff + 1;
+			Dminsecdiff = (polyfunc - y1)*secdelpolyfuncdiff + delpolyfuncdiff * polyfuncdiff + 2 * polyfuncdiff * delpolyfuncdiff ;
 
 			// Compute the first iteration of the new point
-			xcNew = (float) NewtonRaphson(xc, Dmin, Dmindiff);
+			xcNew = (float) NewtonRaphson(xc, Dmin, Dmindiff, Dminsecdiff);
+			
+			
+			
+			
 
 			// Compute the functions and the required derivates at the new point
 			delpolyfuncdiff = 0;
@@ -149,11 +171,32 @@ public class Polynomial extends AbstractFunction<Polynomial> {
 
 			}
 
-			for (int j = degree; j > 2; j--)
+			for (int j = degree; j >= 2; j--)
 				delpolyfuncdiff += j * (j - 1) * coeff[j] * Math.pow(xcNew, j - 2);
-			System.out.println(xcNew);
+			if (degree < 3)
+				delpolyfuncdiff = 0;
+			
+			for (int j = degree; j >= 3; j--)
+				secdelpolyfuncdiff += j * (j - 1) * (j - 2) * coeff[j] * Math.pow(xcNew, j - 3);
+			if (degree < 4)
+				secdelpolyfuncdiff = 0;
+			
+			
+			
+			
+			// Darvishi step
+			//A third-order Newton-type method to solve systems
+			//of nonlinear equations
+			//M.T. Darvishi *, A. Barati
+			if (degree%2 == 0){
+			Dmin = (polyfunc - y1) * polyfuncdiff + (xcNew - x1);
+			xcNew = (float) NewtonRaphson(xcNew, Dmin, Dmindiff, Dminsecdiff);
+			}
+			if (xcNew == Double.NaN)
+				xcNew = xc;
+			
 
-		} while (Math.abs((xcNew - xc)) > 1.0E-5);
+		} while (Math.abs((xcNew - xc)) > 1.0E-2);
 
 		// After the solution is found compute the y co-oordinate of the point
 		// on the curve
@@ -172,9 +215,9 @@ public class Polynomial extends AbstractFunction<Polynomial> {
 		return returndist;
 	}
 
-	public double NewtonRaphson(final double oldpoint, final double Function, final double Functionderiv) {
+	public double NewtonRaphson(final double oldpoint, final double Function, final double Functionderiv, final double Functionsecderiv) {
 
-		return oldpoint - Function / Functionderiv;
+		return oldpoint - Function / Functionderiv - 0.5 * (Function * Function * Functionsecderiv) /(Math.pow(Functionderiv, 3) - Function * Functionderiv * Functionsecderiv);
 
 	}
 
@@ -240,7 +283,7 @@ public class Polynomial extends AbstractFunction<Polynomial> {
 		for (final Point p : points)
 			candidates.add(new PointFunctionMatch(p));
 
-		final int degree = 1;
+		final int degree = 3;
 		// Using the polynomial model to do the fitting
 		final Polynomial regression = new Polynomial(degree);
 
@@ -255,9 +298,14 @@ public class Polynomial extends AbstractFunction<Polynomial> {
 					+ regression.getCoefficients(2) + " x*x " + " " + regression.getCoefficients(1) + " x " + " + "
 					+ +regression.getCoefficients(0));
 
-		if (degree <= 2)
+		if (degree < 2)
 			System.out
 					.println(" y = " + regression.getCoefficients(1) + " x " + " +  " + +regression.getCoefficients(0));
+		
+		if (degree == 2)
+			System.out.println(" y = " 
+					+ regression.getCoefficients(2) + " x*x " + " " + regression.getCoefficients(1) + " x " + " + "
+					+ +regression.getCoefficients(0));
 
 	}
 
